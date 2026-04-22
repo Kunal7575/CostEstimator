@@ -226,7 +226,7 @@ function renderStep0() {
 
         <div class="step-actions welcome-actions">
           <button class="btn-primary btn-lg" id="startBtn" type="button">
-            ${state.studentPhase ? "Get Started" : "Select a student type first"}
+            ${state.studentPhase ? "Get Started" : "Get Started"}
           </button>
         </div>
       </div>
