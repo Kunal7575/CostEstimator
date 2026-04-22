@@ -492,7 +492,7 @@ function renderStep3() {
               `
               : `
                 <div class="form-group">
-                  <label>Scholarships and bursaries</label>
+                  <h1>Scholarships and bursaries</h1>
 
                   <div class="scholarship-checkbox-list">
                     ${getScholarshipOptions().map(item => {
