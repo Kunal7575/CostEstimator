@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
   bindScrollTop();
   await loadData();
+  calculateEstimate();
   renderCurrentStep();
 }
 
@@ -73,8 +74,7 @@ function bindScrollTop() {
   if (!btn) return;
 
   window.addEventListener("scroll", () => {
-    if (window.scrollY > 250) btn.classList.add("show");
-    else btn.classList.remove("show");
+    btn.classList.toggle("show", window.scrollY > 250);
   });
 
   btn.addEventListener("click", () => {
@@ -117,13 +117,10 @@ function updateChrome() {
   const topStatusCard = document.getElementById("topStatusCard");
   const progressInline = document.getElementById("progressInline");
 
-  if (state.currentStep === 0) {
-    if (topStatusCard) topStatusCard.style.display = "none";
-    if (progressInline) progressInline.style.display = "none";
-  } else {
-    if (topStatusCard) topStatusCard.style.display = "flex";
-    if (progressInline) progressInline.style.display = "flex";
-  }
+  const showChrome = state.currentStep > 0;
+
+  if (topStatusCard) topStatusCard.style.display = showChrome ? "flex" : "none";
+  if (progressInline) progressInline.style.display = showChrome ? "flex" : "none";
 
   const statusEyebrow = document.getElementById("statusEyebrow");
   const statusTitle = document.getElementById("statusTitle");
@@ -142,8 +139,8 @@ function updateChrome() {
 
   const runningTotal = document.getElementById("topRunningTotal");
   if (runningTotal) {
-    const low = state.result ? state.result.low : 0;
-    const high = state.result ? state.result.high : 0;
+    const low = state.result?.low || 0;
+    const high = state.result?.high || 0;
     runningTotal.textContent = formatRangeValue(low, high);
   }
 
@@ -151,14 +148,15 @@ function updateChrome() {
     const step = Number(item.dataset.step);
     item.classList.remove("active", "done");
 
-    if (state.currentStep > 0) {
+    if (showChrome) {
       if (step === state.currentStep) item.classList.add("active");
       if (step < state.currentStep) item.classList.add("done");
     }
 
     item.onclick = () => {
-      if (step <= 0 || step > 5) return;
+      if (step < 1 || step > 5) return;
       state.currentStep = step;
+      calculateEstimate();
       renderCurrentStep();
     };
   });
@@ -179,13 +177,33 @@ function renderCurrentStep() {
 
   calculateEstimate();
 
-  if (state.currentStep === 0) container.innerHTML = renderStep0();
-  if (state.currentStep === 1) container.innerHTML = renderStep1();
-  if (state.currentStep === 2) container.innerHTML = renderStep2();
-  if (state.currentStep === 3) container.innerHTML = renderStep3();
-  if (state.currentStep === 4) container.innerHTML = renderStep4();
-  if (state.currentStep === 5) container.innerHTML = renderStep5();
+  let html = "";
+  switch (state.currentStep) {
+    case 0:
+      html = renderStep0();
+      break;
+    case 1:
+      html = renderStep1();
+      break;
+    case 2:
+      html = renderStep2();
+      break;
+    case 3:
+      html = renderStep3();
+      break;
+    case 4:
+      html = renderStep4();
+      break;
+    case 5:
+      html = renderStep5();
+      break;
+    default:
+      state.currentStep = 0;
+      html = renderStep0();
+      break;
+  }
 
+  container.innerHTML = html;
   bindRenderedEvents();
   setupWelcomeImage();
   updateChrome();
@@ -225,9 +243,7 @@ function renderStep0() {
         </div>
 
         <div class="step-actions welcome-actions">
-          <button class="btn-primary btn-lg" id="startBtn" type="button">
-            ${state.studentPhase ? "Get Started" : "Get Started"}
-          </button>
+          <button class="btn-primary btn-lg" id="startBtn" type="button">Get Started</button>
         </div>
       </div>
     </div>
@@ -267,19 +283,13 @@ function renderStep1() {
               ${state.studentPhase === "future" ? "What are you looking for?" : "Level"}
             </label>
             <select id="level" class="step-dropdown">
-              <option value="">
-                ${state.studentPhase === "future" ? "Select an option" : "Select level"}
-              </option>
+              <option value="">${state.studentPhase === "future" ? "Select an option" : "Select level"}</option>
               <option value="UG" ${state.level === "UG" ? "selected" : ""}>Undergraduate</option>
               <option value="GR" ${state.level === "GR" ? "selected" : ""}>Graduate</option>
             </select>
           </div>
 
-          <div
-            class="form-group"
-            id="provinceGroup"
-            style="display: ${state.residencyType === "Domestic" ? "flex" : "none"};"
-          >
+          <div class="form-group" id="provinceGroup" style="display:${state.residencyType === "Domestic" ? "flex" : "none"};">
             <label for="province">Province status</label>
             <select id="province" class="step-dropdown">
               <option value="">Select province status</option>
@@ -312,15 +322,18 @@ function renderStep2() {
   const programs = getAvailablePrograms().sort((a, b) => a.localeCompare(b));
   const countries = getAvailableCountries();
 
+  if (state.campus && !campuses.includes(state.campus)) {
+    state.campus = "";
+    state.program = "";
+    state.matchedTuitionRecord = null;
+  }
+
   if (state.program && !programs.includes(state.program)) {
     state.program = "";
     state.matchedTuitionRecord = null;
   }
 
-  const currentStudentYear =
-    state.studentPhase === "current"
-      ? state.cohortYear
-      : "";
+  const currentStudentYear = state.studentPhase === "current" ? state.cohortYear : "";
 
   return `
     <div class="step-container">
@@ -397,7 +410,7 @@ function renderStep2() {
           </div>
 
           <div class="section-note">
-            The available options come directly from the tuition data for your selected student path, campus, and study type.
+            The available options come directly from the tuition data for your selected study type, campus, and residency path.
           </div>
         </div>
       </div>
@@ -420,12 +433,7 @@ function renderStep3() {
     ? scholarships.map(item => {
         const awardName = escapeHtml(item["Award Name"] || "Unnamed award");
         const amount = escapeHtml(item.Amount || "Amount not listed");
-        const note = escapeHtml(
-          item["Notes"] ||
-          item["Application Required"] ||
-          item["Eligibility"] ||
-          ""
-        );
+        const note = escapeHtml(item["Notes"] || item["Application Required"] || item["Eligibility"] || "");
 
         return `
           <div class="scholarship-card">
@@ -469,6 +477,17 @@ function renderStep3() {
           </label>
 
           ${
+            state.coopInterest === "Yes"
+              ? `
+                <label class="checkbox-item">
+                  <input type="checkbox" id="includeCoop" ${state.includeCoop ? "checked" : ""} />
+                  <span>Include co-op fees</span>
+                </label>
+              `
+              : ""
+          }
+
+          ${
             state.studentPhase === "future"
               ? `
                 <div class="scholarship-panel">
@@ -492,7 +511,7 @@ function renderStep3() {
               `
               : `
                 <div class="form-group">
-                  <h1>Scholarships and bursaries</h1>
+                  <h3>Scholarships and bursaries</h3>
 
                   <div class="scholarship-checkbox-list">
                     ${getScholarshipOptions().map(item => {
@@ -526,9 +545,7 @@ function renderStep3() {
                     Renewable or multi-year awards are converted to an estimated yearly amount for this calculator.
                   </div>
 
-                  <div class="section-note" style="margin-top:8px;">
-                    Scholarship and bursary deduction selected: <strong>${formatMoney(getSelectedScholarshipTotal())}</strong>
-                  </div>
+                  
                 </div>
 
                 <div class="form-group">
@@ -570,6 +587,8 @@ function renderStep3() {
 
 function renderStep4() {
   const isFutureStudent = state.studentPhase === "future";
+  const onCampusOptions = getOnCampusResidenceOptions();
+  const mealPlanOptions = getMealPlanOptions();
 
   return `
     <div class="step-container">
@@ -600,71 +619,71 @@ function renderStep4() {
                   </select>
                 </div>
               `
-              : `
-                ${
-                  state.housingType === "OnCampus"
-                    ? `
-                      <div class="form-group">
-                        <label for="residence">Residence</label>
-                        <select id="residence" class="step-dropdown">
-                          <option value="">Select residence</option>
-                          ${(state.data["On_campus_Living_Costs"] || []).map(item => {
-                            const value = `${normalize(item.ResidenceArea)} | ${normalize(item.RoomType)}`;
-                            const label = `${normalize(item.ResidenceArea)} - ${normalize(item.RoomType)} (${formatMoney(toNumber(item.Cost))}/year)`;
-                            return `<option value="${escapeHtml(value)}" ${state.residence === value ? "selected" : ""}>${escapeHtml(label)}</option>`;
-                          }).join("")}
-                        </select>
-                      </div>
+              : ""
+          }
 
-                      <div class="form-group">
-                        <label for="mealPlan">Meal plan</label>
-                        <select id="mealPlan" class="step-dropdown">
-                          <option value="">Select meal plan</option>
-                          ${(state.data["Meal_Plan"] || []).map(item => {
-                            const value = normalize(item["Meal Plan Size"]);
-                            const label = `${normalize(item["Meal Plan Size"])} (${formatMoney(toNumber(item["Total cost per year"]))}/year)`;
-                            return `<option value="${escapeHtml(value)}" ${state.mealPlan === value ? "selected" : ""}>${escapeHtml(label)}</option>`;
-                          }).join("")}
-                        </select>
-                      </div>
-                    `
-                    : ""
-                }
+          ${
+            !isFutureStudent && state.housingType === "OnCampus"
+              ? `
+                <div class="form-group">
+                  <label for="residence">Residence</label>
+                  <select id="residence" class="step-dropdown">
+                    <option value="">Select residence</option>
+                    ${onCampusOptions.map(item => `
+                      <option value="${escapeHtml(item.value)}" ${state.residence === item.value ? "selected" : ""}>
+                        ${escapeHtml(item.label)}
+                      </option>
+                    `).join("")}
+                  </select>
+                </div>
 
-                ${
-                  state.housingType === "OffCampus"
-                    ? `
-                      <div class="form-group">
-                        <label for="currentOffCampusRent">Yearly rent</label>
-                        <input
-                          id="currentOffCampusRent"
-                          class="step-input"
-                          type="number"
-                          min="0"
-                          value="${escapeHtml(state.currentOffCampusRent)}"
-                          placeholder="Enter your yearly rent"
-                        />
-                      </div>
-
-                      <div class="form-group">
-                        <label for="currentOffCampusFood">Yearly food expense</label>
-                        <input
-                          id="currentOffCampusFood"
-                          class="step-input"
-                          type="number"
-                          min="0"
-                          value="${escapeHtml(state.currentOffCampusFood)}"
-                          placeholder="Enter your yearly food expense"
-                        />
-                      </div>
-                    `
-                    : ""
-                }
+                <div class="form-group">
+                  <label for="mealPlan">Meal plan</label>
+                  <select id="mealPlan" class="step-dropdown">
+                    <option value="">Select meal plan</option>
+                    ${mealPlanOptions.map(item => `
+                      <option value="${escapeHtml(item.value)}" ${state.mealPlan === item.value ? "selected" : ""}>
+                        ${escapeHtml(item.label)}
+                      </option>
+                    `).join("")}
+                  </select>
+                </div>
               `
+              : ""
+          }
+
+          ${
+            !isFutureStudent && state.housingType === "OffCampus"
+              ? `
+                <div class="form-group">
+                  <label for="currentOffCampusRent">Yearly rent</label>
+                  <input
+                    id="currentOffCampusRent"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.currentOffCampusRent)}"
+                    placeholder="Enter your yearly rent"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="currentOffCampusFood">Yearly food expense</label>
+                  <input
+                    id="currentOffCampusFood"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.currentOffCampusFood)}"
+                    placeholder="Enter your yearly food expense"
+                  />
+                </div>
+              `
+              : ""
           }
 
           <div class="section-note">
-            Living costs are shown as planning estimates and may vary by year, room choice, and market conditions.
+            Living costs are planning estimates and may vary by year, room choice, and market conditions.
           </div>
         </div>
       </div>
@@ -725,485 +744,476 @@ function renderStep5() {
 }
 
 function bindRenderedEvents() {
-  if (state.currentStep === 0) {
-    const cards = document.querySelectorAll(".choice-card");
-    const startBtn = document.getElementById("startBtn");
+  bindStep0Events();
+  bindStep1Events();
+  bindStep2Events();
+  bindStep3Events();
+  bindStep4Events();
+  bindStep5Events();
+}
 
-    cards.forEach(card => {
-      card.onclick = () => {
-        const selectedValue = card.getAttribute("data-value");
+function bindStep0Events() {
+  if (state.currentStep !== 0) return;
 
-        cards.forEach(c => c.classList.remove("selected"));
-        card.classList.add("selected");
+  const cards = document.querySelectorAll(".choice-card");
+  const startBtn = document.getElementById("startBtn");
 
-        state.studentPhase = selectedValue || "";
-      };
-    });
+  cards.forEach(card => {
+    card.onclick = () => {
+      const selectedValue = card.getAttribute("data-value") || "";
+      cards.forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      state.studentPhase = selectedValue;
+    };
+  });
 
-    if (startBtn) {
-      startBtn.onclick = () => {
-        if (!state.studentPhase) state.studentPhase = "future";
-        state.currentStep = 1;
-        renderCurrentStep();
-      };
-    }
+  if (startBtn) {
+    startBtn.onclick = () => {
+      if (!state.studentPhase) state.studentPhase = "future";
+      state.currentStep = 1;
+      renderCurrentStep();
+    };
   }
+}
 
-  if (state.currentStep === 1) {
-    const studentPhase = document.getElementById("studentPhase");
-    const residencyType = document.getElementById("residencyType");
-    const level = document.getElementById("level");
-    const province = document.getElementById("province");
-    const provinceGroup = document.getElementById("provinceGroup");
-    const nextBtn = document.getElementById("nextStep1");
+function bindStep1Events() {
+  if (state.currentStep !== 1) return;
 
-    if (studentPhase) {
-      studentPhase.onchange = e => {
-        state.studentPhase = e.target.value;
+  const studentPhase = document.getElementById("studentPhase");
+  const residencyType = document.getElementById("residencyType");
+  const level = document.getElementById("level");
+  const province = document.getElementById("province");
+  const provinceGroup = document.getElementById("provinceGroup");
+  const nextBtn = document.getElementById("nextStep1");
 
-        state.coopInterest = "No";
-        state.includeCoop = false;
-        state.coopEarningsOffset = 0;
-        state.selectedScholarshipKeys = [];
-        state.scholarshipOffset = 0;
-        state.country = "";
-
+  if (studentPhase) {
+    studentPhase.onchange = e => {
+      const newValue = e.target.value;
+      if (newValue !== state.studentPhase) {
+        state.studentPhase = newValue;
+        resetProgramPathState();
         if (state.studentPhase !== "future") {
           state.futureMealPlanInterest = "No";
+          state.country = "";
         }
-
         renderCurrentStep();
-      };
-    }
+      }
+    };
+  }
 
-    if (residencyType) {
-      residencyType.onchange = e => {
-        state.residencyType = e.target.value;
-        state.campus = "";
-        state.program = "";
-        state.cohortYear = "";
-        state.country = "";
-        state.matchedTuitionRecord = null;
-        state.selectedScholarshipKeys = [];
-        state.scholarshipOffset = 0;
+  if (residencyType) {
+    residencyType.onchange = e => {
+      const newValue = e.target.value;
+      if (newValue !== state.residencyType) {
+        state.residencyType = newValue;
+        resetProgramPathState();
+        resetFundingSelections();
 
         if (state.residencyType === "Domestic") {
+          state.province = "";
           if (provinceGroup) provinceGroup.style.display = "flex";
         } else {
           state.province = "INT";
-          if (province) province.value = "";
           if (provinceGroup) provinceGroup.style.display = "none";
         }
-      };
-    }
 
-    if (level) {
-      level.onchange = e => {
-        state.level = e.target.value;
-        state.campus = "";
-        state.program = "";
-        state.cohortYear = "";
-        state.country = "";
-        state.matchedTuitionRecord = null;
-        state.selectedScholarshipKeys = [];
-        state.scholarshipOffset = 0;
-      };
-    }
-
-    if (province) {
-      province.onchange = e => {
-        state.province = e.target.value;
-      };
-    }
-
-    if (nextBtn) {
-      nextBtn.onclick = () => {
-        if (!state.studentPhase) return alert("Please select student type.");
-        if (!state.residencyType) return alert("Please select residency type.");
-        if (!state.level) {
-          return alert(
-            state.studentPhase === "future"
-              ? "Please select what you are looking for."
-              : "Please select level."
-          );
-        }
-
-        if (state.residencyType === "Domestic" && !state.province) {
-          return alert("Please select province status.");
-        }
-
-        if (state.residencyType === "International") {
-          state.province = "INT";
-        }
-
-        state.currentStep = 2;
         renderCurrentStep();
-      };
-    }
-  }
-
-  if (state.currentStep === 2) {
-    const cohortYear = document.getElementById("cohortYear");
-    const country = document.getElementById("country");
-    const campus = document.getElementById("campus");
-    const program = document.getElementById("program");
-    const coopInterest = document.getElementById("coopInterest");
-    const back = document.getElementById("backStep2");
-    const next = document.getElementById("nextStep2");
-
-    if (country) {
-      country.onchange = e => {
-        state.country = e.target.value;
-      };
-    }
-
-    if (state.studentPhase === "current") {
-      const latestYear = getLatestCurrentCohortYear();
-      if (latestYear) {
-        state.cohortYear = latestYear;
       }
+    };
+  }
+
+  if (level) {
+    level.onchange = e => {
+      const newValue = e.target.value;
+      if (newValue !== state.level) {
+        state.level = newValue;
+        resetProgramPathState();
+        renderCurrentStep();
+      }
+    };
+  }
+
+  if (province) {
+    province.onchange = e => {
+      state.province = e.target.value;
+    };
+  }
+
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      if (!state.studentPhase) return alert("Please select student type.");
+      if (!state.residencyType) return alert("Please select residency type.");
+      if (!state.level) {
+        return alert(
+          state.studentPhase === "future"
+            ? "Please select what you are looking for."
+            : "Please select level."
+        );
+      }
+
+      if (state.residencyType === "Domestic" && !state.province) {
+        return alert("Please select province status.");
+      }
+
+      if (state.residencyType === "International") {
+        state.province = "INT";
+      }
+
+      state.currentStep = 2;
+      renderCurrentStep();
+    };
+  }
+}
+
+function bindStep2Events() {
+  if (state.currentStep !== 2) return;
+
+  const cohortYear = document.getElementById("cohortYear");
+  const country = document.getElementById("country");
+  const campus = document.getElementById("campus");
+  const program = document.getElementById("program");
+  const coopInterest = document.getElementById("coopInterest");
+  const back = document.getElementById("backStep2");
+  const next = document.getElementById("nextStep2");
+
+  if (cohortYear) {
+    cohortYear.onchange = e => {
+      state.cohortYear = e.target.value;
       state.matchedTuitionRecord = null;
-    }
-
-    if (cohortYear) {
-      cohortYear.onchange = e => {
-        state.cohortYear = e.target.value;
-        state.matchedTuitionRecord = null;
-      };
-    }
-
-    if (coopInterest) {
-      coopInterest.onchange = e => {
-        state.coopInterest = e.target.value;
-        state.includeCoop = e.target.value === "Yes";
-
-        if (state.coopInterest !== "Yes") {
-          state.coopEarningsOffset = 0;
-        }
-
-        updateRunningEstimate();
-        renderCurrentStep();
-      };
-    }
-
-    if (campus) {
-      campus.onchange = e => {
-        state.campus = e.target.value;
-        state.program = "";
-        state.matchedTuitionRecord = null;
-        updateRunningEstimate();
-        renderCurrentStep();
-      };
-    }
-
-    if (program) {
-      program.onchange = e => {
-        state.program = e.target.value;
-        state.matchedTuitionRecord = null;
-        matchTuitionRecord();
-        updateRunningEstimate();
-      };
-    }
-
-    if (back) {
-      back.onclick = () => {
-        state.currentStep = 1;
-        renderCurrentStep();
-      };
-    }
-
-    if (next) {
-      next.onclick = () => {
-        if (state.studentPhase === "current") {
-          state.cohortYear = getLatestCurrentCohortYear();
-        }
-
-        if (country) state.country = country.value;
-        if (campus) state.campus = campus.value;
-        if (program) state.program = program.value;
-        if (coopInterest) {
-          state.coopInterest = coopInterest.value;
-          state.includeCoop = coopInterest.value === "Yes";
-        }
-
-        if (
-          state.studentPhase === "future" &&
-          state.residencyType === "International" &&
-          !state.country
-        ) {
-          return alert("Please select your country.");
-        }
-
-        state.matchedTuitionRecord = null;
-
-        if (!state.cohortYear) {
-          return alert(
-            state.studentPhase === "future"
-              ? "Please select target year."
-              : "Year data is unavailable."
-          );
-        }
-
-        if (!state.campus) return alert("Please select campus.");
-        if (!state.program) return alert("Please select a program.");
-
-        matchTuitionRecord();
-
-        if (!state.matchedTuitionRecord) {
-          console.log("No match found for:", {
-            studentPhase: state.studentPhase,
-            residencyType: state.residencyType,
-            province: state.province,
-            level: state.level,
-            campus: state.campus,
-            cohortYear: state.cohortYear,
-            program: state.program,
-            country: state.country
-          });
-          return alert("No tuition record matched this selection.");
-        }
-
-        updateRunningEstimate();
-        state.currentStep = 3;
-        renderCurrentStep();
-      };
-    }
+    };
   }
 
-  if (state.currentStep === 3) {
-    const includeBooks = document.getElementById("includeBooks");
-    const includePersonal = document.getElementById("includePersonal");
-    const selectedScholarshipInputs = document.querySelectorAll('input[name="selectedScholarships"]');
-    const partTimeIncome = document.getElementById("partTimeIncome");
-    const coopEarningsOffset = document.getElementById("coopEarningsOffset");
-    const familySupport = document.getElementById("familySupport");
-    const back = document.getElementById("backStep3");
-    const next = document.getElementById("nextStep3");
-
-    if (includeBooks) {
-      includeBooks.onchange = e => {
-        state.includeBooks = e.target.checked;
-        updateRunningEstimate();
-      };
-    }
-
-    if (includePersonal) {
-      includePersonal.onchange = e => {
-        state.includePersonal = e.target.checked;
-        updateRunningEstimate();
-      };
-    }
-
-    if (selectedScholarshipInputs.length) {
-      selectedScholarshipInputs.forEach(input => {
-        input.onchange = () => {
-          state.selectedScholarshipKeys = Array.from(selectedScholarshipInputs)
-            .filter(el => el.checked)
-            .map(el => el.value);
-
-          state.scholarshipOffset = getSelectedScholarshipTotal();
-          updateRunningEstimate();
-          renderCurrentStep();
-        };
-      });
-    }
-
-    if (partTimeIncome) {
-      partTimeIncome.oninput = e => {
-        state.partTimeIncome = toNumber(e.target.value);
-        updateRunningEstimate();
-      };
-    }
-
-    if (coopEarningsOffset) {
-      coopEarningsOffset.oninput = e => {
-        state.coopEarningsOffset = toNumber(e.target.value);
-        updateRunningEstimate();
-      };
-    }
-
-    if (familySupport) {
-      familySupport.oninput = e => {
-        state.familySupport = toNumber(e.target.value);
-        updateRunningEstimate();
-      };
-    }
-
-    if (back) {
-      back.onclick = () => {
-        state.currentStep = 2;
-        renderCurrentStep();
-      };
-    }
-
-    if (next) {
-      next.onclick = () => {
-        state.currentStep = 4;
-        renderCurrentStep();
-      };
-    }
+  if (country) {
+    country.onchange = e => {
+      state.country = e.target.value;
+    };
   }
 
-  if (state.currentStep === 4) {
-    const housingType = document.getElementById("housingType");
-    const residence = document.getElementById("residence");
-    const mealPlan = document.getElementById("mealPlan");
-    const currentOffCampusRent = document.getElementById("currentOffCampusRent");
-    const currentOffCampusFood = document.getElementById("currentOffCampusFood");
-    const futureMealPlanInterest = document.getElementById("futureMealPlanInterest");
-    const back = document.getElementById("backStep4");
-    const next = document.getElementById("nextStep4");
-
-    if (futureMealPlanInterest) {
-      futureMealPlanInterest.onchange = e => {
-        state.futureMealPlanInterest = e.target.value;
-        calculateEstimate();
-        renderCurrentStep();
-      };
-    }
-
-    if (housingType) {
-      housingType.onchange = e => {
-        state.housingType = e.target.value;
-
-        if (state.housingType !== "OnCampus") {
-          state.residence = "";
-          state.mealPlan = "";
-        }
-
-        if (state.housingType !== "OffCampus") {
-          state.offCampusType = "";
-          state.currentOffCampusRent = 0;
-          state.currentOffCampusFood = 0;
-        }
-
-        if (state.housingType === "None") {
-          state.futureMealPlanInterest = "No";
-        }
-
-        calculateEstimate();
-        renderCurrentStep();
-      };
-    }
-
-    if (residence) {
-      residence.onchange = e => {
-        state.residence = e.target.value;
-        updateRunningEstimate();
-      };
-    }
-
-    if (mealPlan) {
-      mealPlan.onchange = e => {
-        state.mealPlan = e.target.value;
-        updateRunningEstimate();
-      };
-    }
-
-    if (currentOffCampusRent) {
-      currentOffCampusRent.oninput = e => {
-        state.currentOffCampusRent = toNumber(e.target.value);
-        updateRunningEstimate();
-      };
-    }
-
-    if (currentOffCampusFood) {
-      currentOffCampusFood.oninput = e => {
-        state.currentOffCampusFood = toNumber(e.target.value);
-        updateRunningEstimate();
-      };
-    }
-
-    if (back) {
-      back.onclick = () => {
-        state.currentStep = 3;
-        renderCurrentStep();
-      };
-    }
-
-    if (next) {
-      next.onclick = () => {
-        if (state.studentPhase !== "future") {
-          if (state.housingType === "OnCampus") {
-            if (!state.residence) return alert("Please select residence.");
-            if (!state.mealPlan) return alert("Please select meal plan.");
-          }
-
-          if (state.housingType === "OffCampus") {
-            if (!state.currentOffCampusRent) {
-              return alert("Please enter your yearly rent.");
-            }
-
-            if (!state.currentOffCampusFood) {
-              return alert("Please enter your yearly food expense.");
-            }
-          }
-        }
-
-        calculateEstimate();
-        state.currentStep = 5;
-        renderCurrentStep();
-      };
-    }
+  if (campus) {
+    campus.onchange = e => {
+      state.campus = e.target.value;
+      state.program = "";
+      state.matchedTuitionRecord = null;
+      renderCurrentStep();
+    };
   }
 
-  if (state.currentStep === 5) {
-    const fullName = document.getElementById("fullName");
-    const email = document.getElementById("email");
-    const back = document.getElementById("backStep5");
-    const downloadBtn = document.getElementById("downloadEstimateBtn");
-    const emailBtn = document.getElementById("emailEstimateBtn");
+  if (program) {
+    program.onchange = e => {
+      state.program = e.target.value;
+      state.matchedTuitionRecord = null;
+      updateRunningEstimate();
+    };
+  }
 
-    if (fullName) {
-      fullName.oninput = e => {
-        state.fullName = e.target.value;
+  if (coopInterest) {
+    coopInterest.onchange = e => {
+      state.coopInterest = e.target.value;
+      state.includeCoop = state.coopInterest === "Yes";
+      if (state.coopInterest !== "Yes") {
+        state.coopEarningsOffset = 0;
+      }
+      updateRunningEstimate();
+    };
+  }
+
+  if (back) {
+    back.onclick = () => {
+      state.currentStep = 1;
+      renderCurrentStep();
+    };
+  }
+
+  if (next) {
+    next.onclick = () => {
+      if (state.studentPhase === "current") {
+        state.cohortYear = getLatestCurrentCohortYear();
+      }
+
+      if (state.studentPhase === "future" && !state.cohortYear) {
+        return alert("Please select target year.");
+      }
+
+      if (state.studentPhase === "future" && state.residencyType === "International" && !state.country) {
+        return alert("Please select your country.");
+      }
+
+      if (!state.campus) return alert("Please select campus.");
+      if (!state.program) return alert("Please select a program.");
+
+      matchTuitionRecord();
+
+      if (!state.matchedTuitionRecord) {
+        console.log("No match found for:", {
+          studentPhase: state.studentPhase,
+          residencyType: state.residencyType,
+          province: state.province,
+          level: state.level,
+          campus: state.campus,
+          cohortYear: state.cohortYear,
+          program: state.program,
+          country: state.country
+        });
+        return alert("No tuition record matched this selection.");
+      }
+
+      calculateEstimate();
+      state.currentStep = 3;
+      renderCurrentStep();
+    };
+  }
+}
+
+function bindStep3Events() {
+  if (state.currentStep !== 3) return;
+
+  const includeBooks = document.getElementById("includeBooks");
+  const includePersonal = document.getElementById("includePersonal");
+  const includeCoop = document.getElementById("includeCoop");
+  const selectedScholarshipInputs = document.querySelectorAll('input[name="selectedScholarships"]');
+  const partTimeIncome = document.getElementById("partTimeIncome");
+  const coopEarningsOffset = document.getElementById("coopEarningsOffset");
+  const familySupport = document.getElementById("familySupport");
+  const back = document.getElementById("backStep3");
+  const next = document.getElementById("nextStep3");
+
+  if (includeBooks) {
+    includeBooks.onchange = e => {
+      state.includeBooks = e.target.checked;
+      updateRunningEstimate();
+    };
+  }
+
+  if (includePersonal) {
+    includePersonal.onchange = e => {
+      state.includePersonal = e.target.checked;
+      updateRunningEstimate();
+    };
+  }
+
+  if (includeCoop) {
+    includeCoop.onchange = e => {
+      state.includeCoop = e.target.checked;
+      updateRunningEstimate();
+    };
+  }
+
+  if (selectedScholarshipInputs.length) {
+    selectedScholarshipInputs.forEach(input => {
+      input.onchange = () => {
+        state.selectedScholarshipKeys = Array.from(selectedScholarshipInputs)
+          .filter(el => el.checked)
+          .map(el => el.value);
+
+        state.scholarshipOffset = getSelectedScholarshipTotal();
+        updateRunningEstimate();
       };
-    }
+    });
+  }
 
-    if (email) {
-      email.oninput = e => {
-        state.email = e.target.value;
-      };
-    }
+  if (partTimeIncome) {
+    partTimeIncome.oninput = e => {
+      state.partTimeIncome = toNumber(e.target.value);
+      updateRunningEstimate();
+    };
+  }
 
-    if (back) {
-      back.onclick = () => {
-        state.currentStep = 4;
-        renderCurrentStep();
-      };
-    }
+  if (coopEarningsOffset) {
+    coopEarningsOffset.oninput = e => {
+      state.coopEarningsOffset = toNumber(e.target.value);
+      updateRunningEstimate();
+    };
+  }
 
-    if (downloadBtn) {
-      downloadBtn.onclick = async () => {
-        try {
-          calculateEstimate();
+  if (familySupport) {
+    familySupport.oninput = e => {
+      state.familySupport = toNumber(e.target.value);
+      updateRunningEstimate();
+    };
+  }
 
-          if (!state.fullName.trim()) {
-            alert("Please enter your full name.");
-            return;
-          }
+  if (back) {
+    back.onclick = () => {
+      state.currentStep = 2;
+      renderCurrentStep();
+    };
+  }
 
-          if (!state.email.trim()) {
-            alert("Please enter your email address.");
-            return;
-          }
+  if (next) {
+    next.onclick = () => {
+      state.currentStep = 4;
+      renderCurrentStep();
+    };
+  }
+}
 
-          await generateEstimatePDF();
-        } catch (error) {
-          console.error("PDF generation failed:", error);
-          alert("PDF download failed. Please refresh and try again.");
+function bindStep4Events() {
+  if (state.currentStep !== 4) return;
+
+  const housingType = document.getElementById("housingType");
+  const residence = document.getElementById("residence");
+  const mealPlan = document.getElementById("mealPlan");
+  const currentOffCampusRent = document.getElementById("currentOffCampusRent");
+  const currentOffCampusFood = document.getElementById("currentOffCampusFood");
+  const futureMealPlanInterest = document.getElementById("futureMealPlanInterest");
+  const back = document.getElementById("backStep4");
+  const next = document.getElementById("nextStep4");
+
+  if (futureMealPlanInterest) {
+    futureMealPlanInterest.onchange = e => {
+      state.futureMealPlanInterest = e.target.value;
+      updateRunningEstimate();
+    };
+  }
+
+  if (housingType) {
+    housingType.onchange = e => {
+      state.housingType = e.target.value;
+
+      if (state.housingType !== "OnCampus") {
+        state.residence = "";
+        state.mealPlan = "";
+      }
+
+      if (state.housingType !== "OffCampus") {
+        state.currentOffCampusRent = 0;
+        state.currentOffCampusFood = 0;
+      }
+
+      renderCurrentStep();
+    };
+  }
+
+  if (residence) {
+    residence.onchange = e => {
+      state.residence = e.target.value;
+      updateRunningEstimate();
+    };
+  }
+
+  if (mealPlan) {
+    mealPlan.onchange = e => {
+      state.mealPlan = e.target.value;
+      updateRunningEstimate();
+    };
+  }
+
+  if (currentOffCampusRent) {
+    currentOffCampusRent.oninput = e => {
+      state.currentOffCampusRent = toNumber(e.target.value);
+      updateRunningEstimate();
+    };
+  }
+
+  if (currentOffCampusFood) {
+    currentOffCampusFood.oninput = e => {
+      state.currentOffCampusFood = toNumber(e.target.value);
+      updateRunningEstimate();
+    };
+  }
+
+  if (back) {
+    back.onclick = () => {
+      state.currentStep = 3;
+      renderCurrentStep();
+    };
+  }
+
+  if (next) {
+    next.onclick = () => {
+      if (state.studentPhase !== "future") {
+        if (state.housingType === "OnCampus") {
+          if (!state.residence) return alert("Please select residence.");
+          if (!state.mealPlan) return alert("Please select meal plan.");
         }
-      };
-    }
 
-    if (emailBtn) {
-      emailBtn.onclick = () => {
+        if (state.housingType === "OffCampus") {
+          if (toNumber(state.currentOffCampusRent) <= 0) return alert("Please enter your yearly rent.");
+          if (toNumber(state.currentOffCampusFood) < 0) return alert("Please enter a valid yearly food expense.");
+        }
+      }
+
+      calculateEstimate();
+      state.currentStep = 5;
+      renderCurrentStep();
+    };
+  }
+}
+
+function bindStep5Events() {
+  if (state.currentStep !== 5) return;
+
+  const fullName = document.getElementById("fullName");
+  const email = document.getElementById("email");
+  const back = document.getElementById("backStep5");
+  const downloadBtn = document.getElementById("downloadEstimateBtn");
+  const emailBtn = document.getElementById("emailEstimateBtn");
+
+  if (fullName) {
+    fullName.oninput = e => {
+      state.fullName = e.target.value;
+    };
+  }
+
+  if (email) {
+    email.oninput = e => {
+      state.email = e.target.value;
+    };
+  }
+
+  if (back) {
+    back.onclick = () => {
+      state.currentStep = 4;
+      renderCurrentStep();
+    };
+  }
+
+  if (downloadBtn) {
+    downloadBtn.onclick = async () => {
+      try {
+        calculateEstimate();
+
         if (!state.fullName.trim()) return alert("Please enter your full name.");
         if (!state.email.trim()) return alert("Please enter your email address.");
-        alert("Email flow can be wired next.");
-      };
-    }
+
+        await generateEstimatePDF();
+      } catch (error) {
+        console.error("PDF generation failed:", error);
+        alert("PDF download failed. Please refresh and try again.");
+      }
+    };
   }
+
+  if (emailBtn) {
+    emailBtn.onclick = () => {
+      if (!state.fullName.trim()) return alert("Please enter your full name.");
+      if (!state.email.trim()) return alert("Please enter your email address.");
+      alert("Email flow can be wired next.");
+    };
+  }
+}
+
+function resetProgramPathState() {
+  state.campus = "";
+  state.cohortYear = "";
+  state.program = "";
+  state.country = "";
+  state.coopInterest = "No";
+  state.includeCoop = false;
+  state.matchedTuitionRecord = null;
+  state.housingType = "None";
+  state.residence = "";
+  state.mealPlan = "";
+  state.currentOffCampusRent = 0;
+  state.currentOffCampusFood = 0;
+}
+
+function resetFundingSelections() {
+  state.selectedScholarshipKeys = [];
+  state.scholarshipOffset = 0;
+  state.partTimeIncome = 0;
+  state.coopEarningsOffset = 0;
+  state.familySupport = 0;
 }
 
 function updateRunningEstimate() {
@@ -1241,82 +1251,63 @@ function emptyResult() {
   };
 }
 
+function getTuitionArray() {
+  if (!state.data) return [];
+  return state.level === "UG" ? (state.data.UG_Tuition || []) : (state.data.GR_Tuition || []);
+}
+
+function getFilteredTuitionRows({ includeCampus = false, includeProgram = false, includeCohortForCurrent = true } = {}) {
+  return getTuitionArray().filter(row => {
+    const residencyMatch = normalize(row.Residency) === normalize(state.residencyType);
+
+    const provinceValue = normalize(row.Province);
+    const provinceMatch =
+      state.residencyType === "International"
+        ? provinceValue === "INT"
+        : !state.province || provinceValue === normalize(state.province);
+
+    const campusMatch = includeCampus ? normalize(row.Campus) === normalize(state.campus) : true;
+    const programMatch = includeProgram ? normalize(row.Program) === normalize(state.program) : true;
+
+    const cohortMatch =
+      state.studentPhase === "current" && includeCohortForCurrent
+        ? !state.cohortYear || normalize(row.CohortYear) === normalize(state.cohortYear)
+        : true;
+
+    return residencyMatch && provinceMatch && campusMatch && programMatch && cohortMatch;
+  });
+}
+
 function getAvailableCampuses() {
   return [...new Set(
-    getTuitionArray()
-      .filter(row => {
-        const residencyMatch = normalize(row.Residency) === normalize(state.residencyType);
-        const provinceMatch =
-          state.residencyType === "International"
-            ? normalize(row.Province) === "INT"
-            : !state.province || normalize(row.Province) === normalize(state.province);
-        return residencyMatch && provinceMatch;
-      })
+    getFilteredTuitionRows()
       .map(row => normalize(row.Campus))
       .filter(Boolean)
-  )];
+  )].sort((a, b) => a.localeCompare(b));
 }
 
 function getAvailableCohortYears() {
-  const rows = getTuitionArray().filter(row => {
-    const residencyMatch = normalize(row.Residency) === normalize(state.residencyType);
-    const provinceMatch =
-      state.residencyType === "International"
-        ? normalize(row.Province) === "INT"
-        : !state.province || normalize(row.Province) === normalize(state.province);
-
-    return residencyMatch && provinceMatch;
-  });
+  const rows = getFilteredTuitionRows();
 
   if (state.studentPhase === "future") {
-    const endYears = rows
-      .map(row => {
-        const cohort = normalize(row.CohortYear);
-        const match = cohort.match(/(\d{4})\s*-\s*(\d{4})/);
-        return match ? Number(match[2]) : 0;
-      })
-      .filter(Boolean);
+    const years = rows
+      .map(row => parseCohortRange(normalize(row.CohortYear)))
+      .filter(Boolean)
+      .map(range => range.end);
 
-    const latestYear = endYears.length ? Math.max(...endYears) : new Date().getFullYear();
+    const latestEnd = years.length ? Math.max(...years) : new Date().getFullYear();
 
-    return Array.from({ length: 7 }, (_, i) => String(latestYear + i));
+    return Array.from({ length: 7 }, (_, i) => String(latestEnd + i));
   }
 
   return [...new Set(
-    rows
-      .map(row => normalize(row.CohortYear))
-      .filter(Boolean)
-  )];
+    rows.map(row => normalize(row.CohortYear)).filter(Boolean)
+  )].sort((a, b) => compareCohortDesc(a, b));
 }
 
 function getLatestCurrentCohortYear() {
-  const rows = getTuitionArray().filter(row => {
-    const residencyMatch = normalize(row.Residency) === normalize(state.residencyType);
-    const provinceMatch =
-      state.residencyType === "International"
-        ? normalize(row.Province) === "INT"
-        : !state.province || normalize(row.Province) === normalize(state.province);
-
-    return residencyMatch && provinceMatch;
-  });
-
-  const cohortYears = [...new Set(
-    rows.map(row => normalize(row.CohortYear)).filter(Boolean)
-  )];
-
-  if (!cohortYears.length) return "";
-
-  const sorted = cohortYears.sort((a, b) => {
-    const aMatch = a.match(/(\d{4})\s*-\s*(\d{4})/);
-    const bMatch = b.match(/(\d{4})\s*-\s*(\d{4})/);
-
-    const aEnd = aMatch ? Number(aMatch[2]) : 0;
-    const bEnd = bMatch ? Number(bMatch[2]) : 0;
-
-    return bEnd - aEnd;
-  });
-
-  return sorted[0] || "";
+  const cohortYears = getAvailableCohortYears();
+  return cohortYears[0] || "";
 }
 
 function getAvailableCountries() {
@@ -1325,6 +1316,66 @@ function getAvailableCountries() {
       .map(item => normalize(item.Country))
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b));
+}
+
+function getAvailablePrograms() {
+  return [...new Set(
+    getFilteredTuitionRows({ includeCampus: !!state.campus })
+      .map(row => normalize(row.Program))
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
+}
+
+function parseCohortRange(value) {
+  const text = normalize(value);
+  const match = text.match(/(\d{4})\s*-\s*(\d{4})/);
+  if (!match) return null;
+  return {
+    start: Number(match[1]),
+    end: Number(match[2]),
+    raw: text
+  };
+}
+
+function compareCohortDesc(a, b) {
+  const ra = parseCohortRange(a);
+  const rb = parseCohortRange(b);
+  const ae = ra ? ra.end : 0;
+  const be = rb ? rb.end : 0;
+  return be - ae;
+}
+
+function matchTuitionRecord() {
+  const rows = getFilteredTuitionRows({
+    includeCampus: true,
+    includeProgram: true,
+    includeCohortForCurrent: true
+  });
+
+  if (!rows.length) {
+    state.matchedTuitionRecord = null;
+    return;
+  }
+
+  if (state.studentPhase === "current") {
+    state.matchedTuitionRecord = rows[0] || null;
+    return;
+  }
+
+  const sorted = [...rows].sort((a, b) => compareCohortDesc(normalize(a.CohortYear), normalize(b.CohortYear)));
+
+  const targetYear = Number(state.cohortYear);
+  if (!targetYear) {
+    state.matchedTuitionRecord = sorted[0] || null;
+    return;
+  }
+
+  const exactOrNearest = sorted.find(row => {
+    const range = parseCohortRange(row.CohortYear);
+    return range ? range.end === targetYear || range.start === targetYear : false;
+  });
+
+  state.matchedTuitionRecord = exactOrNearest || sorted[0] || null;
 }
 
 function getScholarshipOptions() {
@@ -1342,7 +1393,7 @@ function getScholarshipOptions() {
 function extractMoneyValues(text) {
   const cleaned = String(text || "").replace(/,/g, "");
   const matches = cleaned.match(/(\d+(\.\d+)?)/g);
-  if (!matches || !matches.length) return [];
+  if (!matches) return [];
   return matches.map(Number).filter(v => !isNaN(v));
 }
 
@@ -1366,13 +1417,8 @@ function getScholarshipYearlyValue(item) {
 
   const maxAmount = Math.max(...amountValues);
 
-  if (combined.includes("over 4 years")) {
-    return Math.round(maxAmount / 4);
-  }
-
-  if (combined.includes("total")) {
-    return Math.round(maxAmount / 4);
-  }
+  if (combined.includes("over 4 years")) return Math.round(maxAmount / 4);
+  if (combined.includes("total")) return Math.round(maxAmount / 4);
 
   return maxAmount;
 }
@@ -1387,90 +1433,28 @@ function getSelectedScholarshipTotal() {
   }, 0);
 }
 
-function getAvailablePrograms() {
-  return [...new Set(
-    getTuitionArray()
-      .filter(row => {
-        const residencyMatch = normalize(row.Residency) === normalize(state.residencyType);
-        const provinceMatch =
-          state.residencyType === "International"
-            ? normalize(row.Province) === "INT"
-            : !state.province || normalize(row.Province) === normalize(state.province);
-
-        const campusMatch =
-          !state.campus || normalize(row.Campus) === normalize(state.campus);
-
-        const cohortMatch =
-          state.studentPhase === "future"
-            ? true
-            : !state.cohortYear || normalize(row.CohortYear) === normalize(state.cohortYear);
-
-        return residencyMatch && provinceMatch && campusMatch && cohortMatch;
-      })
-      .map(row => normalize(row.Program))
-      .filter(Boolean)
-  )];
-}
-
-function getTuitionArray() {
-  if (!state.data) return [];
-  return state.level === "UG" ? (state.data.UG_Tuition || []) : (state.data.GR_Tuition || []);
-}
-
-function matchTuitionRecord() {
-  const rows = getTuitionArray();
-
-  let filtered = rows.filter(row => {
-    const residencyMatch = normalize(row.Residency) === normalize(state.residencyType);
-    const campusMatch = normalize(row.Campus) === normalize(state.campus);
-    const programMatch = normalize(row.Program) === normalize(state.program);
-    const cohortMatch =
-      state.studentPhase === "future"
-        ? true
-        : !state.cohortYear || normalize(row.CohortYear) === normalize(state.cohortYear);
-
-    return residencyMatch && campusMatch && programMatch && cohortMatch;
-  });
-
-  if (state.residencyType === "Domestic") {
-    filtered = filtered.filter(row => normalize(row.Province) === normalize(state.province));
-  }
-
-  if (state.residencyType === "International") {
-    filtered = filtered.filter(row => normalize(row.Province) === "INT");
-  }
-
-  state.matchedTuitionRecord = filtered[0] || null;
-}
-
 function getTuitionCosts() {
   const row = state.matchedTuitionRecord;
   if (!row) {
-    return {
-      items: [],
-      low: 0,
-      high: 0
-    };
+    return { items: [], low: 0, high: 0 };
   }
 
   const fallTuition = toNumber(row.FallTuition);
   const winterTuition = toNumber(row.WinterTuition);
 
-  const fallTotal = toNumber(row.FallTuition_Compulsory);
-  const winterTotal = toNumber(row.WinterTuition_Compulsory);
-
-  const buffer = 1000;
+  const fallTotal = Math.max(fallTuition, toNumber(row.FallTuition_Compulsory));
+  const winterTotal = Math.max(winterTuition, toNumber(row.WinterTuition_Compulsory));
 
   const items = [
     {
-      label: "Fall tuition estimate",
+      label: "Fall tuition and fee estimate",
       low: fallTuition,
-      high: fallTotal + buffer
+      high: fallTotal
     },
     {
-      label: "Winter tuition estimate",
+      label: "Winter tuition and fee estimate",
       low: winterTuition,
-      high: winterTotal + buffer
+      high: winterTotal
     }
   ];
 
@@ -1481,12 +1465,66 @@ function getTuitionCosts() {
   };
 }
 
+function getOnCampusResidenceOptions() {
+  return (state.data?.["On_campus_Living_Costs"] || [])
+    .map(item => {
+      const area = normalize(readField(item, ["ResidenceArea", "Residence Area"]));
+      const room = normalize(readField(item, ["RoomType", "Room Type"]));
+      const cost = toNumber(readField(item, ["Cost"]));
+      const deposit = toNumber(readField(item, ["Deposit"]));
+      const total = cost + deposit;
+
+      if (!area && !room) return null;
+
+      return {
+        value: `${area} | ${room}`,
+        label: `${area} - ${room} (${formatMoney(total)}/year)`
+      };
+    })
+    .filter(Boolean);
+}
+
+function getMealPlanOptions() {
+  return (state.data?.["Meal_Plan"] || [])
+    .map(item => {
+      const size = normalize(readField(item, ["Meal Plan Size", "MealPlanSize"]));
+      const total = toNumber(readField(item, ["Total cost per year", "TotalCostPerYear"]));
+
+      if (!size) return null;
+
+      return {
+        value: size,
+        label: `${size} (${formatMoney(total)}/year)`
+      };
+    })
+    .filter(Boolean);
+}
+
 function getLivingCosts() {
   const items = [];
   let low = 0;
   let high = 0;
 
-  if (!state.housingType || state.housingType === "None") {
+  if (state.housingType === "None") {
+    if (state.studentPhase === "future" && state.futureMealPlanInterest === "Yes") {
+      const mealPlans = state.data?.["Meal_Plan"] || [];
+      const totals = mealPlans
+        .map(item => toNumber(readField(item, ["Total cost per year", "TotalCostPerYear"])))
+        .filter(v => v > 0);
+
+      if (totals.length) {
+        const mealLow = Math.min(...totals);
+        const mealHigh = Math.max(...totals);
+        items.push({
+          label: "Yearly meal plan estimate",
+          low: mealLow,
+          high: mealHigh
+        });
+        low += mealLow;
+        high += mealHigh;
+      }
+    }
+
     return { items, low, high };
   }
 
@@ -1494,10 +1532,9 @@ function getLivingCosts() {
 
   if (isFutureStudent) {
     if (state.housingType === "OnCampus") {
-      const rows = state.data["On_campus_Living_Costs"] || [];
-
+      const rows = state.data?.["On_campus_Living_Costs"] || [];
       const totals = rows
-        .map(item => toNumber(item.Cost) + toNumber(item.Deposit))
+        .map(item => toNumber(readField(item, ["Cost"])) + toNumber(readField(item, ["Deposit"])))
         .filter(v => v > 0);
 
       if (totals.length) {
@@ -1516,16 +1553,32 @@ function getLivingCosts() {
     }
 
     if (state.housingType === "OffCampus") {
-      const rows = state.data["Off_campus_Living_Costs"] || [];
+      const rows = state.data?.["Off_campus_Living_Costs"] || [];
 
       const groupedByType = {};
       rows.forEach(item => {
-        const type = normalize(item["RoomType                "]);
-        const total = toNumber(item[" TotalTermCost"]);
-        if (!type || !total) return;
+        const type = normalize(
+          readField(item, [
+            "RoomType                ",
+            "RoomType",
+            "Room Type",
+            "Accommodation Type",
+            "Type"
+          ])
+        );
 
-        if (!groupedByType[type]) groupedByType[type] = 0;
-        groupedByType[type] += total;
+        const total = toNumber(
+          readField(item, [
+            " TotalTermCost",
+            "TotalTermCost",
+            "Total Term Cost",
+            "Yearly Cost",
+            "Cost"
+          ])
+        );
+
+        if (!type || total <= 0) return;
+        groupedByType[type] = (groupedByType[type] || 0) + total;
       });
 
       const yearlyTotals = Object.values(groupedByType).filter(v => v > 0);
@@ -1546,9 +1599,9 @@ function getLivingCosts() {
     }
 
     if (state.futureMealPlanInterest === "Yes") {
-      const mealPlans = state.data["Meal_Plan"] || [];
+      const mealPlans = state.data?.["Meal_Plan"] || [];
       const totals = mealPlans
-        .map(item => toNumber(item["Total cost per year"]))
+        .map(item => toNumber(readField(item, ["Total cost per year", "TotalCostPerYear"])))
         .filter(v => v > 0);
 
       if (totals.length) {
@@ -1570,43 +1623,51 @@ function getLivingCosts() {
   }
 
   if (state.housingType === "OnCampus") {
-    const residence = (state.data["On_campus_Living_Costs"] || []).find(item => {
-      const key = `${normalize(item.ResidenceArea)} | ${normalize(item.RoomType)}`;
-      return key === state.residence;
+    const residence = (state.data?.["On_campus_Living_Costs"] || []).find(item => {
+      const area = normalize(readField(item, ["ResidenceArea", "Residence Area"]));
+      const room = normalize(readField(item, ["RoomType", "Room Type"]));
+      return `${area} | ${room}` === state.residence;
     });
 
-    const meal = (state.data["Meal_Plan"] || []).find(item =>
-      normalize(item["Meal Plan Size"]) === normalize(state.mealPlan)
-    );
+    const meal = (state.data?.["Meal_Plan"] || []).find(item => {
+      const size = normalize(readField(item, ["Meal Plan Size", "MealPlanSize"]));
+      return size === normalize(state.mealPlan);
+    });
 
-    const residenceCost = residence ? toNumber(residence.Cost) + toNumber(residence.Deposit) : 0;
-    const mealCost = meal ? toNumber(meal["Total cost per year"]) : 0;
-    const total = residenceCost + mealCost;
+    const residenceCost = residence
+      ? toNumber(readField(residence, ["Cost"])) + toNumber(readField(residence, ["Deposit"]))
+      : 0;
+
+    const mealCost = meal
+      ? toNumber(readField(meal, ["Total cost per year", "TotalCostPerYear"]))
+      : 0;
 
     if (residence) {
+      const area = normalize(readField(residence, ["ResidenceArea", "Residence Area"]));
+      const room = normalize(readField(residence, ["RoomType", "Room Type"]));
       items.push({
-        label: `Residence: ${normalize(residence.ResidenceArea)} - ${normalize(residence.RoomType)}`,
+        label: `Residence: ${area} - ${room}`,
         low: residenceCost,
-        high: residenceCost + 1000
+        high: residenceCost
       });
     }
 
     if (meal) {
+      const size = normalize(readField(meal, ["Meal Plan Size", "MealPlanSize"]));
       items.push({
-        label: `Meal plan: ${normalize(meal["Meal Plan Size"])}`,
+        label: `Meal plan: ${size}`,
         low: mealCost,
         high: mealCost
       });
     }
 
-    low = total;
-    high = total + 1000;
+    low = items.reduce((sum, item) => sum + item.low, 0);
+    high = items.reduce((sum, item) => sum + item.high, 0);
   }
 
   if (state.housingType === "OffCampus") {
     const rent = toNumber(state.currentOffCampusRent);
     const food = toNumber(state.currentOffCampusFood);
-    const total = rent + food;
 
     if (rent > 0) {
       items.push({
@@ -1624,8 +1685,8 @@ function getLivingCosts() {
       });
     }
 
-    low = total;
-    high = total;
+    low = items.reduce((sum, item) => sum + item.low, 0);
+    high = items.reduce((sum, item) => sum + item.high, 0);
   }
 
   return { items, low, high };
@@ -1635,7 +1696,7 @@ function getExtraCosts() {
   const items = [];
 
   if (state.includeBooks) {
-    const value = parseAmountFromText(state.data?.Textbooks?.[0]?.Txtbooks || "");
+    const value = parseAmountFromText(readField(state.data?.Textbooks?.[0] || {}, ["Txtbooks", "Textbooks"]));
     items.push({
       label: "Textbooks",
       low: value,
@@ -1644,7 +1705,7 @@ function getExtraCosts() {
   }
 
   if (state.includePersonal) {
-    const value = parseAmountFromText(state.data?.["Personal Expenses"]?.[0]?.["Personal Expenses"] || "");
+    const value = parseAmountFromText(readField(state.data?.["Personal Expenses"]?.[0] || {}, ["Personal Expenses"]));
     items.push({
       label: "Personal expenses",
       low: value,
@@ -1652,8 +1713,8 @@ function getExtraCosts() {
     });
   }
 
-  if (state.includeCoop) {
-    const value = parseAmountFromText(state.data?.["Co-op Cost"]?.[0]?.["Co-op Cost"] || "");
+  if (state.includeCoop && state.coopInterest === "Yes") {
+    const value = parseAmountFromText(readField(state.data?.["Co-op Cost"]?.[0] || {}, ["Co-op Cost"]));
     items.push({
       label: "Co-op fee estimate",
       low: value,
@@ -1662,7 +1723,7 @@ function getExtraCosts() {
   }
 
   if (state.residencyType === "International") {
-    const value = parseAmountFromText(state.data?.["Health Insurance Int"]?.[0]?.["Health Insurance"] || "");
+    const value = parseAmountFromText(readField(state.data?.["Health Insurance Int"]?.[0] || {}, ["Health Insurance"]));
     items.push({
       label: "Mandatory health insurance",
       low: value,
@@ -1686,6 +1747,8 @@ function getOffsets() {
   }
 
   const items = [];
+
+  state.scholarshipOffset = getSelectedScholarshipTotal();
 
   if (state.scholarshipOffset > 0) {
     items.push({ label: "Scholarships and bursaries", value: state.scholarshipOffset });
@@ -1746,18 +1809,21 @@ function renderBreakdownRows(title, items, isOffset = false) {
   return rows;
 }
 
-function parseRangeFromText(text) {
-  const nums = String(text || "").replace(/,/g, "").match(/(\d+(\.\d+)?)/g);
-  if (!nums || !nums.length) return { min: 0, mid: 0, max: 0 };
-
-  if (nums.length === 1) {
-    const val = Number(nums[0]) || 0;
-    return { min: val, mid: val, max: val };
+function readField(obj, keys = []) {
+  if (!obj || typeof obj !== "object") return "";
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      return obj[key];
+    }
   }
 
-  const min = Number(nums[0]) || 0;
-  const max = Number(nums[1]) || min;
-  return { min, mid: Math.round((min + max) / 2), max };
+  const normalizedKeys = Object.keys(obj);
+  for (const desired of keys) {
+    const match = normalizedKeys.find(k => normalize(k) === normalize(desired));
+    if (match) return obj[match];
+  }
+
+  return "";
 }
 
 function normalize(value) {
@@ -1928,7 +1994,7 @@ function finishEstimatePDF(doc, startY = 24) {
   doc.text(state.campus || "N/A", 138, line1);
   doc.text(state.cohortYear || "N/A", 138, line2);
   doc.text(state.housingType || "None", 138, line3);
-  doc.text(state.mealPlan || "None", 138, line4);
+  doc.text(state.mealPlan || (state.futureMealPlanInterest === "Yes" ? "Estimated" : "None"), 138, line4);
 
   y += 52;
 
