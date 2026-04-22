@@ -1,0 +1,1470 @@
+﻿{
+    "UG_Tuition": [
+        {
+            "Program": "Regular Programs (ATP, BA, BAS, BASc, BMATH, BSAG, BSC, BSES, BBRM, BIESP, BOH, DTM)",
+            "Residency": "Domestic",
+            "Province": "ON",
+            "Campus": "University of Guelph",
+            "CohortYear": "2024-2025",
+            "Tuition": "3045.46",
+            "FallCompulsoryFees": "1005.29",
+            "WinterCompulsoryFees": "660.22",
+            "SummerCompulsoryFees": "638.03",
+            "FallTuition": "3045.46",
+            "WinterTuition": "3045.46",
+            "SummerTuition": "3045.46",
+            "FallTuition_Compulsory": "4050.75",
+            "WinterTuition_Compulsory": "3705.68",
+            "SummerTuition_Compulsory": "3683.49"
+        },
+        {
+            "Program": "Bachelor of Commerce (BCOM)",
+            "Residency": "Domestic",
+            "Province": "ON",
+            "Campus": "University of Guelph-Humber",
+            "CohortYear": "2024-2025",
+            "Tuition": "5179",
+            "FallCompulsoryFees": "1005.29",
+            "WinterCompulsoryFees": "660.22",
+            "SummerCompulsoryFees": "638.03",
+            "FallTuition": "5179",
+            "WinterTuition": "5179",
+            "SummerTuition": "5179",
+            "FallTuition_Compulsory": "6184.29",
+            "WinterTuition_Compulsory": "5839.22",
+            "SummerTuition_Compulsory": "5817.03"
+        },
+        {
+            "Program": "Bachelor of Computing (BCOMP)",
+            "Residency": "Domestic",
+            "Province": "ON",
+            "Campus": "Ridgetown Campus",
+            "CohortYear": "2024-2025",
+            "Tuition": "4255.26",
+            "FallCompulsoryFees": "1005.29",
+            "WinterCompulsoryFees": "660.22",
+            "SummerCompulsoryFees": "638.03",
+            "FallTuition": "4255.26",
+            "WinterTuition": "4255.26",
+            "SummerTuition": "4255.26",
+            "FallTuition_Compulsory": "5260.55",
+            "WinterTuition_Compulsory": "4915.48",
+            "SummerTuition_Compulsory": "4893.29"
+        },
+        {
+            "Program": "Bachelor of Engineering (BIO, ENV, WRE, ESC, UND)",
+            "Residency": "Domestic",
+            "Province": "Non-ON",
+            "Campus": "University of Guelph",
+            "CohortYear": "2024-2025",
+            "Tuition": "2370.07",
+            "FallCompulsoryFees": "666.06",
+            "WinterCompulsoryFees": "323.06",
+            "SummerCompulsoryFees": "357.12",
+            "FallTuition": "2370.07",
+            "WinterTuition": "2370.07",
+            "SummerTuition": "2370.07",
+            "FallTuition_Compulsory": "3036.13",
+            "WinterTuition_Compulsory": "2693.13",
+            "SummerTuition_Compulsory": "2727.19"
+        },
+        {
+            "Program": "Bachelor of Engineering (BME, COMP, MECH)",
+            "Residency": "Domestic",
+            "Province": "Non-ON",
+            "Campus": "University of Guelph-Humber",
+            "CohortYear": "2024-2025",
+            "Tuition": "2743.66",
+            "FallCompulsoryFees": "666.06",
+            "WinterCompulsoryFees": "323.06",
+            "SummerCompulsoryFees": "357.12",
+            "FallTuition": "2743.66",
+            "WinterTuition": "2743.66",
+            "SummerTuition": "2743.66",
+            "FallTuition_Compulsory": "3409.72",
+            "WinterTuition_Compulsory": "3066.72",
+            "SummerTuition_Compulsory": "3100.78"
+        },
+        {
+            "Program": "Bachelor of Landscape Architecture (BLA)",
+            "Residency": "Domestic",
+            "Province": "Non-ON",
+            "Campus": "Ridgetown Campus",
+            "CohortYear": "2024-2025",
+            "Tuition": "2247.21",
+            "FallCompulsoryFees": "666.06",
+            "WinterCompulsoryFees": "323.06",
+            "SummerCompulsoryFees": "357.12",
+            "FallTuition": "2247.21",
+            "WinterTuition": "2247.21",
+            "SummerTuition": "2247.21",
+            "FallTuition_Compulsory": "2913.27",
+            "WinterTuition_Compulsory": "2570.27",
+            "SummerTuition_Compulsory": "2604.33"
+        },
+        {
+            "Program": "Bachelor of Engineering (All majors)",
+            "Residency": "International",
+            "Province": "INT",
+            "Campus": "University of Guelph",
+            "CohortYear": "2024-2025",
+            "Tuition": "11241.25",
+            "FallCompulsoryFees": "666.06",
+            "WinterCompulsoryFees": "323.06",
+            "SummerCompulsoryFees": "357.12",
+            "FallTuition": "11241.25",
+            "WinterTuition": "11241.25",
+            "SummerTuition": "11241.25",
+            "FallTuition_Compulsory": "11907.31",
+            "WinterTuition_Compulsory": "11564.31",
+            "SummerTuition_Compulsory": "11598.37"
+        },
+        {
+            "Program": "Bachelor of Landscape Architecture (BLA)",
+            "Residency": "International",
+            "Province": "INT",
+            "Campus": "University of Guelph-Humber",
+            "CohortYear": "2024-2025",
+            "Tuition": "9891.53",
+            "FallCompulsoryFees": "666.06",
+            "WinterCompulsoryFees": "323.06",
+            "SummerCompulsoryFees": "357.12",
+            "FallTuition": "9891.53",
+            "WinterTuition": "9891.53",
+            "SummerTuition": "9891.53",
+            "FallTuition_Compulsory": "10557.59",
+            "WinterTuition_Compulsory": "10214.59",
+            "SummerTuition_Compulsory": "10248.65"
+        },
+        {
+            "Program": "Doctor of Veterinary Medicine (DVM)",
+            "Residency": "International",
+            "Province": "INT",
+            "Campus": "Ridgetown Campus",
+            "CohortYear": "2024-2025",
+            "Tuition": "18436.94",
+            "FallCompulsoryFees": "666.06",
+            "WinterCompulsoryFees": "323.06",
+            "SummerCompulsoryFees": "357.12",
+            "FallTuition": "18436.94",
+            "WinterTuition": "18436.94",
+            "SummerTuition": "18436.94",
+            "FallTuition_Compulsory": "19103",
+            "WinterTuition_Compulsory": "18760",
+            "SummerTuition_Compulsory": "18794.06"
+        }
+    ],
+    "GR_Tuition": [
+        {
+            "Program": "Doctoral",
+            "Residency": "Domestic",
+            "Province": "ON",
+            "Campus": "University of Guelph",
+            "CohortYear": "2024-2025",
+            "Tuition": "2330.69",
+            "FallCompulsoryFees": "971.75",
+            "WinterCompulsoryFees": "628.35",
+            "SummerCompulsoryFees": "618.67",
+            "FallTuition": "2330.69",
+            "WinterTuition": "2330.69",
+            "SummerTuition": "2330.69",
+            "FallTuition_Compulsory": "3302.44",
+            "WinterTuition_Compulsory": "2959.04",
+            "SummerTuition_Compulsory": "2949.36"
+        },
+        {
+            "Program": "Master of Public Health",
+            "Residency": "Domestic",
+            "Province": "ON",
+            "Campus": "University of Guelph-Humber",
+            "CohortYear": "2024-2025",
+            "Tuition": "1664.79",
+            "FallCompulsoryFees": "267.97",
+            "WinterCompulsoryFees": "267.85",
+            "SummerCompulsoryFees": "258.17",
+            "FallTuition": "1664.79",
+            "WinterTuition": "1664.79",
+            "SummerTuition": "1664.79",
+            "FallTuition_Compulsory": "1932.76",
+            "WinterTuition_Compulsory": "1932.64",
+            "SummerTuition_Compulsory": "1922.96"
+        },
+        {
+            "Program": "Master of Wildlife Biology",
+            "Residency": "Domestic",
+            "Province": "ON",
+            "Campus": "Ridgetown Campus",
+            "CohortYear": "2024-2025",
+            "Tuition": "4000",
+            "FallCompulsoryFees": "267.97",
+            "WinterCompulsoryFees": "267.85",
+            "SummerCompulsoryFees": "258.17",
+            "FallTuition": "4000",
+            "WinterTuition": "4000",
+            "SummerTuition": "4000",
+            "FallTuition_Compulsory": "4267.97",
+            "WinterTuition_Compulsory": "4267.85",
+            "SummerTuition_Compulsory": "4258.17"
+        },
+        {
+            "Program": "Doctoral",
+            "Residency": "International",
+            "Province": "INT",
+            "Campus": "University of Guelph",
+            "CohortYear": "2024-2025",
+            "Tuition": "6244.3",
+            "FallCompulsoryFees": "971.75",
+            "WinterCompulsoryFees": "628.35",
+            "SummerCompulsoryFees": "618.67",
+            "FallTuition": "6244.3",
+            "WinterTuition": "6244.3",
+            "SummerTuition": "6244.3",
+            "FallTuition_Compulsory": "7216.05",
+            "WinterTuition_Compulsory": "6872.65",
+            "SummerTuition_Compulsory": "6862.97"
+        },
+        {
+            "Program": "Master of Science in Management",
+            "Residency": "International",
+            "Province": "INT",
+            "Campus": "University of Guelph-Humber",
+            "CohortYear": "2024-2025",
+            "Tuition": "7210",
+            "FallCompulsoryFees": "267.97",
+            "WinterCompulsoryFees": "267.85",
+            "SummerCompulsoryFees": "258.17",
+            "FallTuition": "7210",
+            "WinterTuition": "7210",
+            "SummerTuition": "7210",
+            "FallTuition_Compulsory": "7477.97",
+            "WinterTuition_Compulsory": "7477.85",
+            "SummerTuition_Compulsory": "7468.17"
+        },
+        {
+            "Program": "Master of Wildlife Biology",
+            "Residency": "International",
+            "Province": "INT",
+            "Campus": "Ridgetown Campus",
+            "CohortYear": "2024-2025",
+            "Tuition": "7000",
+            "FallCompulsoryFees": "267.97",
+            "WinterCompulsoryFees": "267.85",
+            "SummerCompulsoryFees": "258.17",
+            "FallTuition": "7000",
+            "WinterTuition": "7000",
+            "SummerTuition": "7000",
+            "FallTuition_Compulsory": "7267.97",
+            "WinterTuition_Compulsory": "7267.85",
+            "SummerTuition_Compulsory": "7258.17"
+        }
+    ],
+    "Meal_Plan": [
+        {
+            "Meal Plan Size": "Minimum",
+            "Total cost per year": "5500",
+            "Semesterly cost (Fall)": "2750",
+            "Semesterly cost (Winter)": "2750"
+        },
+        {
+            "Meal Plan Size": "Light",
+            "Total cost per year": "6100",
+            "Semesterly cost (Fall)": "3050",
+            "Semesterly cost (Winter)": "3050"
+        },
+        {
+            "Meal Plan Size": "Full",
+            "Total cost per year": "6800",
+            "Semesterly cost (Fall)": "3400",
+            "Semesterly cost (Winter)": "3400"
+        },
+        {
+            "Meal Plan Size": "Plus",
+            "Total cost per year": "7200",
+            "Semesterly cost (Fall)": "3600",
+            "Semesterly cost (Winter)": "3600"
+        }
+    ],
+    "Off_campus_Living_Costs": [
+        {
+            "LivingType     ": "OffCampus ",
+            "RoomType                ": "1-bed Apartment  ",
+            "Term    ": "Fall ",
+            " Rent    ": "7200",
+            "Utilities    ": "360",
+            "Internet    ": "240",
+            "Food   ": "1600",
+            " TotalTermCost": "9400"
+        },
+        {
+            "LivingType     ": "OffCampus ",
+            "RoomType                ": "1-bed Apartment  ",
+            "Term    ": "Winter",
+            " Rent    ": "7200",
+            "Utilities    ": "360",
+            "Internet    ": "240",
+            "Food   ": "1600",
+            " TotalTermCost": "9400"
+        },
+        {
+            "LivingType     ": "OffCampus ",
+            "RoomType                ": "2-bed Apartment",
+            "Term    ": "Fall ",
+            " Rent    ": "8152",
+            "Utilities    ": "400",
+            "Internet    ": "240",
+            "Food   ": "1600",
+            " TotalTermCost": "10392"
+        },
+        {
+            "LivingType     ": "OffCampus ",
+            "RoomType                ": "2-bed Apartment",
+            "Term    ": "Winter",
+            " Rent    ": "8152",
+            "Utilities    ": "400",
+            "Internet    ": "240",
+            "Food   ": "1600",
+            " TotalTermCost": "10392"
+        },
+        {
+            "LivingType     ": "OffCampus ",
+            "RoomType                ": "Room in Shared House",
+            "Term    ": "Fall ",
+            " Rent    ": "3600",
+            "Utilities    ": "320",
+            "Internet    ": "240",
+            "Food   ": "1600",
+            " TotalTermCost": "5760"
+        },
+        {
+            "LivingType     ": "OffCampus ",
+            "RoomType                ": "Room in Shared House",
+            "Term    ": "Winter",
+            " Rent    ": "3600",
+            "Utilities    ": "320",
+            "Internet    ": "240",
+            "Food   ": "1600",
+            " TotalTermCost": "5760"
+        },
+        {
+            "LivingType     ": "OffCampus ",
+            "RoomType                ": "Studio Apartment  ",
+            "Term    ": "Fall ",
+            " Rent    ": "6000",
+            "Utilities    ": "380",
+            "Internet    ": "240",
+            "Food   ": "1600",
+            " TotalTermCost": "8220"
+        },
+        {
+            "LivingType     ": "OffCampus ",
+            "RoomType                ": "Studio Apartment  ",
+            "Term    ": "Winter",
+            " Rent    ": "6000",
+            "Utilities    ": "380",
+            "Internet    ": "240",
+            "Food   ": "1600",
+            " TotalTermCost": "8220"
+        }
+    ],
+    "On_campus_Living_Costs": [
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "East Residences",
+            "Deposit": "750",
+            "Fall Term": "4633",
+            "Winter Term": "3883",
+            "Cost": "9266"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "Gordon Hall ",
+            "Deposit": "750",
+            "Fall Term": "4946",
+            "Winter Term": "4196",
+            "Cost": "9892"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "Johnston Hall    ",
+            "Deposit": "750",
+            "Fall Term": "4365",
+            "Winter Term": "3615",
+            "Cost": "8730"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "Lambton Suite",
+            "Deposit": "750",
+            "Fall Term": "4290",
+            "Winter Term": "3540",
+            "Cost": "8580"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "Lennox & Addington",
+            "Deposit": "750",
+            "Fall Term": "4290",
+            "Winter Term": "3540",
+            "Cost": "8580"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "Maids Halls ",
+            "Deposit": "750",
+            "Fall Term": "4290",
+            "Winter Term": "3540",
+            "Cost": "8580"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "Mills",
+            "Deposit": "750",
+            "Fall Term": "4290",
+            "Winter Term": "3540",
+            "Cost": "8580"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "North Residence",
+            "Deposit": "750",
+            "Fall Term": "4290",
+            "Winter Term": "3540",
+            "Cost": "8580"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "South Residence",
+            "Deposit": "750",
+            "Fall Term": "4290",
+            "Winter Term": "3540",
+            "Cost": "8580"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "Watson",
+            "Deposit": "750",
+            "Fall Term": "4290",
+            "Winter Term": "3540",
+            "Cost": "8580"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Double Room",
+            "ResidenceArea": "West Village ",
+            "Deposit": "750",
+            "Fall Term": "5015",
+            "Winter Term": "4265",
+            "Cost": "10030"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "One-person Apartment",
+            "ResidenceArea": "North Residence",
+            "Deposit": "750",
+            "Fall Term": "5215",
+            "Winter Term": "4465",
+            "Cost": "10430"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "One-person Apartment",
+            "ResidenceArea": "South Residence",
+            "Deposit": "750",
+            "Fall Term": "5215",
+            "Winter Term": "4465",
+            "Cost": "10430"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "One-person Apartment",
+            "ResidenceArea": "West Village ",
+            "Deposit": "750",
+            "Fall Term": "5598",
+            "Winter Term": "4848",
+            "Cost": "11196"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Quad Room",
+            "ResidenceArea": "North Residence",
+            "Deposit": "750",
+            "Fall Term": "4037",
+            "Winter Term": "3287",
+            "Cost": "8074"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Quad Room",
+            "ResidenceArea": "South Residence",
+            "Deposit": "750",
+            "Fall Term": "4037",
+            "Winter Term": "3287",
+            "Cost": "8074"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "East Residences",
+            "Deposit": "750",
+            "Fall Term": "5250",
+            "Winter Term": "4500",
+            "Cost": "10500"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "East Village Townhouses",
+            "Deposit": "750",
+            "Fall Term": "5558",
+            "Winter Term": "4808",
+            "Cost": "11116"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "Johnston Hall",
+            "Deposit": "750",
+            "Fall Term": "5046",
+            "Winter Term": "4296",
+            "Cost": "10092"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "Lambton Suite",
+            "Deposit": "750",
+            "Fall Term": "5250",
+            "Winter Term": "4500",
+            "Cost": "10500"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "Lennox & Addington",
+            "Deposit": "750",
+            "Fall Term": "4946",
+            "Winter Term": "4196",
+            "Cost": "9892"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "Maids Halls",
+            "Deposit": "750",
+            "Fall Term": "4946",
+            "Winter Term": "4196",
+            "Cost": "9892"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "Mills",
+            "Deposit": "750",
+            "Fall Term": "4946",
+            "Winter Term": "4196",
+            "Cost": "9892"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "South Residence",
+            "Deposit": "750",
+            "Fall Term": "4946",
+            "Winter Term": "4196",
+            "Cost": "9892"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "University Houses",
+            "Deposit": "750",
+            "Fall Term": "5250",
+            "Winter Term": "4500",
+            "Cost": "10500"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "Watson ",
+            "Deposit": "750",
+            "Fall Term": "4946",
+            "Winter Term": "4196",
+            "Cost": "9892"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Single Room",
+            "ResidenceArea": "West Village ",
+            "Deposit": "750",
+            "Fall Term": "5250",
+            "Winter Term": "4500",
+            "Cost": "10500"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Small Single Room",
+            "ResidenceArea": "South Residence",
+            "Deposit": "750",
+            "Fall Term": "4300",
+            "Winter Term": "3550",
+            "Cost": "8600"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Triple Room",
+            "ResidenceArea": "North Residence",
+            "Deposit": "750",
+            "Fall Term": "5215",
+            "Winter Term": "4465",
+            "Cost": "10430"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Triple Room",
+            "ResidenceArea": "South Residence",
+            "Deposit": "750",
+            "Fall Term": "5215",
+            "Winter Term": "4465",
+            "Cost": "10430"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Triple Room",
+            "ResidenceArea": "North Residence",
+            "Deposit": "750",
+            "Fall Term": "3950",
+            "Winter Term": "3200",
+            "Cost": "7900"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Triple Room",
+            "ResidenceArea": "South Residence",
+            "Deposit": "750",
+            "Fall Term": "3950",
+            "Winter Term": "3200",
+            "Cost": "7900"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Triple Room",
+            "ResidenceArea": "Gordan Hall",
+            "Deposit": "750",
+            "Fall Term": "4239",
+            "Winter Term": "3489",
+            "Cost": "8478"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Two-bedroom Apartment",
+            "ResidenceArea": "North Residence",
+            "Deposit": "750",
+            "Fall Term": "5215",
+            "Winter Term": "4465",
+            "Cost": "10430"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Two-bedroom Apartment",
+            "ResidenceArea": "South Residence",
+            "Deposit": "750",
+            "Fall Term": "5215",
+            "Winter Term": "4465",
+            "Cost": "10430"
+        },
+        {
+            "LivingType": "OnCampus",
+            "RoomType": "Two-bedroom Apartment",
+            "ResidenceArea": "West Village ",
+            "Deposit": "750",
+            "Fall Term": "5215",
+            "Winter Term": "4465",
+            "Cost": "10430"
+        }
+    ],
+    "Country List": [
+        {
+            "Country": "Afghanistan"
+        },
+        {
+            "Country": "Albania"
+        },
+        {
+            "Country": "Algeria"
+        },
+        {
+            "Country": "Andorra"
+        },
+        {
+            "Country": "Angola"
+        },
+        {
+            "Country": "Antigua and Barbuda"
+        },
+        {
+            "Country": "Argentina"
+        },
+        {
+            "Country": "Armenia"
+        },
+        {
+            "Country": "Australia"
+        },
+        {
+            "Country": "Austria"
+        },
+        {
+            "Country": "Azerbaijan"
+        },
+        {
+            "Country": "Bahamas"
+        },
+        {
+            "Country": "Bahrain"
+        },
+        {
+            "Country": "Bangladesh"
+        },
+        {
+            "Country": "Barbados"
+        },
+        {
+            "Country": "Belarus"
+        },
+        {
+            "Country": "Belgium"
+        },
+        {
+            "Country": "Belize"
+        },
+        {
+            "Country": "Benin"
+        },
+        {
+            "Country": "Bhutan"
+        },
+        {
+            "Country": "Bolivia"
+        },
+        {
+            "Country": "Bosnia and Herzegovina"
+        },
+        {
+            "Country": "Botswana"
+        },
+        {
+            "Country": "Brazil"
+        },
+        {
+            "Country": "Brunei"
+        },
+        {
+            "Country": "Bulgaria"
+        },
+        {
+            "Country": "Burkina Faso"
+        },
+        {
+            "Country": "Burundi"
+        },
+        {
+            "Country": "Cabo Verde"
+        },
+        {
+            "Country": "Cambodia"
+        },
+        {
+            "Country": "Cameroon"
+        },
+        {
+            "Country": "Canada"
+        },
+        {
+            "Country": "Central African Republic"
+        },
+        {
+            "Country": "Chad"
+        },
+        {
+            "Country": "Chile"
+        },
+        {
+            "Country": "China"
+        },
+        {
+            "Country": "Colombia"
+        },
+        {
+            "Country": "Comoros"
+        },
+        {
+            "Country": "Congo (Democratic Republic of the)"
+        },
+        {
+            "Country": "Congo (Republic of the)"
+        },
+        {
+            "Country": "Costa Rica"
+        },
+        {
+            "Country": "Croatia"
+        },
+        {
+            "Country": "Cuba"
+        },
+        {
+            "Country": "Cyprus"
+        },
+        {
+            "Country": "Czechia"
+        },
+        {
+            "Country": "Denmark"
+        },
+        {
+            "Country": "Djibouti"
+        },
+        {
+            "Country": "Dominica"
+        },
+        {
+            "Country": "Dominican Republic"
+        },
+        {
+            "Country": "Ecuador"
+        },
+        {
+            "Country": "Egypt"
+        },
+        {
+            "Country": "El Salvador"
+        },
+        {
+            "Country": "Equatorial Guinea"
+        },
+        {
+            "Country": "Eritrea"
+        },
+        {
+            "Country": "Estonia"
+        },
+        {
+            "Country": "Eswatini"
+        },
+        {
+            "Country": "Ethiopia"
+        },
+        {
+            "Country": "Fiji"
+        },
+        {
+            "Country": "Finland"
+        },
+        {
+            "Country": "France"
+        },
+        {
+            "Country": "Gabon"
+        },
+        {
+            "Country": "Gambia"
+        },
+        {
+            "Country": "Georgia"
+        },
+        {
+            "Country": "Germany"
+        },
+        {
+            "Country": "Ghana"
+        },
+        {
+            "Country": "Greece"
+        },
+        {
+            "Country": "Grenada"
+        },
+        {
+            "Country": "Guatemala"
+        },
+        {
+            "Country": "Guinea"
+        },
+        {
+            "Country": "Guinea-Bissau"
+        },
+        {
+            "Country": "Guyana"
+        },
+        {
+            "Country": "Haiti"
+        },
+        {
+            "Country": "Holy See (Vatican City)"
+        },
+        {
+            "Country": "Honduras"
+        },
+        {
+            "Country": "Hungary"
+        },
+        {
+            "Country": "Iceland"
+        },
+        {
+            "Country": "India"
+        },
+        {
+            "Country": "Indonesia"
+        },
+        {
+            "Country": "Iran"
+        },
+        {
+            "Country": "Iraq"
+        },
+        {
+            "Country": "Ireland"
+        },
+        {
+            "Country": "Israel"
+        },
+        {
+            "Country": "Italy"
+        },
+        {
+            "Country": "Ivory Coast"
+        },
+        {
+            "Country": "Jamaica"
+        },
+        {
+            "Country": "Japan"
+        },
+        {
+            "Country": "Jordan"
+        },
+        {
+            "Country": "Kazakhstan"
+        },
+        {
+            "Country": "Kenya"
+        },
+        {
+            "Country": "Kiribati"
+        },
+        {
+            "Country": "Korea (North)"
+        },
+        {
+            "Country": "Korea (South)"
+        },
+        {
+            "Country": "Kuwait"
+        },
+        {
+            "Country": "Kyrgyzstan"
+        },
+        {
+            "Country": "Laos"
+        },
+        {
+            "Country": "Latvia"
+        },
+        {
+            "Country": "Lebanon"
+        },
+        {
+            "Country": "Lesotho"
+        },
+        {
+            "Country": "Liberia"
+        },
+        {
+            "Country": "Libya"
+        },
+        {
+            "Country": "Liechtenstein"
+        },
+        {
+            "Country": "Lithuania"
+        },
+        {
+            "Country": "Luxembourg"
+        },
+        {
+            "Country": "Madagascar"
+        },
+        {
+            "Country": "Malawi"
+        },
+        {
+            "Country": "Malaysia"
+        },
+        {
+            "Country": "Maldives"
+        },
+        {
+            "Country": "Mali"
+        },
+        {
+            "Country": "Malta"
+        },
+        {
+            "Country": "Marshall Islands"
+        },
+        {
+            "Country": "Mauritania"
+        },
+        {
+            "Country": "Mauritius"
+        },
+        {
+            "Country": "Mexico"
+        },
+        {
+            "Country": "Micronesia"
+        },
+        {
+            "Country": "Moldova"
+        },
+        {
+            "Country": "Monaco"
+        },
+        {
+            "Country": "Mongolia"
+        },
+        {
+            "Country": "Montenegro"
+        },
+        {
+            "Country": "Morocco"
+        },
+        {
+            "Country": "Mozambique"
+        },
+        {
+            "Country": "Myanmar"
+        },
+        {
+            "Country": "Namibia"
+        },
+        {
+            "Country": "Nauru"
+        },
+        {
+            "Country": "Nepal"
+        },
+        {
+            "Country": "Netherlands"
+        },
+        {
+            "Country": "New Zealand"
+        },
+        {
+            "Country": "Nicaragua"
+        },
+        {
+            "Country": "Niger"
+        },
+        {
+            "Country": "Nigeria"
+        },
+        {
+            "Country": "North Macedonia"
+        },
+        {
+            "Country": "Norway"
+        },
+        {
+            "Country": "Oman"
+        },
+        {
+            "Country": "Pakistan"
+        },
+        {
+            "Country": "Palestine"
+        },
+        {
+            "Country": "Palau"
+        },
+        {
+            "Country": "Panama"
+        },
+        {
+            "Country": "Papua New Guinea"
+        },
+        {
+            "Country": "Paraguay"
+        },
+        {
+            "Country": "Peru"
+        },
+        {
+            "Country": "Philippines"
+        },
+        {
+            "Country": "Poland"
+        },
+        {
+            "Country": "Portugal"
+        },
+        {
+            "Country": "Qatar"
+        },
+        {
+            "Country": "Romania"
+        },
+        {
+            "Country": "Russia"
+        },
+        {
+            "Country": "Rwanda"
+        },
+        {
+            "Country": "Saint Kitts and Nevis"
+        },
+        {
+            "Country": "Saint Lucia"
+        },
+        {
+            "Country": "Saint Vincent and the Grenadines"
+        },
+        {
+            "Country": "Samoa"
+        },
+        {
+            "Country": "San Marino"
+        },
+        {
+            "Country": "Sao Tome and Principe"
+        },
+        {
+            "Country": "Saudi Arabia"
+        },
+        {
+            "Country": "Senegal"
+        },
+        {
+            "Country": "Serbia"
+        },
+        {
+            "Country": "Seychelles"
+        },
+        {
+            "Country": "Sierra Leone"
+        },
+        {
+            "Country": "Singapore"
+        },
+        {
+            "Country": "Slovakia"
+        },
+        {
+            "Country": "Slovenia"
+        },
+        {
+            "Country": "Solomon Islands"
+        },
+        {
+            "Country": "Somalia"
+        },
+        {
+            "Country": "South Africa"
+        },
+        {
+            "Country": "South Sudan"
+        },
+        {
+            "Country": "Spain"
+        },
+        {
+            "Country": "Sri Lanka"
+        },
+        {
+            "Country": "Sudan"
+        },
+        {
+            "Country": "Suriname"
+        },
+        {
+            "Country": "Sweden"
+        },
+        {
+            "Country": "Switzerland"
+        },
+        {
+            "Country": "Syria"
+        },
+        {
+            "Country": "Taiwan"
+        },
+        {
+            "Country": "Tajikistan"
+        },
+        {
+            "Country": "Tanzania"
+        },
+        {
+            "Country": "Thailand"
+        },
+        {
+            "Country": "Timor-Leste"
+        },
+        {
+            "Country": "Togo"
+        },
+        {
+            "Country": "Tonga"
+        },
+        {
+            "Country": "Trinidad and Tobago"
+        },
+        {
+            "Country": "Tunisia"
+        },
+        {
+            "Country": "Turkey"
+        },
+        {
+            "Country": "Turkmenistan"
+        },
+        {
+            "Country": "Tuvalu"
+        },
+        {
+            "Country": "Uganda"
+        },
+        {
+            "Country": "Ukraine"
+        },
+        {
+            "Country": "United Arab Emirates"
+        },
+        {
+            "Country": "United Kingdom"
+        },
+        {
+            "Country": "United States"
+        },
+        {
+            "Country": "Uruguay"
+        },
+        {
+            "Country": "Uzbekistan"
+        },
+        {
+            "Country": "Vanuatu"
+        },
+        {
+            "Country": "Venezuela"
+        },
+        {
+            "Country": "Vietnam"
+        },
+        {
+            "Country": "Yemen"
+        },
+        {
+            "Country": "Zambia"
+        },
+        {
+            "Country": "Zimbabwe"
+        }
+    ],
+    "Co-op Cost": [
+        {
+            "Co-op Cost": "405 /semester",
+            "Coop Earnings": "500-2,500 /per week"
+        }
+    ],
+    "Health Insurance Int": [
+        {
+            "Health Insurance": "756 /yearly"
+        }
+    ],
+    "Personal Expenses": [
+        {
+            "Personal Expenses": "2500 /yearly"
+        }
+    ],
+    "Textbooks": [
+        {
+            "Txtbooks": "1,400 /yearly"
+        }
+    ],
+    "Scholarships for Int": [
+        {
+            "Award Name": "President's International Entrance Scholarship",
+            "Amount": "$2,000 - $7,500 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Entrance Scholarship",
+            "Notes": "Based on admission average"
+        },
+        {
+            "Award Name": "University International Scholarship",
+            "Amount": "$20,000 CAD total",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Renewable Scholarship",
+            "Notes": "$5,000 per year over 4 years"
+        },
+        {
+            "Award Name": "Dean's International Scholarship",
+            "Amount": "$10,000 CAD total",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Renewable Scholarship",
+            "Notes": "$2,500 per year over 4 years"
+        },
+        {
+            "Award Name": "Dr. Franco J. Vaccarino President’s Scholarship",
+            "Amount": "$42,500 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "Yes",
+            "Category": "Major Scholarship",
+            "Notes": "Includes guaranteed residence"
+        },
+        {
+            "Award Name": "International Transfer Scholarship",
+            "Amount": "$10,000 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Transfer Scholarship",
+            "Notes": "One-time award"
+        },
+        {
+            "Award Name": "Quinn Memorial Scholarship",
+            "Amount": "$2,000 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Scholarship",
+            "Notes": "Academic + references"
+        },
+        {
+            "Award Name": "Hardy International Student Scholarship",
+            "Amount": "$2,000 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Scholarship",
+            "Notes": "Priority: Haiti, Africa, then others"
+        },
+        {
+            "Award Name": "Fatemeh Haghighi International Scholarship",
+            "Amount": "$1,000 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Scholarship",
+            "Notes": "Based on academic review"
+        },
+        {
+            "Award Name": "OAC 1973 International Entrance Scholarship",
+            "Amount": "$1,000 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Scholarship",
+            "Notes": "Statement or recommendation considered"
+        },
+        {
+            "Award Name": "CSAHS Dean's International Scholarship",
+            "Amount": "$10,000 CAD total",
+            "Quantity / Availability": "Various awards",
+            "Application Required": "No",
+            "Category": "College Scholarship",
+            "Notes": "$2,500/year renewable"
+        },
+        {
+            "Award Name": "College of Arts Dean's International Scholarship",
+            "Amount": "Up to $10,000 CAD total",
+            "Quantity / Availability": "Several awards",
+            "Application Required": "No",
+            "Category": "College Scholarship",
+            "Notes": "$2,500/year renewable"
+        },
+        {
+            "Award Name": "Lang Dean's International Online Student Scholarship",
+            "Amount": "$15,000 CAD total",
+            "Quantity / Availability": "Several awards",
+            "Application Required": "No",
+            "Category": "College Scholarship",
+            "Notes": "Sport & Event Mgmt only"
+        }
+    ],
+    "Scholarships for Dom": [
+        {
+            "Award Name": "President's Scholarships",
+            "Amount": "$42,500 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "Yes",
+            "Category": "Scholarship",
+            "Notes": "Major entrance scholarship"
+        },
+        {
+            "Award Name": "Lincoln Alexander Chancellor's Scholarships",
+            "Amount": "$42,500 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "Yes",
+            "Category": "Scholarship",
+            "Notes": "Major entrance scholarship"
+        },
+        {
+            "Award Name": "Board of Governors' Scholarships",
+            "Amount": "$20,000 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Scholarship",
+            "Notes": "Automatic consideration"
+        },
+        {
+            "Award Name": "Entrance Scholarships",
+            "Amount": "$2,000 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Scholarship",
+            "Notes": "Admission average 95.0%+"
+        },
+        {
+            "Award Name": "Entrance Scholarships",
+            "Amount": "$1,000 CAD",
+            "Quantity / Availability": "Available",
+            "Application Required": "No",
+            "Category": "Scholarship",
+            "Notes": "Admission average 90.0% - 94.9%"
+        },
+        {
+            "Award Name": "Program-Specific Awards",
+            "Amount": "Varies",
+            "Quantity / Availability": "Hundreds available",
+            "Application Required": "Usually Yes",
+            "Category": "Scholarship / Award",
+            "Notes": "Searchable by program"
+        },
+        {
+            "Award Name": "Registrar's Entrance Bursaries",
+            "Amount": "$4,000 CAD",
+            "Quantity / Availability": "550 awards",
+            "Application Required": "Yes",
+            "Category": "Bursary",
+            "Notes": "Based on financial need"
+        },
+        {
+            "Award Name": "Accessibility Bursaries",
+            "Amount": "$14,000 CAD",
+            "Quantity / Availability": "200 awards",
+            "Application Required": "Yes",
+            "Category": "Bursary",
+            "Notes": "Accessibility support"
+        }
+    ]
+}
