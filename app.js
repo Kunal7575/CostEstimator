@@ -5,7 +5,9 @@ const state = {
   studentPhase: "",            // future | current
   residencyType: "",           // Domestic | International
   province: "",                // ON | Non-ON | INT
-
+  livingInCanada: "",
+  canadianCitizen: "",
+  permanentResident: "",
   level: "",                   // UG | GR
   campus: "",
   cohortYear: "",
@@ -35,7 +37,285 @@ const state = {
   email: "",
 
   matchedTuitionRecord: null,
-  result: null
+  result: null,
+
+  currencyCode: "",
+  currencyRate: null,
+  currencyLoading: false,
+  currencyError: "",
+  showStep2Error: false,
+  step2ErrorMessage: ""
+};
+
+// ======================
+// HELPER FUNCTIONS
+// ======================
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderAlert(title, message = "", color = "yellow") {
+  return `
+    <div class="uog-alert uog-alert-${color}">
+      <div class="uog-alert-title">
+        <span class="uog-alert-icon">!</span>
+        <span>${escapeHtml(title)}</span>
+      </div>
+      ${message ? `<div class="uog-alert-message">${escapeHtml(message)}</div>` : ""}
+    </div>
+  `;
+}
+
+// CSS for alerts (injected once)
+(function injectAlertStyles() {
+  const styleId = "uog-alert-styles";
+  if (document.getElementById(styleId)) return;
+  const style = document.createElement("style");
+  style.id = styleId;
+  style.textContent = `
+    .uog-alert {
+      border: 1px solid #d6d6d6;
+      background: #fff;
+      padding: 14px;
+      margin: 14px 0;
+    }
+    .uog-alert-title {
+      font-weight: 700;
+      padding: 12px 14px;
+      font-size: 15px;
+    }
+    .uog-alert-message {
+      padding: 12px 14px 4px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #2f3640;
+    }
+    .uog-alert-yellow .uog-alert-title {
+      background: #ffc72c;
+      color: #111;
+    }
+    .uog-alert-blue .uog-alert-title {
+      background: #3178b8;
+      color: #fff;
+    }
+    .uog-alert-green .uog-alert-title {
+      background: #2f8132;
+      color: #fff;
+    }
+    .uog-alert-red .uog-alert-title {
+      background: #e51937;
+      color: #fff;
+    }
+    .uog-alert-grey .uog-alert-title {
+      background: #d9d9d9;
+      color: #111;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
+const COUNTRY_CURRENCY = {
+  Afghanistan: "AFN",
+  Albania: "ALL",
+  Algeria: "DZD",
+  Andorra: "EUR",
+  Angola: "AOA",
+  "Antigua and Barbuda": "XCD",
+  Argentina: "ARS",
+  Armenia: "AMD",
+  Australia: "AUD",
+  Austria: "EUR",
+  Azerbaijan: "AZN",
+  Bahamas: "BSD",
+  Bahrain: "BHD",
+  Bangladesh: "BDT",
+  Barbados: "BBD",
+  Belarus: "BYN",
+  Belgium: "EUR",
+  Belize: "BZD",
+  Benin: "XOF",
+  Bhutan: "BTN",
+  Bolivia: "BOB",
+  "Bosnia and Herzegovina": "BAM",
+  Botswana: "BWP",
+  Brazil: "BRL",
+  Brunei: "BND",
+  Bulgaria: "BGN",
+  "Burkina Faso": "XOF",
+  Burundi: "BIF",
+  "Cabo Verde": "CVE",
+  Cambodia: "KHR",
+  Cameroon: "XAF",
+  Canada: "CAD",
+  "Central African Republic": "XAF",
+  Chad: "XAF",
+  Chile: "CLP",
+  China: "CNY",
+  Colombia: "COP",
+  Comoros: "KMF",
+  "Congo (Democratic Republic of the)": "CDF",
+  "Congo (Republic of the)": "XAF",
+  "Costa Rica": "CRC",
+  Croatia: "EUR",
+  Cuba: "CUP",
+  Cyprus: "EUR",
+  Czechia: "CZK",
+  Denmark: "DKK",
+  Djibouti: "DJF",
+  Dominica: "XCD",
+  "Dominican Republic": "DOP",
+  Ecuador: "USD",
+  Egypt: "EGP",
+  "El Salvador": "USD",
+  "Equatorial Guinea": "XAF",
+  Eritrea: "ERN",
+  Estonia: "EUR",
+  Eswatini: "SZL",
+  Ethiopia: "ETB",
+  Fiji: "FJD",
+  Finland: "EUR",
+  France: "EUR",
+  Gabon: "XAF",
+  Gambia: "GMD",
+  Georgia: "GEL",
+  Germany: "EUR",
+  Ghana: "GHS",
+  Greece: "EUR",
+  Grenada: "XCD",
+  Guatemala: "GTQ",
+  Guinea: "GNF",
+  "Guinea-Bissau": "XOF",
+  Guyana: "GYD",
+  Haiti: "HTG",
+  "Holy See (Vatican City)": "EUR",
+  Honduras: "HNL",
+  Hungary: "HUF",
+  Iceland: "ISK",
+  India: "INR",
+  Indonesia: "IDR",
+  Iran: "IRR",
+  Iraq: "IQD",
+  Ireland: "EUR",
+  Israel: "ILS",
+  Italy: "EUR",
+  "Ivory Coast": "XOF",
+  Jamaica: "JMD",
+  Japan: "JPY",
+  Jordan: "JOD",
+  Kazakhstan: "KZT",
+  Kenya: "KES",
+  Kiribati: "AUD",
+  "Korea (North)": "KPW",
+  "Korea (South)": "KRW",
+  Kuwait: "KWD",
+  Kyrgyzstan: "KGS",
+  Laos: "LAK",
+  Latvia: "EUR",
+  Lebanon: "LBP",
+  Lesotho: "LSL",
+  Liberia: "LRD",
+  Libya: "LYD",
+  Liechtenstein: "CHF",
+  Lithuania: "EUR",
+  Luxembourg: "EUR",
+  Madagascar: "MGA",
+  Malawi: "MWK",
+  Malaysia: "MYR",
+  Maldives: "MVR",
+  Mali: "XOF",
+  Malta: "EUR",
+  "Marshall Islands": "USD",
+  Mauritania: "MRU",
+  Mauritius: "MUR",
+  Mexico: "MXN",
+  Micronesia: "USD",
+  Moldova: "MDL",
+  Monaco: "EUR",
+  Mongolia: "MNT",
+  Montenegro: "EUR",
+  Morocco: "MAD",
+  Mozambique: "MZN",
+  Myanmar: "MMK",
+  Namibia: "NAD",
+  Nauru: "AUD",
+  Nepal: "NPR",
+  Netherlands: "EUR",
+  "New Zealand": "NZD",
+  Nicaragua: "NIO",
+  Niger: "XOF",
+  Nigeria: "NGN",
+  "North Macedonia": "MKD",
+  Norway: "NOK",
+  Oman: "OMR",
+  Pakistan: "PKR",
+  Palestine: "ILS",
+  Palau: "USD",
+  Panama: "USD",
+  "Papua New Guinea": "PGK",
+  Paraguay: "PYG",
+  Peru: "PEN",
+  Philippines: "PHP",
+  Poland: "PLN",
+  Portugal: "EUR",
+  Qatar: "QAR",
+  Romania: "RON",
+  Russia: "RUB",
+  Rwanda: "RWF",
+  "Saint Kitts and Nevis": "XCD",
+  "Saint Lucia": "XCD",
+  "Saint Vincent and the Grenadines": "XCD",
+  Samoa: "WST",
+  "San Marino": "EUR",
+  "Sao Tome and Principe": "STN",
+  "Saudi Arabia": "SAR",
+  Senegal: "XOF",
+  Serbia: "RSD",
+  Seychelles: "SCR",
+  "Sierra Leone": "SLE",
+  Singapore: "SGD",
+  Slovakia: "EUR",
+  Slovenia: "EUR",
+  "Solomon Islands": "SBD",
+  Somalia: "SOS",
+  "South Africa": "ZAR",
+  "South Sudan": "SSP",
+  Spain: "EUR",
+  "Sri Lanka": "LKR",
+  Sudan: "SDG",
+  Suriname: "SRD",
+  Sweden: "SEK",
+  Switzerland: "CHF",
+  Syria: "SYP",
+  Taiwan: "TWD",
+  Tajikistan: "TJS",
+  Tanzania: "TZS",
+  Thailand: "THB",
+  "Timor-Leste": "USD",
+  Togo: "XOF",
+  Tonga: "TOP",
+  "Trinidad and Tobago": "TTD",
+  Tunisia: "TND",
+  Turkey: "TRY",
+  Turkmenistan: "TMT",
+  Tuvalu: "AUD",
+  Uganda: "UGX",
+  Ukraine: "UAH",
+  "United Arab Emirates": "AED",
+  "United Kingdom": "GBP",
+  "United States": "USD",
+  Uruguay: "UYU",
+  Uzbekistan: "UZS",
+  Vanuatu: "VUV",
+  Venezuela: "VES",
+  Vietnam: "VND",
+  Yemen: "YER",
+  Zambia: "ZMW",
+  Zimbabwe: "ZWL"
 };
 
 document.addEventListener("DOMContentLoaded", init);
@@ -43,8 +323,23 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
   bindScrollTop();
   await loadData();
+  await loadSupportedCurrencies();
   calculateEstimate();
   renderCurrentStep();
+}
+
+let SUPPORTED_CURRENCIES = [];
+
+async function loadSupportedCurrencies() {
+  try {
+    const res = await fetch("https://api.frankfurter.dev/v1/currencies");
+    if (!res.ok) throw new Error("Could not load supported currencies.");
+    const data = await res.json();
+    SUPPORTED_CURRENCIES = Object.keys(data);
+  } catch (err) {
+    console.warn("Could not load supported currencies:", err);
+    SUPPORTED_CURRENCIES = [];
+  }
 }
 
 async function loadData() {
@@ -95,6 +390,21 @@ function setupWelcomeImage() {
   );
 }
 
+function deriveFutureResidency() {
+  if (state.studentPhase !== "future") return;
+
+  if (state.canadianCitizen === "Yes" || state.permanentResident === "Yes") {
+    state.residencyType = "Domestic";
+    state.province = "ON";
+    state.country = "";
+  }
+
+  if (state.canadianCitizen === "No" && state.permanentResident === "No") {
+    state.residencyType = "International";
+    state.province = "INT";
+  }
+}
+
 function updateChrome() {
   const stepTitles = {
     0: "Welcome",
@@ -135,8 +445,23 @@ function updateChrome() {
   const progressText = document.getElementById("progressInlineText");
 
   if (progressFill) progressFill.style.width = `${progressPct}%`;
-  if (progressText) progressText.textContent = `${Math.max(0, 100 - progressPct)}% left`;
+  if (progressText) progressText.textContent = `${progressPct}% complete`;
+  const gryphImg = document.getElementById("sidebarGryphImg");
+  const gryphText = document.getElementById("sidebarGryphText");
 
+  const gryphMap = {
+    0: { img: "gryph1.png", text: "Let’s get started" },
+    1: { img: "gryph1.png", text: "Build your profile" },
+    2: { img: "gryph2.png", text: "You’re making progress" },
+    3: { img: "gryph3.png", text: "Halfway there" },
+    4: { img: "gryph2.png", text: "Almost done" },
+    5: { img: "gryph4.png", text: "Your estimate is ready" }
+  };
+
+  const gryph = gryphMap[state.currentStep] || gryphMap[0];
+
+  if (gryphImg) gryphImg.src = `./${gryph.img}`;
+  if (gryphText) gryphText.textContent = gryph.text;
   const runningTotal = document.getElementById("topRunningTotal");
   if (runningTotal) {
     const low = state.result?.low || 0;
@@ -161,7 +486,25 @@ function updateChrome() {
     };
   });
 }
+function renderGryph(step) {
+  const gryphMap = {
+    1: { img: "gryph1.png", text: "Let’s get started" },
+    2: { img: "gryph2.png", text: "You’re making progress" },
+    3: { img: "gryph3.png", text: "Halfway there" },
+    4: { img: "gryph2.png", text: "Almost done" },
+    5: { img: "gryph4.png", text: "Your estimate is ready" }
+  };
 
+  const g = gryphMap[step];
+  if (!g) return "";
+
+  return `
+    <div class="gryph-assist">
+      <img src="./${g.img}" />
+      <p>${g.text}</p>
+    </div>
+  `;
+}
 function renderCurrentStep() {
   const container = document.getElementById("flowContainer");
   if (!container) return;
@@ -257,9 +600,14 @@ function renderStep1() {
         <h2 class="step-title">Who are you?</h2>
         <p class="step-description">Choose your student path and study type so we can build the right estimate.</p>
       </div>
+     
 
       <div class="step-content">
         <div class="form-stack">
+      
+
+        <div class="step-content">
+          <div class="form-stack">
           <div class="form-group">
             <label for="studentPhase">Student type</label>
             <select id="studentPhase" class="step-dropdown">
@@ -269,14 +617,53 @@ function renderStep1() {
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="residencyType">Residency type</label>
-            <select id="residencyType" class="step-dropdown">
-              <option value="">Select residency type</option>
-              <option value="Domestic" ${state.residencyType === "Domestic" ? "selected" : ""}>Domestic</option>
-              <option value="International" ${state.residencyType === "International" ? "selected" : ""}>International</option>
-            </select>
-          </div>
+          ${
+            state.studentPhase === "future"
+              ? `
+                <div class="form-group">
+                  <label for="livingInCanada">Are you currently living in Canada?</label>
+                  <select id="livingInCanada" class="step-dropdown">
+                    <option value="">Select an option</option>
+                    <option value="Yes" ${state.livingInCanada === "Yes" ? "selected" : ""}>Yes</option>
+                    <option value="No" ${state.livingInCanada === "No" ? "selected" : ""}>No</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="canadianCitizen">Are you a Canadian citizen?</label>
+                  <select id="canadianCitizen" class="step-dropdown">
+                    <option value="">Select an option</option>
+                    <option value="Yes" ${state.canadianCitizen === "Yes" ? "selected" : ""}>Yes</option>
+                    <option value="No" ${state.canadianCitizen === "No" ? "selected" : ""}>No</option>
+                  </select>
+                </div>
+
+                ${
+                  state.canadianCitizen === "No"
+                    ? `
+                      <div class="form-group">
+                        <label for="permanentResident">Are you a permanent resident of Canada?</label>
+                        <select id="permanentResident" class="step-dropdown">
+                          <option value="">Select an option</option>
+                          <option value="Yes" ${state.permanentResident === "Yes" ? "selected" : ""}>Yes</option>
+                          <option value="No" ${state.permanentResident === "No" ? "selected" : ""}>No</option>
+                        </select>
+                      </div>
+                    `
+                    : ""
+                }
+              `
+              : `
+                <div class="form-group">
+                  <label for="residencyType">Residency type</label>
+                  <select id="residencyType" class="step-dropdown">
+                    <option value="">Select residency type</option>
+                    <option value="Domestic" ${state.residencyType === "Domestic" ? "selected" : ""}>Domestic</option>
+                    <option value="International" ${state.residencyType === "International" ? "selected" : ""}>International</option>
+                  </select>
+                </div>
+              `
+          }
 
           <div class="form-group">
             <label for="level">
@@ -284,11 +671,11 @@ function renderStep1() {
             </label>
             <select id="level" class="step-dropdown">
               <option value="">${state.studentPhase === "future" ? "Select an option" : "Select level"}</option>
-              <option value="UG" ${state.level === "UG" ? "selected" : ""}>Undergraduate</option>
-              <option value="GR" ${state.level === "GR" ? "selected" : ""}>Graduate</option>
+              <option value="UG" ${state.level === "UG" ? "selected" : ""}>Undergraduate (Bachelor's degree)</option>
+              <option value="GR" ${state.level === "GR" ? "selected" : ""}>Graduate (Master’s or PhD)</option>
             </select>
           </div>
-
+          
           <div class="form-group" id="provinceGroup" style="display:${state.residencyType === "Domestic" ? "flex" : "none"};">
             <label for="province">Province status</label>
             <select id="province" class="step-dropdown">
@@ -297,10 +684,22 @@ function renderStep1() {
               <option value="Non-ON" ${state.province === "Non-ON" ? "selected" : ""}>Outside Ontario</option>
             </select>
           </div>
-
-          <div class="section-note">
-            This estimator is a planning tool based on the data currently loaded.
-          </div>
+          ${
+              state.studentPhase === "future"
+                ? `<div style="margin-top:-5px;">
+                    ${renderAlert(
+                      "Program tip!",
+                      "Choose Undergraduate if you're starting your first degree. Choose Graduate if you already have a degree.",
+                      "blue"
+                    )}
+                  </div>`
+                : ""
+            }
+          ${renderAlert(
+            "Estimate notice!",
+            "This estimator is a planning tool and does not replace official University of Guelph tuition, fee, housing, meal plan, scholarship, or funding information.",
+            "yellow"
+          )}
         </div>
       </div>
 
@@ -344,11 +743,12 @@ function renderStep2() {
 
       <div class="step-content">
         <div class="form-stack">
+      
           ${
             state.studentPhase === "future"
               ? `
                 <div class="form-group">
-                  <label for="cohortYear">Target year</label>
+                  <label for="cohortYear">Select your expected start year?</label>
                   <select id="cohortYear" class="step-dropdown">
                     <option value="">Select target year</option>
                     ${cohortYears.map(y => `<option value="${escapeHtml(y)}" ${state.cohortYear === y ? "selected" : ""}>${escapeHtml(y)}</option>`).join("")}
@@ -378,6 +778,7 @@ function renderStep2() {
                       </option>
                     `).join("")}
                   </select>
+                  ${renderCurrencyBadge()}
                 </div>
               `
               : ""
@@ -392,7 +793,7 @@ function renderStep2() {
           </div>
 
           <div class="form-group">
-            <label for="program">What program interests you</label>
+            <label for="program">Select the program you are interested in</label>
             <select id="program" class="step-dropdown">
               <option value="">Select program</option>
               ${programs.map(p => `<option value="${escapeHtml(p)}" ${state.program === p ? "selected" : ""}>${escapeHtml(p)}</option>`).join("")}
@@ -409,9 +810,11 @@ function renderStep2() {
             </select>
           </div>
 
-          <div class="section-note">
-            The available options come directly from the tuition data for your selected study type, campus, and residency path.
-          </div>
+          ${renderAlert(
+            "Data source notice",
+            "The available options come directly from the tuition data for your selected study type, campus, and residency path.",
+            "blue"
+          )}
         </div>
       </div>
 
@@ -446,9 +849,7 @@ function renderStep3() {
         `;
       }).join("")
     : `
-      <div class="section-note">
-        No scholarship or bursary entries were found for this residency type in the current data.
-      </div>
+      ${renderAlert("No scholarships found", "No scholarship or bursary entries were found for this residency type in the current data.", "grey")}
     `;
 
   return `
@@ -477,37 +878,13 @@ function renderStep3() {
           </label>
 
           ${
-            state.coopInterest === "Yes"
-              ? `
-                <label class="checkbox-item">
-                  <input type="checkbox" id="includeCoop" ${state.includeCoop ? "checked" : ""} />
-                  <span>Include co-op fees</span>
-                </label>
-              `
-              : ""
-          }
-
-          ${
             state.studentPhase === "future"
               ? `
-                <div class="scholarship-panel">
-                  <div class="scholarship-panel-header">
-                    <h3>Available scholarships and bursaries</h3>
-                    <p>
-                      These are possible funding options for ${
-                        state.residencyType === "International" ? "international" : "domestic"
-                      } students. They are shown for awareness only and are not deducted automatically.
-                    </p>
-                  </div>
-
-                  <div class="scholarship-list">
-                    ${scholarshipCards}
-                  </div>
-                </div>
-
-                <div class="section-note">
-                  Funding is shown here for awareness only and is not automatically deducted from the estimate.
-                </div>
+                ${renderAlert(
+                  "Scholarships & bursaries",
+                  "Scholarships and bursaries will be shown in your final estimate summary for awareness.",
+                  "blue"
+                )}
               `
               : `
                 <div class="form-group">
@@ -541,11 +918,11 @@ function renderStep3() {
                     }).join("")}
                   </div>
 
-                  <div class="section-note" style="margin-top:10px;">
-                    Renewable or multi-year awards are converted to an estimated yearly amount for this calculator.
-                  </div>
-
-                  
+                  ${renderAlert(
+                    "Scholarship calculation",
+                    "Renewable or multi-year awards are converted to an estimated yearly amount for this calculator.",
+                    "grey"
+                  )}
                 </div>
 
                 <div class="form-group">
@@ -569,16 +946,19 @@ function renderStep3() {
                   <input id="familySupport" class="step-input" type="number" min="0" value="${escapeHtml(state.familySupport)}" />
                 </div>
 
-                <div class="section-note">
-                  Selected scholarships, bursaries, and funding values are deducted from the final estimate for current or returning students.
-                </div>
+                ${renderAlert(
+                  "Funding deduction",
+                  "Selected scholarships, bursaries, and funding values are deducted from the final estimate for current or returning students.",
+                  "yellow"
+                )}
               `
           }
         </div>
       </div>
-
+      
       <div class="step-footer">
         <button class="btn-secondary" id="backStep3">Back</button>
+
         <button class="btn-primary" id="nextStep3">Continue</button>
       </div>
     </div>
@@ -609,7 +989,7 @@ function renderStep4() {
           </div>
 
           ${
-            isFutureStudent
+            isFutureStudent && state.housingType !== "OnCampus"
               ? `
                 <div class="form-group">
                   <label for="futureMealPlanInterest">Would you like to include a meal plan estimate?</label>
@@ -682,9 +1062,11 @@ function renderStep4() {
               : ""
           }
 
-          <div class="section-note">
-            Living costs are planning estimates and may vary by year, room choice, and market conditions.
-          </div>
+          ${renderAlert(
+            "Living cost notice",
+            "Living costs are planning estimates and may vary by year, room choice, meal plan, and market conditions.",
+            "yellow"
+          )}
         </div>
       </div>
 
@@ -711,6 +1093,7 @@ function renderStep5() {
           <div class="summary-item">
             <label>Estimated range</label>
             <div class="summary-value">${formatRangeValue(result.low, result.high)}</div>
+            ${getConvertedRangeText(result.low, result.high)}
           </div>
         </div>
 
@@ -718,8 +1101,14 @@ function renderStep5() {
           ${renderBreakdownRows("Tuition and fees", result.tuition.items).join("")}
           ${renderBreakdownRows("Living costs", result.living.items).join("")}
           ${renderBreakdownRows("Extra costs", result.extras.items).join("")}
-          ${renderBreakdownRows("Funding and offsets", result.offsets.items, true).join("")}
+          ${
+            state.studentPhase === "current"
+              ? renderBreakdownRows("Funding and offsets", result.offsets.items, true).join("")
+              : ""
+          }
         </div>
+
+        ${renderFutureFundingSummary()}
 
         <div class="form-stack" style="margin-top:20px;">
           <div class="form-group">
@@ -750,6 +1139,39 @@ function bindRenderedEvents() {
   bindStep3Events();
   bindStep4Events();
   bindStep5Events();
+  const livingInCanada = document.getElementById("livingInCanada");
+  const canadianCitizen = document.getElementById("canadianCitizen");
+  const permanentResident = document.getElementById("permanentResident");
+  if (livingInCanada) {
+    livingInCanada.onchange = e => {
+      state.livingInCanada = e.target.value;
+      resetProgramPathState();
+      renderCurrentStep();
+    };
+  }
+
+  if (canadianCitizen) {
+    canadianCitizen.onchange = e => {
+      state.canadianCitizen = e.target.value;
+
+      if (state.canadianCitizen === "Yes") {
+        state.permanentResident = "";
+      }
+
+      deriveFutureResidency();
+      resetProgramPathState();
+      renderCurrentStep();
+    };
+  }
+
+  if (permanentResident) {
+    permanentResident.onchange = e => {
+      state.permanentResident = e.target.value;
+      deriveFutureResidency();
+      resetProgramPathState();
+      renderCurrentStep();
+    };
+  }
 }
 
 function bindStep0Events() {
@@ -841,8 +1263,59 @@ function bindStep1Events() {
 
   if (nextBtn) {
     nextBtn.onclick = () => {
-      if (!state.studentPhase) return alert("Please select student type.");
-      if (!state.residencyType) return alert("Please select residency type.");
+      clearErrors();
+
+      let hasError = false;
+
+      if (!state.studentPhase) {
+        markError(document.getElementById("studentPhase"), "Required");
+        hasError = true;
+      }
+
+      if (state.studentPhase === "future") {
+        if (!state.livingInCanada) {
+          markError(document.getElementById("livingInCanada"), "Required");
+          hasError = true;
+        }
+
+        if (!state.canadianCitizen) {
+          markError(document.getElementById("canadianCitizen"), "Required");
+          hasError = true;
+        }
+
+        if (state.canadianCitizen === "No" && !state.permanentResident) {
+          markError(document.getElementById("permanentResident"), "Required");
+          hasError = true;
+        }
+      }
+
+      if (!state.residencyType) {
+        markError(document.getElementById("residencyType"), "Required");
+        hasError = true;
+      }
+
+      if (!state.level) {
+        markError(document.getElementById("level"), "Required");
+        hasError = true;
+      }
+
+      if (state.residencyType === "Domestic" && !state.province) {
+        markError(document.getElementById("province"), "Required");
+        hasError = true;
+      }
+
+      if (hasError) return;
+      if (state.studentPhase === "future") {
+        if (!state.livingInCanada) return alert("Please select whether you are currently living in Canada.");
+        if (!state.canadianCitizen) return alert("Please select whether you are a Canadian citizen.");
+
+        if (state.canadianCitizen === "No" && !state.permanentResident) {
+          return alert("Please select whether you are a permanent resident of Canada.");
+        }
+
+        deriveFutureResidency();
+      }
+      if (!state.residencyType) return alert("Please complete your residency information.");
       if (!state.level) {
         return alert(
           state.studentPhase === "future"
@@ -865,6 +1338,147 @@ function bindStep1Events() {
   }
 }
 
+function getSelectedCurrencyCode() {
+  if (!state.country) return "";
+  return COUNTRY_CURRENCY[state.country] || "";
+}
+
+async function updateCurrencyConversion() {
+  const currency = getSelectedCurrencyCode();
+
+  state.currencyCode = currency;
+  state.currencyRate = null;
+  state.currencyError = "";
+
+  if (!currency || currency === "CAD") return;
+
+  if (SUPPORTED_CURRENCIES.length && !SUPPORTED_CURRENCIES.includes(currency)) {
+    state.currencyError = `${currency} conversion is not supported yet.`;
+    return;
+  }
+
+  try {
+    state.currencyLoading = true;
+
+    const url = `https://api.frankfurter.dev/v1/latest?base=CAD&symbols=${encodeURIComponent(currency)}`;
+    const res = await fetch(url);
+
+    if (!res.ok) throw new Error("Currency rate not available.");
+
+    const data = await res.json();
+    const rate = data?.rates?.[currency];
+
+    if (!rate) throw new Error("Currency not supported.");
+
+    state.currencyRate = Number(rate);
+  } catch (err) {
+    console.warn("Currency conversion unavailable:", err);
+    state.currencyError = "Exchange estimate is not available for this currency yet.";
+  } finally {
+    state.currencyLoading = false;
+  }
+}
+
+function renderCurrencyBadge() {
+  if (!state.country) return "";
+
+  const currency = getSelectedCurrencyCode();
+
+  if (!currency) {
+    return renderAlert(
+      "Currency conversion unavailable",
+      "Currency conversion is not available for this country yet. Estimate will remain in CAD.",
+      "blue"
+    );
+  }
+
+  if (currency === "CAD") {
+    return renderAlert(
+      "Currency",
+      "Estimate will be shown in CAD.",
+      "grey"
+    );
+  }
+
+  if (state.currencyLoading) {
+    return renderAlert(
+      "Loading exchange rate",
+      `Loading ${escapeHtml(currency)} exchange estimate...`,
+      "grey"
+    );
+  }
+
+  if (state.currencyError) {
+    return renderAlert(
+      "Currency conversion unavailable",
+      `${escapeHtml(state.currencyError)} Estimate will remain in CAD.`,
+      "red"
+    );
+  }
+
+  if (state.currencyRate) {
+    return renderAlert(
+      "Currency conversion available",
+      `Approximate conversion available in ${escapeHtml(currency)}.`,
+      "green"
+    );
+  }
+
+  return "";
+}
+function markError(el, message = "") {
+  if (!el) return;
+
+  el.classList.add("input-error");
+
+  // remove old error text if exists
+  const existing = el.parentElement.querySelector(".error-text");
+  if (existing) existing.remove();
+
+  if (message) {
+    const msg = document.createElement("div");
+    msg.className = "error-text";
+    msg.innerText = message;
+    el.parentElement.appendChild(msg);
+  }
+}
+
+function clearErrors() {
+  document.querySelectorAll(".input-error").forEach(el => {
+    el.classList.remove("input-error");
+  });
+
+  document.querySelectorAll(".error-text").forEach(el => el.remove());
+}
+function formatCurrency(value, currency) {
+  return new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency,
+    currencyDisplay: "code",
+    maximumFractionDigits: 0
+  }).format(Number(value) || 0);
+}
+
+function getConvertedRangeText(low, high) {
+  if (!state.currencyCode || state.currencyCode === "CAD" || !state.currencyRate) {
+    return "";
+  }
+
+  const convertedLow = low * state.currencyRate;
+  const convertedHigh = high * state.currencyRate;
+
+  const text =
+    convertedLow === convertedHigh
+      ? formatCurrency(convertedLow, state.currencyCode)
+      : `${formatCurrency(convertedLow, state.currencyCode)} - ${formatCurrency(convertedHigh, state.currencyCode)}`;
+
+  return `
+    <div style="font-size:14px; margin-top:6px; opacity:0.8;">
+      Approx. ${text} ${escapeHtml(state.currencyCode)}
+    </div>
+  `;
+}
+
 function bindStep2Events() {
   if (state.currentStep !== 2) return;
 
@@ -880,12 +1494,17 @@ function bindStep2Events() {
     cohortYear.onchange = e => {
       state.cohortYear = e.target.value;
       state.matchedTuitionRecord = null;
+      clearErrors();
     };
   }
 
   if (country) {
-    country.onchange = e => {
+    country.onchange = async e => {
       state.country = e.target.value;
+      state.matchedTuitionRecord = null;
+      clearErrors();
+      await updateCurrencyConversion();
+      renderCurrentStep();
     };
   }
 
@@ -894,15 +1513,18 @@ function bindStep2Events() {
       state.campus = e.target.value;
       state.program = "";
       state.matchedTuitionRecord = null;
+      clearErrors();
       renderCurrentStep();
     };
   }
 
   if (program) {
-    program.onchange = e => {
+    program.onchange = async e => {
       state.program = e.target.value;
       state.matchedTuitionRecord = null;
+      clearErrors();
       updateRunningEstimate();
+      await updateCurrencyConversion();
     };
   }
 
@@ -910,15 +1532,18 @@ function bindStep2Events() {
     coopInterest.onchange = e => {
       state.coopInterest = e.target.value;
       state.includeCoop = state.coopInterest === "Yes";
+
       if (state.coopInterest !== "Yes") {
         state.coopEarningsOffset = 0;
       }
+
       updateRunningEstimate();
     };
   }
 
   if (back) {
     back.onclick = () => {
+      clearErrors();
       state.currentStep = 1;
       renderCurrentStep();
     };
@@ -926,35 +1551,48 @@ function bindStep2Events() {
 
   if (next) {
     next.onclick = () => {
+      clearErrors();
+
+      let hasError = false;
+
       if (state.studentPhase === "current") {
         state.cohortYear = getLatestCurrentCohortYear();
       }
 
       if (state.studentPhase === "future" && !state.cohortYear) {
-        return alert("Please select target year.");
+        markError(document.getElementById("cohortYear"), "Required");
+        hasError = true;
       }
 
-      if (state.studentPhase === "future" && state.residencyType === "International" && !state.country) {
-        return alert("Please select your country.");
+      if (
+        state.studentPhase === "future" &&
+        state.residencyType === "International" &&
+        !state.country
+      ) {
+        markError(document.getElementById("country"), "Required");
+        hasError = true;
       }
 
-      if (!state.campus) return alert("Please select campus.");
-      if (!state.program) return alert("Please select a program.");
+      if (!state.campus) {
+        markError(document.getElementById("campus"), "Required");
+        hasError = true;
+      }
+
+      if (!state.program) {
+        markError(document.getElementById("program"), "Required");
+        hasError = true;
+      }
+
+      if (hasError) return;
 
       matchTuitionRecord();
 
       if (!state.matchedTuitionRecord) {
-        console.log("No match found for:", {
-          studentPhase: state.studentPhase,
-          residencyType: state.residencyType,
-          province: state.province,
-          level: state.level,
-          campus: state.campus,
-          cohortYear: state.cohortYear,
-          program: state.program,
-          country: state.country
-        });
-        return alert("No tuition record matched this selection.");
+        markError(
+          document.getElementById("program"),
+          "No tuition record matched this selection. Please try a different program, campus, or year."
+        );
+        return;
       }
 
       calculateEstimate();
@@ -1070,6 +1708,10 @@ function bindStep4Events() {
     housingType.onchange = e => {
       state.housingType = e.target.value;
 
+      if (state.studentPhase === "future" && state.housingType === "OnCampus") {
+        state.futureMealPlanInterest = "Yes";
+      }
+
       if (state.housingType !== "OnCampus") {
         state.residence = "";
         state.mealPlan = "";
@@ -1152,42 +1794,61 @@ function bindStep5Events() {
   if (fullName) {
     fullName.oninput = e => {
       state.fullName = e.target.value;
+      clearErrors();
     };
   }
 
   if (email) {
     email.oninput = e => {
       state.email = e.target.value;
+      clearErrors();
     };
   }
 
   if (back) {
     back.onclick = () => {
+      clearErrors();
       state.currentStep = 4;
       renderCurrentStep();
     };
   }
 
+  function validateContactFields() {
+    clearErrors();
+
+    let hasError = false;
+
+    if (!state.fullName.trim()) {
+      markError(fullName, "Required");
+      hasError = true;
+    }
+
+    if (!state.email.trim()) {
+      markError(email, "Required");
+      hasError = true;
+    }
+
+    return !hasError;
+  }
+
   if (downloadBtn) {
     downloadBtn.onclick = async () => {
+      if (!validateContactFields()) return;
+
       try {
         calculateEstimate();
-
-        if (!state.fullName.trim()) return alert("Please enter your full name.");
-        if (!state.email.trim()) return alert("Please enter your email address.");
-
         await generateEstimatePDF();
       } catch (error) {
         console.error("PDF generation failed:", error);
-        alert("PDF download failed. Please refresh and try again.");
+        markError(email, "PDF download failed. Please refresh and try again.");
       }
     };
   }
 
   if (emailBtn) {
     emailBtn.onclick = () => {
-      if (!state.fullName.trim()) return alert("Please enter your full name.");
-      if (!state.email.trim()) return alert("Please enter your email address.");
+      if (!validateContactFields()) return;
+
       alert("Email flow can be wired next.");
     };
   }
@@ -1809,6 +2470,43 @@ function renderBreakdownRows(title, items, isOffset = false) {
   return rows;
 }
 
+function renderFutureFundingSummary() {
+  if (state.studentPhase !== "future") return "";
+
+  const scholarships =
+    state.residencyType === "International"
+      ? (state.data["Scholarships for Int"] || [])
+      : (state.data["Scholarships for Dom"] || []);
+
+  if (!scholarships.length) return "";
+
+  return `
+    <div class="cost-summary" style="margin-top:20px;">
+      <div class="summary-item">
+        <label><strong>Available funding options</strong></label>
+        <div></div>
+      </div>
+
+      <div style="font-size:13px; opacity:0.8; margin-bottom:10px;">
+        These are possible scholarships and bursaries for ${state.residencyType.toLowerCase()} students. 
+        They are shown for awareness only and are not deducted from this estimate.
+      </div>
+
+      ${scholarships.map(item => `
+        <div class="summary-item">
+          <label>
+            <strong>${escapeHtml(item["Award Name"] || "Funding option")}</strong>
+            <div style="font-size:12px; opacity:0.8;">
+              ${escapeHtml(item.Notes || item.Category || "")}
+            </div>
+          </label>
+          <div class="summary-value">${escapeHtml(item.Amount || "Amount varies")}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function readField(obj, keys = []) {
   if (!obj || typeof obj !== "object") return "";
   for (const key of keys) {
@@ -1844,11 +2542,14 @@ function parseAmountFromText(text) {
 }
 
 function formatMoney(value) {
-  return new Intl.NumberFormat("en-CA", {
+  const formatted = new Intl.NumberFormat("en-CA", {
     style: "currency",
     currency: "CAD",
+    currencyDisplay: "code",
     maximumFractionDigits: 0
   }).format(Number(value) || 0);
+
+  return formatted.replace("CAD", "CAD ");
 }
 
 function formatRangeValue(low, high) {
@@ -1860,15 +2561,6 @@ function formatRangeValue(low, high) {
   }
 
   return `${formatMoney(safeLow)} - ${formatMoney(safeHigh)}`;
-}
-
-function escapeHtml(str) {
-  return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 function safeFileNamePart(value, fallback = "Estimate") {
@@ -1931,7 +2623,7 @@ function finishEstimatePDF(doc, startY = 24) {
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.8);
-  doc.rect(left, y, fullWidth, 18, "FD");
+  doc.rect(left, y, fullWidth, 24, "FD");
 
   doc.setTextColor(100, 100, 100);
   doc.setFont("helvetica", "normal");
@@ -1943,8 +2635,27 @@ function finishEstimatePDF(doc, startY = 24) {
     y + 11,
     { align: "right" }
   );
+  if (state.currencyCode && state.currencyCode !== "CAD" && state.currencyRate) {
+    const convertedLow = (state.result?.low || 0) * state.currencyRate;
+    const convertedHigh = (state.result?.high || 0) * state.currencyRate;
 
-  y += 28;
+    const convertedText =
+      convertedLow === convertedHigh
+        ? formatCurrency(convertedLow, state.currencyCode)
+        : `${formatCurrency(convertedLow, state.currencyCode)} - ${formatCurrency(convertedHigh, state.currencyCode)}`;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+      `Approx. ${convertedText}`,
+      right - 4,
+      y + 16,
+      { align: "right" }
+    );
+  }
+
+  y += 34;
 
   doc.setTextColor(44, 52, 64);
   doc.setFont("helvetica", "bold");
@@ -2031,6 +2742,67 @@ function finishEstimatePDF(doc, startY = 24) {
   });
 
   y += tableHeight + 12;
+  
+  if (state.studentPhase === "future") {
+    const scholarships =
+      state.residencyType === "International"
+        ? (state.data["Scholarships for Int"] || [])
+        : (state.data["Scholarships for Dom"] || []);
+
+    if (scholarships.length) {
+      if (y > pageHeight - 70) {
+        doc.addPage();
+        y = 20;
+      }
+
+      doc.setTextColor(44, 52, 64);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Available Funding Options", left, y);
+      y += 6;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+
+      const fundingNote =
+        `Possible scholarships and bursaries for ${state.residencyType.toLowerCase()} students. These are shown for awareness only and are not deducted from the estimate.`;
+
+      doc.text(doc.splitTextToSize(fundingNote, fullWidth), left, y);
+      y += 10;
+
+      scholarships.slice(0, 8).forEach(item => {
+        if (y > pageHeight - 20) {
+          doc.addPage();
+          y = 20;
+        }
+
+        const name = item["Award Name"] || "Funding option";
+        const amount = item.Amount || "Amount varies";
+        const note = item.Notes || item.Category || "";
+
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(44, 52, 64);
+        doc.text(doc.splitTextToSize(name, 105), left, y);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(amount, right - 4, y, { align: "right" });
+
+        y += 5;
+
+        if (note) {
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(8);
+          doc.text(doc.splitTextToSize(note, fullWidth), left, y);
+          y += 5;
+        }
+
+        y += 2;
+      });
+
+      y += 5;
+    }
+  }
 
   if (y > pageHeight - 20) {
     doc.addPage();
