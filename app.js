@@ -898,21 +898,31 @@ function renderStep3() {
                       const yearlyValue = getScholarshipYearlyValue(item);
 
                       return `
-                        <label class="checkbox-item" style="align-items:flex-start;">
+                        <label class="scholarship-option ${selected ? "selected" : ""}">
                           <input
                             type="checkbox"
                             name="selectedScholarships"
                             value="${escapeHtml(item.__key)}"
                             ${selected ? "checked" : ""}
                           />
-                          <span>
-                            <strong>${escapeHtml(item.__label)}</strong>
-                            ${amount ? `<div>${escapeHtml(amount)}</div>` : ""}
-                            ${category ? `<div>${escapeHtml(category)}</div>` : ""}
-                            <div style="font-size:12px;opacity:0.8;">
-                              Estimated yearly deduction: ${formatMoney(yearlyValue)}
+
+                          <div class="scholarship-option-body">
+                            <div class="scholarship-option-top">
+                              <strong>${escapeHtml(item.__label)}</strong>
+                              <span>${formatMoney(yearlyValue)} / year</span>
                             </div>
-                          </span>
+
+                            <div class="scholarship-option-meta">
+                              ${category ? `${escapeHtml(category)} · ` : ""}
+                              ${item["Application Required"] ? `Application required: ${escapeHtml(item["Application Required"])}` : ""}
+                            </div>
+
+                            ${amount ? `
+                              <div class="scholarship-option-note">
+                                Listed award amount: ${escapeHtml(amount)}
+                              </div>
+                            ` : ""}
+                          </div>
                         </label>
                       `;
                     }).join("")}
