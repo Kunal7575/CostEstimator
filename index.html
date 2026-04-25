@@ -826,7 +826,79 @@
       white-space: nowrap;
       border: 0;
     }
+    .scholarship-checkbox-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
+    .scholarship-option {
+      display: grid;
+      grid-template-columns: 20px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .scholarship-option:hover,
+    .scholarship-option.selected {
+      border-color: var(--uog-blue);
+      background: #f7fbfd;
+    }
+
+    .scholarship-option input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--uog-blue);
+    }
+
+    .scholarship-option-body {
+      min-width: 0;
+    }
+
+    .scholarship-option-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .scholarship-option-top strong {
+      font-size: 1.35rem;
+      line-height: 1.25;
+      color: var(--text-dark);
+    }
+
+    .scholarship-option-top span {
+      white-space: nowrap;
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--uog-blue-dark);
+    }
+
+    .scholarship-option-meta {
+      margin-top: 3px;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #666;
+    }
+
+    .scholarship-option-note {
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      .scholarship-option-top {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
     /* =========================
        11. Responsive
        ========================= */
