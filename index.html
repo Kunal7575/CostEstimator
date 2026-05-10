@@ -891,7 +891,65 @@
     .scholarship-option-note {
       display: none;
     }
+    .success-story-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
 
+    .success-story-card {
+      display: grid;
+      grid-template-columns: 82px 1fr;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: #fff;
+    }
+
+    .success-story-card img {
+      width: 82px;
+      height: 82px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    .success-story-card h3 {
+      margin: 0 0 6px;
+      font-size: 1.7rem;
+      color: var(--text-dark);
+    }
+
+    .success-story-meta {
+      margin: 0 0 8px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .success-story-text {
+      font-size: 1.3rem;
+      line-height: 1.45;
+      color: var(--text);
+      white-space: pre-line;
+    }
+
+    .success-story-total {
+      margin-top: 10px;
+      font-weight: 900;
+      color: #a71930;
+    }
+
+    @media (max-width: 640px) {
+      .success-story-card {
+        grid-template-columns: 1fr;
+      }
+
+      .success-story-card img {
+        width: 76px;
+        height: 76px;
+      }
+    }
     @media (max-width: 640px) {
       .scholarship-option-top {
         align-items: flex-start;
