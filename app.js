@@ -885,6 +885,7 @@ function renderStep3() {
                   "Scholarships and bursaries will be shown in your final estimate summary for awareness.",
                   "blue"
                 )}
+                ${renderSuccessStories()}
               `
               : `
                 <div class="form-group">
@@ -2425,7 +2426,62 @@ function getLivingCosts() {
 
   return { items, low, high };
 }
+function renderSuccessStories() {
+  if (state.studentPhase !== "future" || state.residencyType !== "International") {
+    return "";
+  }
 
+  const stories = state.data?.SuccessStory || [];
+
+  if (!stories.length) return "";
+
+  const imageMap = {
+    JUNTIAN: "Juntian.png",
+    JIYA: "Jiya.png"
+  };
+
+  return `
+    <div class="form-group">
+      <h3>Student funding examples</h3>
+
+      <div class="success-story-grid">
+        ${stories.map(item => {
+          const name = normalize(item["Name "] || item.Name || "Student");
+          const image = imageMap[name.toUpperCase()] || "";
+
+          return `
+            <div class="success-story-card">
+              ${image ? `<img src="./${escapeHtml(image)}" alt="${escapeHtml(name)} success story" />` : ""}
+
+              <div>
+                <h3>Meet ${escapeHtml(name)}!</h3>
+
+                <p class="success-story-meta">
+                  Program: ${escapeHtml(item.Program || "N/A")}<br>
+                  Home Country: ${escapeHtml(item["Home Country"] || "N/A")}
+                </p>
+
+                <div class="success-story-text">
+                  ${escapeHtml(item.Story || "")}
+                </div>
+
+                <div class="success-story-total">
+                  Total Funding + Earnings: ${escapeHtml(item["Total Funding + Earnings:"] || "")}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+
+      ${renderAlert(
+        "Funding example notice",
+        "These examples are illustrative only. Actual funding may vary based on eligibility, renewal terms, and employment wages.",
+        "grey"
+      )}
+    </div>
+  `;
+}
 function getExtraCosts() {
   const items = [];
 
