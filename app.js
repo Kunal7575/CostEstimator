@@ -1924,11 +1924,42 @@ function emptyResult() {
 
 function getTuitionArray() {
   if (!state.data) return [];
-  return state.level === "UG" ? (state.data.UG_Tuition || []) : (state.data.GR_Tuition || []);
+
+  if (state.studentPhase === "future" && state.level === "UG") {
+    return state.data.FutureStudentFee || [];
+  }
+
+  // Existing logic for others
+  return state.level === "UG"
+    ? (state.data.UG_Tuition || [])
+    : (state.data.GR_Tuition || []);
 }
 
 function getFilteredTuitionRows({ includeCampus = false, includeProgram = false, includeCohortForCurrent = true } = {}) {
   return getTuitionArray().filter(row => {
+
+    // ✅ NEW: Future UG logic using FutureStudentFee
+    if (state.studentPhase === "future" && state.level === "UG") {
+      const type = normalize(row.Type);
+
+      let typeMatch = false;
+
+      if (state.residencyType === "International") {
+        typeMatch = type === "International";
+      } else if (state.province === "ON") {
+        typeMatch = type === "ontario";
+      } else if (state.province === "Non-ON") {
+        typeMatch = type === "Outside-ontario";
+      }
+
+      const programMatch = includeProgram
+        ? normalize(row.Program) === normalize(state.program)
+        : true;
+
+      return typeMatch && programMatch;
+    }
+
+    // ✅ EXISTING LOGIC (unchanged for others)
     const residencyMatch = normalize(row.Residency) === normalize(state.residencyType);
 
     const provinceValue = normalize(row.Province);
@@ -1950,6 +1981,14 @@ function getFilteredTuitionRows({ includeCampus = false, includeProgram = false,
 }
 
 function getAvailableCampuses() {
+  if (state.studentPhase === "future" && state.level === "UG") {
+    return [
+      "University of Guelph",
+      "University of Guelph-Humber",
+      "Ridgetown Campus"
+    ];
+  }
+
   return [...new Set(
     getFilteredTuitionRows()
       .map(row => normalize(row.Campus))
@@ -2110,6 +2149,38 @@ function getTuitionCosts() {
     return { items: [], low: 0, high: 0 };
   }
 
+  // ✅ NEW: Future UG logic
+  if (state.studentPhase === "future" && state.level === "UG") {
+    const tuitionValues = extractMoneyValues(row["Full-time Tuition"]);
+    const feeValues = extractMoneyValues(row["Compulsory Fees"]);
+
+    const tuitionLow = Math.min(...tuitionValues);
+    const tuitionHigh = Math.max(...tuitionValues);
+
+    const feeLow = Math.min(...feeValues);
+    const feeHigh = Math.max(...feeValues);
+
+    const items = [
+      {
+        label: "Full-time tuition",
+        low: tuitionLow,
+        high: tuitionHigh
+      },
+      {
+        label: "Compulsory fees",
+        low: feeLow,
+        high: feeHigh
+      }
+    ];
+
+    return {
+      items,
+      low: tuitionLow + feeLow,
+      high: tuitionHigh + feeHigh
+    };
+  }
+
+
   const fallTuition = toNumber(row.FallTuition);
   const winterTuition = toNumber(row.WinterTuition);
 
@@ -2117,16 +2188,8 @@ function getTuitionCosts() {
   const winterTotal = Math.max(winterTuition, toNumber(row.WinterTuition_Compulsory));
 
   const items = [
-    {
-      label: "Fall tuition and fee estimate",
-      low: fallTuition,
-      high: fallTotal
-    },
-    {
-      label: "Winter tuition and fee estimate",
-      low: winterTuition,
-      high: winterTotal
-    }
+    { label: "Fall tuition and fee estimate", low: fallTuition, high: fallTotal },
+    { label: "Winter tuition and fee estimate", low: winterTuition, high: winterTotal }
   ];
 
   return {
