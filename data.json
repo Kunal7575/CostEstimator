@@ -1,4 +1,4 @@
-﻿{
+{
     "UG_Tuition": [
         {
             "Program": "Regular Programs (ATP, BA, BAS, BASc, BMATH, BSAG, BSC, BSES, BBRM, BIESP, BOH, DTM)",
@@ -1334,7 +1334,7 @@
             "Quantity / Availability": "Available",
             "Application Required": "Yes",
             "Category": "Major Scholarship",
-            "Notes": "Includes guaranteed residence"
+            "Notes": "Includes guaranteed residence "
         },
         {
             "Award Name": "International Transfer Scholarship",
@@ -1465,6 +1465,312 @@
             "Application Required": "Yes",
             "Category": "Bursary",
             "Notes": "Accessibility support"
+        }
+    ],
+    "FutureStudentFee": [
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Applied Science"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Arts"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Arts and Science"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Bio-Resource Management"
+        },
+        {
+            "Full-time Tuition": "54529",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Commerce (Business)"
+        },
+        {
+            "Full-time Tuition": "55915",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Computing"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Creative Arts, Health and Wellness"
+        },
+        {
+            "Full-time Tuition": "63160",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": " Bachelor of Engineering"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Indigenous Environmental Science and Practice"
+        },
+        {
+            "Full-time Tuition": "54320",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Landscape Architecture"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Mathematics"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of One Health"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Science"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Science in Agriculture"
+        },
+        {
+            "Full-time Tuition": "44729",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Bachelor of Science in Environmental Science"
+        },
+        {
+            "Full-time Tuition": "96974",
+            "Compulsory Fees": "1768-1930",
+            "Type": "International",
+            "Program": "Doctor of Veterinary Medicine"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Applied Science"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Arts"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Arts and Science"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Bio-Resource Management"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Commerce (Business)"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Computing"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Creative Arts, Health and Wellness"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": " Bachelor of Engineering"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Indigenous Environmental Science and Practice"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Landscape Architecture"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Mathematics"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of One Health"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Science"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Science in Agriculture"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Bachelor of Science in Environmental Science"
+        },
+        {
+            "Full-time Tuition": "6091 - 11286",
+            "Compulsory Fees": "1768-1930",
+            "Type": "ontario",
+            "Program": "Doctor of Veterinary Medicine"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Applied Science"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Arts"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Arts and Science"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Bio-Resource Management"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Commerce (Business)"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Computing"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Creative Arts, Health and Wellness"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": " Bachelor of Engineering"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Indigenous Environmental Science and Practice"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Landscape Architecture"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Mathematics"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of One Health"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Science"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Science in Agriculture"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Bachelor of Science in Environmental Science"
+        },
+        {
+            "Full-time Tuition": "7404 – 13718",
+            "Compulsory Fees": "1768-1930",
+            "Type": "Outside-ontario",
+            "Program": "Doctor of Veterinary Medicine"
+        }
+    ],
+    "SuccessStory": [
+        {
+            "Name ": "JUNTIAN",
+            "Program": "Bio-Medical Science",
+            "Home Country": "China",
+            "Story": "Applying to the University of Guelph with a 85% (Ontario) // 3.67 (USA) // 35 (IB) GPA, Juntian could receive:\r\n\r\nFirst Year Scholarships: $15,000 CAD\r\n\r\n• President’s International Entrance Scholarship ($5,500)\r\n• University International Scholarship ($5,000)\r\n• Dean’s International Scholarship ($2,500)\r\n• International Tuition Scholarship ($2,000)\r\n\r\nYear 2-4 Funding: $49,500 CAD\r\n\r\n• University International Scholarship ($15,000)\r\n• Dean’s International Scholarship ($7,500)\r\n• Work-Study Part Time Job ($22,000)\r\n• Additional In-Course Scholarships ($5,000)",
+            "Total Funding + Earnings:": "$64,500 CAD"
+        },
+        {
+            "Name ": "JIYA",
+            "Program": "Bachelor of Arts,\r\nPsychology, Co-op",
+            "Home Country": "India",
+            "Story": "Applying to the University of Guelph with a 75% (Ontario) // 3.0 (USA) // 28 (IB) GPA, Jiya could receive:\r\n\r\nFirst Year Scholarships: $14,000 CAD\r\n\r\n• President’s International Entrance Scholarship ($2,000)\r\n• University International Scholarship ($5,000)\r\n• Dean’s International Scholarship ($2,500)\r\n• International Tuition Scholarship ($2,000)\r\n• CSAHS Program-Specific Scholarship ($2,500)\r\n\r\nYear 2-4 Funding: $66,300 CAD\r\n\r\n• University International Scholarship ($15,000)\r\n• Dean’s International Scholarship ($7,500)\r\n• CSAHS Program-Specific Scholarship ($7,500)\r\n• Co-op Work Terms ($36,300)",
+            "Total Funding + Earnings:": "$80,300 CAD"
         }
     ]
 }
