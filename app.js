@@ -480,6 +480,14 @@ function updateChrome() {
 
     item.onclick = () => {
       if (step < 1 || step > 5) return;
+
+      // Do not allow users to jump ahead from the sidebar.
+      // They must use Continue so required fields are validated.
+      if (step > state.currentStep) {
+        alert("Please complete the current step before moving forward.");
+        return;
+      }
+
       state.currentStep = step;
       calculateEstimate();
       renderCurrentStep();
@@ -825,7 +833,34 @@ function renderStep2() {
     </div>
   `;
 }
+function renderInfoIcon(title, message) {
+  const tooltipId = `tooltip-${Math.random().toString(36).slice(2, 9)}`;
 
+  return `
+    <span class="info-wrap">
+      <button
+        type="button"
+        class="info-btn"
+        aria-label="More information about ${escapeHtml(title)}"
+        data-tooltip-id="${tooltipId}"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 
+          10-4.48 10-10S17.52 2 12 2zm0 17c-.55 
+          0-1-.45-1-1v-6c0-.55.45-1 1-1s1 
+          .45 1 1v6c0 .55-.45 1-1 1zm0-10c-.83 
+          0-1.5-.67-1.5-1.5S11.17 6 12 
+          6s1.5.67 1.5 1.5S12.83 9 12 9z"></path>
+        </svg>
+
+        <div class="info-tooltip" id="${tooltipId}" style="display:none;">
+          <div class="info-tooltip-title">${escapeHtml(title)}</div>
+          <div>${escapeHtml(message)}</div>
+        </div>
+      </button>
+    </span>
+  `;
+}
 function renderStep3() {
   const scholarships =
     state.residencyType === "International"
@@ -910,7 +945,9 @@ function renderStep3() {
                           <div class="scholarship-option-body">
                             <div class="scholarship-option-top">
                               <strong>${escapeHtml(item.__label)}</strong>
-                              <span>${formatMoney(yearlyValue)} / year</span>
+                              <span>
+                                ${yearlyValue > 0 ? `${formatMoney(yearlyValue)} / year` : "Amount varies"}
+                              </span>
                             </div>
 
                             <div class="scholarship-option-meta">
@@ -918,11 +955,15 @@ function renderStep3() {
                               ${item["Application Required"] ? `Application required: ${escapeHtml(item["Application Required"])}` : ""}
                             </div>
 
-                            ${amount ? `
-                              <div class="scholarship-option-note">
-                                Listed award amount: ${escapeHtml(amount)}
-                              </div>
-                            ` : ""}
+                            ${
+                              amount && yearlyValue <= 0
+                                ? `
+                                  <div class="scholarship-option-note" style="display:block;">
+                                    Listed award amount: ${escapeHtml(amount)}
+                                  </div>
+                                `
+                                : ""
+                            }
                           </div>
                         </label>
                       `;
