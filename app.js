@@ -17,6 +17,8 @@ const state = {
   includeBooks: false,
   includePersonal: false,
   includeCoop: false,
+  includePartTimeEarnings: false,
+  includeCoopEarnings: false,
   coopInterest: "No",
   futureMealPlanInterest: "No",
 
@@ -915,11 +917,34 @@ function renderStep3() {
           ${
             state.studentPhase === "future"
               ? `
+                <label class="checkbox-item">
+                  <input type="checkbox" id="includePartTimeEarnings" ${state.includePartTimeEarnings ? "checked" : ""} />
+                  <span>Show potential part-time earnings</span>
+                </label>
+
+                ${
+                  state.coopInterest === "Yes"
+                    ? `
+                      <label class="checkbox-item">
+                        <input type="checkbox" id="includeCoopEarnings" ${state.includeCoopEarnings ? "checked" : ""} />
+                        <span>Show potential co-op earnings</span>
+                      </label>
+                    `
+                    : ""
+                }
+
                 ${renderAlert(
                   "Scholarships & bursaries",
                   "Scholarships and bursaries will be shown in your final estimate summary for awareness.",
                   "blue"
                 )}
+
+                ${renderAlert(
+                  "Potential earnings notice",
+                  "Part-time and co-op earnings are shown for planning awareness only and are not deducted from your estimated total.",
+                  "grey"
+                )}
+
                 ${renderSuccessStories()}
               `
               : `
@@ -1010,7 +1035,6 @@ function renderStep3() {
       
       <div class="step-footer">
         <button class="btn-secondary" id="backStep3">Back</button>
-
         <button class="btn-primary" id="nextStep3">Continue</button>
       </div>
     </div>
@@ -1161,6 +1185,7 @@ function renderStep5() {
         </div>
 
         ${renderFutureFundingSummary()}
+        ${renderFutureEarningsSummary()}
 
         <div class="form-stack" style="margin-top:20px;">
           <div class="form-group">
@@ -1183,7 +1208,65 @@ function renderStep5() {
     </div>
   `;
 }
+function renderFutureEarningsSummary() {
+  if (state.studentPhase !== "future") return "";
 
+  const rows = [];
+
+  if (state.includePartTimeEarnings) {
+    const partTimeText = readField(
+      state.data?.["Part-Time_earnings"]?.[0] || {},
+      ["Part-Time_earnings", "Part-Time earnings", "Part Time Earnings"]
+    );
+
+    const range = parseRangeFromText(partTimeText);
+
+    if (range.low > 0 || range.high > 0) {
+      rows.push({
+        label: "Potential part-time earnings",
+        value: `${formatRangeValue(range.low, range.high)} / year`
+      });
+    }
+  }
+
+  if (state.includeCoopEarnings && state.coopInterest === "Yes") {
+    const coopText = readField(
+      state.data?.["Co-op Cost"]?.[0] || {},
+      ["Coop Earnings", "Co-op Earnings"]
+    );
+
+    const range = parseRangeFromText(coopText);
+
+    if (range.low > 0 || range.high > 0) {
+      rows.push({
+        label: "Potential co-op earnings",
+        value: `${formatRangeValue(range.low, range.high)} / week`
+      });
+    }
+  }
+
+  if (!rows.length) return "";
+
+  return `
+    <div class="cost-summary" style="margin-top:20px;">
+      <div class="summary-item">
+        <label><strong>Potential earnings</strong></label>
+        <div></div>
+      </div>
+
+      <div style="font-size:13px; opacity:0.8; margin-bottom:10px;">
+        These amounts are shown for planning awareness only and are not deducted from your estimated total.
+      </div>
+
+      ${rows.map(row => `
+        <div class="summary-item">
+          <label>${escapeHtml(row.label)}</label>
+          <div class="summary-value">${row.value}</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
 function bindRenderedEvents() {
   bindStep0Events();
   bindStep1Events();
@@ -1299,9 +1382,15 @@ function bindStep1Events() {
   if (level) {
     level.onchange = e => {
       const newValue = e.target.value;
+
       if (newValue !== state.level) {
         state.level = newValue;
         resetProgramPathState();
+
+        if (state.level === "GR") {
+          state.campus = "University of Guelph";
+        }
+
         renderCurrentStep();
       }
     };
@@ -1660,6 +1749,9 @@ function bindStep3Events() {
   const includeBooks = document.getElementById("includeBooks");
   const includePersonal = document.getElementById("includePersonal");
   const includeCoop = document.getElementById("includeCoop");
+  const includePartTimeEarnings = document.getElementById("includePartTimeEarnings");
+  const includeCoopEarnings = document.getElementById("includeCoopEarnings");
+
   const selectedScholarshipInputs = document.querySelectorAll('input[name="selectedScholarships"]');
   const partTimeIncome = document.getElementById("partTimeIncome");
   const coopEarningsOffset = document.getElementById("coopEarningsOffset");
@@ -1684,6 +1776,20 @@ function bindStep3Events() {
   if (includeCoop) {
     includeCoop.onchange = e => {
       state.includeCoop = e.target.checked;
+      updateRunningEstimate();
+    };
+  }
+
+  if (includePartTimeEarnings) {
+    includePartTimeEarnings.onchange = e => {
+      state.includePartTimeEarnings = e.target.checked;
+      updateRunningEstimate();
+    };
+  }
+
+  if (includeCoopEarnings) {
+    includeCoopEarnings.onchange = e => {
+      state.includeCoopEarnings = e.target.checked;
       updateRunningEstimate();
     };
   }
@@ -2023,6 +2129,12 @@ function getFilteredTuitionRows({ includeCampus = false, includeProgram = false,
 }
 
 function getAvailableCampuses() {
+  // Graduate programs are only shown under University of Guelph
+  if (state.level === "GR") {
+    return ["University of Guelph"];
+  }
+
+  // Future undergraduate students can choose all three campuses
   if (state.studentPhase === "future" && state.level === "UG") {
     return [
       "University of Guelph",
@@ -2037,7 +2149,6 @@ function getAvailableCampuses() {
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b));
 }
-
 function getAvailableCohortYears() {
   const rows = getFilteredTuitionRows();
 
@@ -2527,7 +2638,10 @@ function getExtraCosts() {
   const items = [];
 
   if (state.includeBooks) {
-    const value = parseAmountFromText(readField(state.data?.Textbooks?.[0] || {}, ["Txtbooks", "Textbooks"]));
+    const value = parseAmountFromText(
+      readField(state.data?.Textbooks?.[0] || {}, ["Txtbooks", "Textbooks"])
+    );
+
     items.push({
       label: "Textbooks",
       low: value,
@@ -2536,7 +2650,10 @@ function getExtraCosts() {
   }
 
   if (state.includePersonal) {
-    const value = parseAmountFromText(readField(state.data?.["Personal Expenses"]?.[0] || {}, ["Personal Expenses"]));
+    const value = parseAmountFromText(
+      readField(state.data?.["Personal Expenses"]?.[0] || {}, ["Personal Expenses"])
+    );
+
     items.push({
       label: "Personal expenses",
       low: value,
@@ -2545,16 +2662,24 @@ function getExtraCosts() {
   }
 
   if (state.includeCoop && state.coopInterest === "Yes") {
-    const value = parseAmountFromText(readField(state.data?.["Co-op Cost"]?.[0] || {}, ["Co-op Cost"]));
+    const semesterFee = parseAmountFromText(
+      readField(state.data?.["Co-op Cost"]?.[0] || {}, ["Co-op Cost"])
+    );
+
+    const yearlyFee = semesterFee * 2;
+
     items.push({
-      label: "Co-op fee estimate",
-      low: value,
-      high: value
+      label: "Co-op fee estimate, Fall and Winter",
+      low: yearlyFee,
+      high: yearlyFee
     });
   }
 
   if (state.residencyType === "International") {
-    const value = parseAmountFromText(readField(state.data?.["Health Insurance Int"]?.[0] || {}, ["Health Insurance"]));
+    const value = parseAmountFromText(
+      readField(state.data?.["Health Insurance Int"]?.[0] || {}, ["Health Insurance"])
+    );
+
     items.push({
       label: "Mandatory health insurance",
       low: value,
@@ -2703,7 +2828,18 @@ function toNumber(value) {
   const cleaned = String(value).replace(/[^0-9.-]/g, "");
   return Number(cleaned) || 0;
 }
+function parseRangeFromText(text) {
+  const values = extractMoneyValues(text);
 
+  if (!values.length) {
+    return { low: 0, high: 0 };
+  }
+
+  return {
+    low: Math.min(...values),
+    high: Math.max(...values)
+  };
+}
 function parseAmountFromText(text) {
   const cleaned = String(text || "").replace(/,/g, "");
   const matches = cleaned.match(/(\d+(\.\d+)?)/g);
