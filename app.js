@@ -326,24 +326,13 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
   bindScrollTop();
   await loadData();
-  await loadSupportedCurrencies();
   calculateEstimate();
   renderCurrentStep();
 }
 
 let SUPPORTED_CURRENCIES = [];
 
-async function loadSupportedCurrencies() {
-  try {
-    const res = await fetch("https://api.frankfurter.dev/v1/currencies");
-    if (!res.ok) throw new Error("Could not load supported currencies.");
-    const data = await res.json();
-    SUPPORTED_CURRENCIES = Object.keys(data);
-  } catch (err) {
-    console.warn("Could not load supported currencies:", err);
-    SUPPORTED_CURRENCIES = [];
-  }
-}
+
 
 async function loadData() {
   try {
@@ -619,10 +608,6 @@ function renderStep1() {
 
       <div class="step-content">
         <div class="form-stack">
-      
-
-        <div class="step-content">
-          <div class="form-stack">
           <div class="form-group">
             <label for="studentPhase">Student type</label>
             <select id="studentPhase" class="step-dropdown">
@@ -822,7 +807,7 @@ function renderStep2() {
               ${campuses.map(c => `<option value="${escapeHtml(c)}" ${state.campus === c ? "selected" : ""}>${escapeHtml(c)}</option>`).join("")}
             </select>
           </div>
-          ${renderCampusGallery()}
+          
           <div class="form-group">
             <label for="program">Select the program you are interested in</label>
             <select id="program" class="step-dropdown">
@@ -840,7 +825,7 @@ function renderStep2() {
               <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
             </select>
           </div>
-
+          ${renderCampusGallery()}
           ${
             isFutureUG && coopStatus === "No"
               ? renderAlert(
@@ -1562,41 +1547,7 @@ function getSelectedCurrencyCode() {
   return COUNTRY_CURRENCY[state.country] || "";
 }
 
-// async function updateCurrencyConversion() {
-//   const currency = getSelectedCurrencyCode();
 
-//   state.currencyCode = currency;
-//   state.currencyRate = null;
-//   state.currencyError = "";
-
-//   if (!currency || currency === "CAD") return;
-
-//   if (SUPPORTED_CURRENCIES.length && !SUPPORTED_CURRENCIES.includes(currency)) {
-//     state.currencyError = `${currency} conversion is not supported yet.`;
-//     return;
-//   }
-
-//   try {
-//     state.currencyLoading = true;
-
-//     const url = `https://api.frankfurter.dev/v1/latest?base=CAD&symbols=${encodeURIComponent(currency)}`;
-//     const res = await fetch(url);
-
-//     if (!res.ok) throw new Error("Currency rate not available.");
-
-//     const data = await res.json();
-//     const rate = data?.rates?.[currency];
-
-//     if (!rate) throw new Error("Currency not supported.");
-
-//     state.currencyRate = Number(rate);
-//   } catch (err) {
-//     console.warn("Currency conversion unavailable:", err);
-//     state.currencyError = "Exchange estimate is not available for this currency yet.";
-//   } finally {
-//     state.currencyLoading = false;
-//   }
-// }
 async function updateCurrencyConversion() {
   const currency = getSelectedCurrencyCode();
 
@@ -2553,7 +2504,7 @@ function getTuitionCosts() {
         label: "Compulsory fees",
         low: feeLow,
         high: feeHigh
-      },
+      }
       
     ];
 
