@@ -29,12 +29,13 @@ const state = {
   currentOffCampusRent: 0,
   currentOffCampusFood: 0,
 
+  otherScholarshipOffset: 0,
   scholarshipOffset: 0,
   selectedScholarshipKeys: [],
   partTimeIncome: 0,
   coopEarningsOffset: 0,
   familySupport: 0,
-
+  
   fullName: "",
   email: "",
 
@@ -397,8 +398,12 @@ function deriveFutureResidency() {
 
   if (state.canadianCitizen === "Yes" || state.permanentResident === "Yes") {
     state.residencyType = "Domestic";
-    state.province = "ON";
     state.country = "";
+
+    // Do not force Ontario. Let the user choose ON or Non-ON.
+    if (state.province === "INT") {
+      state.province = "";
+    }
   }
 
   if (state.canadianCitizen === "No" && state.permanentResident === "No") {
@@ -686,14 +691,20 @@ function renderStep1() {
             </select>
           </div>
           
-          <div class="form-group" id="provinceGroup" style="display:${state.residencyType === "Domestic" ? "flex" : "none"};">
-            <label for="province">Province status</label>
-            <select id="province" class="step-dropdown">
-              <option value="">Select province status</option>
-              <option value="ON" ${state.province === "ON" ? "selected" : ""}>Ontario</option>
-              <option value="Non-ON" ${state.province === "Non-ON" ? "selected" : ""}>Outside Ontario</option>
-            </select>
-          </div>
+          ${
+            state.residencyType === "Domestic"
+              ? `
+                <div class="form-group" id="provinceGroup">
+                  <label for="province">Province status</label>
+                  <select id="province" class="step-dropdown">
+                    <option value="">Select province status</option>
+                    <option value="ON" ${state.province === "ON" ? "selected" : ""}>Ontario</option>
+                    <option value="Non-ON" ${state.province === "Non-ON" ? "selected" : ""}>Outside Ontario</option>
+                  </select>
+                </div>
+              `
+              : ""
+          }
           ${
               state.studentPhase === "future"
                 ? `<div style="margin-top:-5px;">
@@ -1034,7 +1045,28 @@ function renderStep3() {
 
                 <div class="form-group">
                   <label for="partTimeIncome">Expected part-time income</label>
-                  <input id="partTimeIncome" class="step-input" type="number" min="0" value="${escapeHtml(state.partTimeIncome)}" />
+
+                  <input
+                    id="partTimeIncome"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.partTimeIncome)}"
+                    placeholder="Enter your expected yearly part-time income"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="otherScholarshipOffset">Other yearly scholarship / bursary</label>
+
+                  <input
+                    id="otherScholarshipOffset"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.otherScholarshipOffset)}"
+                    placeholder="Enter any additional yearly scholarship or bursary amount"
+                  />
                 </div>
 
                 ${
@@ -1042,7 +1074,15 @@ function renderStep3() {
                     ? `
                       <div class="form-group">
                         <label for="coopEarningsOffset">Expected co-op earnings</label>
-                        <input id="coopEarningsOffset" class="step-input" type="number" min="0" value="${escapeHtml(state.coopEarningsOffset)}" />
+
+                        <input
+                          id="coopEarningsOffset"
+                          class="step-input"
+                          type="number"
+                          min="0"
+                          value="${escapeHtml(state.coopEarningsOffset)}"
+                          placeholder="Enter your expected co-op earnings"
+                        />
                       </div>
                     `
                     : ""
@@ -1050,7 +1090,15 @@ function renderStep3() {
 
                 <div class="form-group">
                   <label for="familySupport">Family support / savings</label>
-                  <input id="familySupport" class="step-input" type="number" min="0" value="${escapeHtml(state.familySupport)}" />
+
+                  <input
+                    id="familySupport"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.familySupport)}"
+                    placeholder="Enter support from family, savings, or other funding"
+                  />
                 </div>
 
                 ${renderAlert(
@@ -1796,6 +1844,7 @@ function bindStep3Events() {
   const includeCoopEarnings = document.getElementById("includeCoopEarnings");
 
   const selectedScholarshipInputs = document.querySelectorAll('input[name="selectedScholarships"]');
+  const otherScholarshipOffset = document.getElementById("otherScholarshipOffset");
   const partTimeIncome = document.getElementById("partTimeIncome");
   const coopEarningsOffset = document.getElementById("coopEarningsOffset");
   const familySupport = document.getElementById("familySupport");
@@ -1848,6 +1897,13 @@ function bindStep3Events() {
         updateRunningEstimate();
       };
     });
+  }
+
+  if (otherScholarshipOffset) {
+    otherScholarshipOffset.oninput = e => {
+      state.otherScholarshipOffset = toNumber(e.target.value);
+      updateRunningEstimate();
+    };
   }
 
   if (partTimeIncome) {
@@ -2018,6 +2074,7 @@ function bindStep5Events() {
     clearErrors();
 
     let hasError = false;
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!state.fullName.trim()) {
       markError(fullName, "Required");
@@ -2026,6 +2083,9 @@ function bindStep5Events() {
 
     if (!state.email.trim()) {
       markError(email, "Required");
+      hasError = true;
+    } else if (!emailPattern.test(state.email.trim())) {
+      markError(email, "Please enter a valid email address.");
       hasError = true;
     }
 
@@ -2129,42 +2189,53 @@ function getTuitionArray() {
 function getFilteredTuitionRows({ includeCampus = false, includeProgram = false, includeCohortForCurrent = true } = {}) {
   return getTuitionArray().filter(row => {
 
-    // ✅ NEW: Future UG logic using FutureStudentFee
+    // Future undergraduate logic using FutureStudentFee
     if (state.studentPhase === "future" && state.level === "UG") {
-      const type = normalize(row.Type);
+      const type = normalizeKey(row.Type);
 
       let typeMatch = false;
 
       if (state.residencyType === "International") {
-        typeMatch = type === "International";
+        typeMatch = type === "international";
       } else if (state.province === "ON") {
         typeMatch = type === "ontario";
       } else if (state.province === "Non-ON") {
-        typeMatch = type === "Outside-ontario";
+        typeMatch =
+          type === "outside-ontario" ||
+          type === "outside ontario" ||
+          type === "non-on" ||
+          type === "non ontario";
       }
 
       const programMatch = includeProgram
-        ? normalize(row.Program) === normalize(state.program)
+        ? normalizeKey(row.Program) === normalizeKey(state.program)
         : true;
 
       return typeMatch && programMatch;
     }
 
-    // ✅ EXISTING LOGIC (unchanged for others)
-    const residencyMatch = normalize(row.Residency) === normalize(state.residencyType);
+    // Existing UG / GR tuition logic
+    const residencyMatch =
+      normalizeKey(row.Residency) === normalizeKey(state.residencyType);
 
-    const provinceValue = normalize(row.Province);
+    const provinceValue = normalizeKey(row.Province);
+
     const provinceMatch =
       state.residencyType === "International"
-        ? provinceValue === "INT"
-        : !state.province || provinceValue === normalize(state.province);
+        ? provinceValue === "int"
+        : !state.province || provinceValue === normalizeKey(state.province);
 
-    const campusMatch = includeCampus ? normalize(row.Campus) === normalize(state.campus) : true;
-    const programMatch = includeProgram ? normalize(row.Program) === normalize(state.program) : true;
+    const campusMatch = includeCampus
+      ? normalizeKey(row.Campus) === normalizeKey(state.campus)
+      : true;
+
+    const programMatch = includeProgram
+      ? normalizeKey(row.Program) === normalizeKey(state.program)
+      : true;
 
     const cohortMatch =
       state.studentPhase === "current" && includeCohortForCurrent
-        ? !state.cohortYear || normalize(row.CohortYear) === normalize(state.cohortYear)
+        ? !state.cohortYear || normalizeKey(row.CohortYear) === normalizeKey(state.cohortYear)
         : true;
 
     return residencyMatch && provinceMatch && campusMatch && programMatch && cohortMatch;
@@ -2260,10 +2331,18 @@ function getFutureProgramCoopStatus() {
   });
 
   const match = rows.find(row =>
-    normalize(row.Program) === normalize(state.program)
+    normalizeKey(row.Program) === normalizeKey(state.program)
   );
 
-  return normalize(match?.Coop_included || "");
+  return normalize(
+    readField(match || {}, [
+      "Coop_included",
+      "coop_included",
+      "Co-op Included",
+      "Coop Included",
+      "Co-op"
+    ])
+  );
 }
 function matchTuitionRecord() {
   const rows = getFilteredTuitionRows({
@@ -2355,20 +2434,23 @@ function getSelectedScholarshipTotal() {
 
 function getTuitionCosts() {
   const row = state.matchedTuitionRecord;
+
   if (!row) {
     return { items: [], low: 0, high: 0 };
   }
 
-  // ✅ NEW: Future UG logic
+  const TUITION_BUFFER = 1000;
+
+  // Future UG logic using FutureStudentFee
   if (state.studentPhase === "future" && state.level === "UG") {
     const tuitionValues = extractMoneyValues(row["Full-time Tuition"]);
     const feeValues = extractMoneyValues(row["Compulsory Fees"]);
 
-    const tuitionLow = Math.min(...tuitionValues);
-    const tuitionHigh = Math.max(...tuitionValues);
+    const tuitionLow = tuitionValues.length ? Math.min(...tuitionValues) : 0;
+    const tuitionHigh = tuitionValues.length ? Math.max(...tuitionValues) : tuitionLow;
 
-    const feeLow = Math.min(...feeValues);
-    const feeHigh = Math.max(...feeValues);
+    const feeLow = feeValues.length ? Math.min(...feeValues) : 0;
+    const feeHigh = feeValues.length ? Math.max(...feeValues) : feeLow;
 
     const items = [
       {
@@ -2380,26 +2462,46 @@ function getTuitionCosts() {
         label: "Compulsory fees",
         low: feeLow,
         high: feeHigh
+      },
+      {
+        label: "Planning buffer",
+        low: 0,
+        high: TUITION_BUFFER
       }
     ];
 
     return {
       items,
       low: tuitionLow + feeLow,
-      high: tuitionHigh + feeHigh
+      high: tuitionHigh + feeHigh + TUITION_BUFFER
     };
   }
 
-
+  // Current / graduate logic
   const fallTuition = toNumber(row.FallTuition);
   const winterTuition = toNumber(row.WinterTuition);
 
-  const fallTotal = Math.max(fallTuition, toNumber(row.FallTuition_Compulsory));
-  const winterTotal = Math.max(winterTuition, toNumber(row.WinterTuition_Compulsory));
+  const fallTuitionAndFees = Math.max(
+    fallTuition,
+    toNumber(row.FallTuition_Compulsory)
+  );
+
+  const winterTuitionAndFees = Math.max(
+    winterTuition,
+    toNumber(row.WinterTuition_Compulsory)
+  );
 
   const items = [
-    { label: "Fall tuition and fee estimate", low: fallTuition, high: fallTotal },
-    { label: "Winter tuition and fee estimate", low: winterTuition, high: winterTotal }
+    {
+      label: "Fall tuition and fee estimate",
+      low: fallTuition,
+      high: fallTuitionAndFees + TUITION_BUFFER
+    },
+    {
+      label: "Winter tuition and fee estimate",
+      low: winterTuition,
+      high: winterTuitionAndFees + TUITION_BUFFER
+    }
   ];
 
   return {
@@ -2408,7 +2510,6 @@ function getTuitionCosts() {
     high: items.reduce((sum, item) => sum + item.high, 0)
   };
 }
-
 function getOnCampusResidenceOptions() {
   return (state.data?.["On_campus_Living_Costs"] || [])
     .map(item => {
@@ -2764,19 +2865,38 @@ function getOffsets() {
   state.scholarshipOffset = getSelectedScholarshipTotal();
 
   if (state.scholarshipOffset > 0) {
-    items.push({ label: "Scholarships and bursaries", value: state.scholarshipOffset });
+    items.push({
+      label: "Selected scholarships and bursaries",
+      value: state.scholarshipOffset
+    });
+  }
+
+  if (state.otherScholarshipOffset > 0) {
+    items.push({
+      label: "Other yearly scholarship / bursary",
+      value: state.otherScholarshipOffset
+    });
   }
 
   if (state.partTimeIncome > 0) {
-    items.push({ label: "Part-time income", value: state.partTimeIncome });
+    items.push({
+      label: "Part-time income",
+      value: state.partTimeIncome
+    });
   }
 
   if (state.coopInterest === "Yes" && state.coopEarningsOffset > 0) {
-    items.push({ label: "Co-op earnings", value: state.coopEarningsOffset });
+    items.push({
+      label: "Co-op earnings",
+      value: state.coopEarningsOffset
+    });
   }
 
   if (state.familySupport > 0) {
-    items.push({ label: "Family support / savings", value: state.familySupport });
+    items.push({
+      label: "Family support / savings",
+      value: state.familySupport
+    });
   }
 
   return {
@@ -2927,6 +3047,13 @@ function readField(obj, keys = []) {
 
 function normalize(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeKey(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 function toNumber(value) {
