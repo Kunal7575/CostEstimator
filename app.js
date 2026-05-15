@@ -822,7 +822,7 @@ function renderStep2() {
               ${campuses.map(c => `<option value="${escapeHtml(c)}" ${state.campus === c ? "selected" : ""}>${escapeHtml(c)}</option>`).join("")}
             </select>
           </div>
-          
+          ${renderCampusGallery()}
           <div class="form-group">
             <label for="program">Select the program you are interested in</label>
             <select id="program" class="step-dropdown">
@@ -840,7 +840,7 @@ function renderStep2() {
               <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
             </select>
           </div>
-          ${renderCampusGallery()}
+
           ${
             isFutureUG && coopStatus === "No"
               ? renderAlert(
@@ -2554,11 +2554,7 @@ function getTuitionCosts() {
         low: feeLow,
         high: feeHigh
       },
-      {
-        label: "Planning buffer",
-        low: 0,
-        high: TUITION_BUFFER
-      }
+      
     ];
 
     return {
