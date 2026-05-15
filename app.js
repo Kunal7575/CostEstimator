@@ -720,7 +720,6 @@ function renderStep1() {
     </div>
   `;
 }
-
 function renderStep2() {
   if (state.studentPhase === "current" && !state.cohortYear) {
     state.cohortYear = getLatestCurrentCohortYear();
@@ -730,6 +729,17 @@ function renderStep2() {
   const cohortYears = getAvailableCohortYears();
   const programs = getAvailablePrograms().sort((a, b) => a.localeCompare(b));
   const countries = getAvailableCountries();
+
+  const coopStatus = getFutureProgramCoopStatus();
+  const isFutureUG = state.studentPhase === "future" && state.level === "UG";
+
+  const coopDisabled = isFutureUG && coopStatus === "No";
+
+  if (coopDisabled) {
+    state.coopInterest = "No";
+    state.includeCoop = false;
+    state.includeCoopEarnings = false;
+  }
 
   if (state.campus && !campuses.includes(state.campus)) {
     state.campus = "";
@@ -814,11 +824,31 @@ function renderStep2() {
             <label for="coopInterest">
               ${state.studentPhase === "future" ? "Are you interested in co-op?" : "Are you enrolled in co-op?"}
             </label>
-            <select id="coopInterest" class="step-dropdown">
+            <select id="coopInterest" class="step-dropdown" ${coopDisabled ? "disabled" : ""}>
               <option value="No" ${state.coopInterest === "No" ? "selected" : ""}>No</option>
               <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
             </select>
           </div>
+
+          ${
+            isFutureUG && coopStatus === "No"
+              ? renderAlert(
+                  "Co-op not available",
+                  "Co-op is not listed as available for this program, so the co-op option has been turned off.",
+                  "red"
+                )
+              : ""
+          }
+
+          ${
+            isFutureUG && coopStatus === "Partial"
+              ? renderAlert(
+                  "Co-op availability varies by major",
+                  "Some majors in this program may offer co-op, but not all. Please confirm the exact major before relying on this estimate.",
+                  "yellow"
+                )
+              : ""
+          }
 
           ${renderAlert(
             "Data source notice",
@@ -944,7 +974,7 @@ function renderStep3() {
                   "Part-time and co-op earnings are shown for planning awareness only and are not deducted from your estimated total.",
                   "grey"
                 )}
-
+                ${renderOSAPInfo()}
                 ${renderSuccessStories()}
               `
               : `
@@ -1664,8 +1694,21 @@ function bindStep2Events() {
       state.program = e.target.value;
       state.matchedTuitionRecord = null;
       clearErrors();
-      updateRunningEstimate();
+
+      const coopStatus = getFutureProgramCoopStatus();
+
+      if (
+        state.studentPhase === "future" &&
+        state.level === "UG" &&
+        coopStatus === "No"
+      ) {
+        state.coopInterest = "No";
+        state.includeCoop = false;
+        state.includeCoopEarnings = false;
+      }
+
       await updateCurrencyConversion();
+      renderCurrentStep();
     };
   }
 
@@ -2160,7 +2203,7 @@ function getAvailableCohortYears() {
 
     const latestEnd = years.length ? Math.max(...years) : new Date().getFullYear();
 
-    return Array.from({ length: 7 }, (_, i) => String(latestEnd + i));
+    return Array.from({ length: 5 }, (_, i) => String(latestEnd + i));
   }
 
   return [...new Set(
@@ -2207,7 +2250,21 @@ function compareCohortDesc(a, b) {
   const be = rb ? rb.end : 0;
   return be - ae;
 }
+function getFutureProgramCoopStatus() {
+  if (state.studentPhase !== "future" || state.level !== "UG" || !state.program) {
+    return "";
+  }
 
+  const rows = getFilteredTuitionRows({
+    includeProgram: true
+  });
+
+  const match = rows.find(row =>
+    normalize(row.Program) === normalize(state.program)
+  );
+
+  return normalize(match?.Coop_included || "");
+}
 function matchTuitionRecord() {
   const rows = getFilteredTuitionRows({
     includeCampus: true,
@@ -2764,7 +2821,56 @@ function renderBreakdownRows(title, items, isOffset = false) {
 
   return rows;
 }
+function renderOSAPInfo() {
+  if (state.residencyType !== "Domestic" || state.province !== "ON") {
+    return "";
+  }
 
+  return `
+    <div class="cost-summary" style="margin-top:20px;">
+      <div class="summary-item">
+        <label><strong>Ontario Student Assistance Program (OSAP)</strong></label>
+        <div></div>
+      </div>
+
+      <div style="font-size:13px; line-height:1.55; color:#444;">
+        <p>
+          OSAP may be available to eligible Ontario students in the form of grants and loans.
+          Grants do not need to be repaid, and loans are interest-free while students are in full-time studies.
+        </p>
+
+        <p>
+          OSAP can help with education-related costs such as tuition, books, supplies, and basic living expenses.
+          It is meant to supplement student and family resources, not replace them.
+        </p>
+
+        <div style="
+          margin-top:14px;
+          padding:14px;
+          border:1px solid #d6d6d6;
+          border-radius:10px;
+          background:#f8f8f8;
+        ">
+          <strong style="display:block; margin-bottom:6px; color:#333;">
+            Planning reminder
+          </strong>
+
+          Students should start a new OSAP application each school year and apply early so funding can be processed before fee deadlines.
+        </div>
+
+        <div style="
+          margin-top:14px;
+          padding:14px;
+          border-left:5px solid var(--uog-yellow);
+          background:#fff9e6;
+        ">
+          <strong>Note:</strong>
+          This estimator does not calculate OSAP funding amounts. Students should apply through OSAP to receive their official assessment.
+        </div>
+      </div>
+    </div>
+  `;
+}
 function renderFutureFundingSummary() {
   if (state.studentPhase !== "future") return "";
 
