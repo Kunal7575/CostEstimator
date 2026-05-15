@@ -1562,6 +1562,41 @@ function getSelectedCurrencyCode() {
   return COUNTRY_CURRENCY[state.country] || "";
 }
 
+// async function updateCurrencyConversion() {
+//   const currency = getSelectedCurrencyCode();
+
+//   state.currencyCode = currency;
+//   state.currencyRate = null;
+//   state.currencyError = "";
+
+//   if (!currency || currency === "CAD") return;
+
+//   if (SUPPORTED_CURRENCIES.length && !SUPPORTED_CURRENCIES.includes(currency)) {
+//     state.currencyError = `${currency} conversion is not supported yet.`;
+//     return;
+//   }
+
+//   try {
+//     state.currencyLoading = true;
+
+//     const url = `https://api.frankfurter.dev/v1/latest?base=CAD&symbols=${encodeURIComponent(currency)}`;
+//     const res = await fetch(url);
+
+//     if (!res.ok) throw new Error("Currency rate not available.");
+
+//     const data = await res.json();
+//     const rate = data?.rates?.[currency];
+
+//     if (!rate) throw new Error("Currency not supported.");
+
+//     state.currencyRate = Number(rate);
+//   } catch (err) {
+//     console.warn("Currency conversion unavailable:", err);
+//     state.currencyError = "Exchange estimate is not available for this currency yet.";
+//   } finally {
+//     state.currencyLoading = false;
+//   }
+// }
 async function updateCurrencyConversion() {
   const currency = getSelectedCurrencyCode();
 
@@ -1571,33 +1606,37 @@ async function updateCurrencyConversion() {
 
   if (!currency || currency === "CAD") return;
 
-  if (SUPPORTED_CURRENCIES.length && !SUPPORTED_CURRENCIES.includes(currency)) {
-    state.currencyError = `${currency} conversion is not supported yet.`;
-    return;
-  }
-
   try {
     state.currencyLoading = true;
 
-    const url = `https://api.frankfurter.dev/v1/latest?base=CAD&symbols=${encodeURIComponent(currency)}`;
-    const res = await fetch(url);
+    const res = await fetch(
+      "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cad.json"
+    );
 
-    if (!res.ok) throw new Error("Currency rate not available.");
+    if (!res.ok) {
+      throw new Error("Currency data unavailable.");
+    }
 
     const data = await res.json();
-    const rate = data?.rates?.[currency];
 
-    if (!rate) throw new Error("Currency not supported.");
+    const rates = data?.cad || {};
+
+    const rate = rates[currency.toLowerCase()];
+
+    if (!rate) {
+      throw new Error("Currency not supported.");
+    }
 
     state.currencyRate = Number(rate);
+
   } catch (err) {
     console.warn("Currency conversion unavailable:", err);
-    state.currencyError = "Exchange estimate is not available for this currency yet.";
+    state.currencyError =
+      "Exchange estimate is not available for this currency yet.";
   } finally {
     state.currencyLoading = false;
   }
 }
-
 function renderCurrencyBadge() {
   if (!state.country) return "";
 
@@ -1636,11 +1675,11 @@ function renderCurrencyBadge() {
   }
 
   if (state.currencyRate) {
-    return renderAlert(
-      "Currency conversion available",
-      `Approximate conversion available in ${escapeHtml(currency)}.`,
-      "green"
-    );
+    return `
+      <div class="currency-badge">
+        Approximate estimate available in ${escapeHtml(currency)}
+      </div>
+    `;
   }
 
   return "";
