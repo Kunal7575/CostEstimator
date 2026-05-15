@@ -822,7 +822,7 @@ function renderStep2() {
               ${campuses.map(c => `<option value="${escapeHtml(c)}" ${state.campus === c ? "selected" : ""}>${escapeHtml(c)}</option>`).join("")}
             </select>
           </div>
-
+          
           <div class="form-group">
             <label for="program">Select the program you are interested in</label>
             <select id="program" class="step-dropdown">
@@ -840,7 +840,7 @@ function renderStep2() {
               <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
             </select>
           </div>
-
+          ${renderCampusGallery()}
           ${
             isFutureUG && coopStatus === "No"
               ? renderAlert(
@@ -1684,6 +1684,58 @@ function renderCurrencyBadge() {
 
   return "";
 }
+
+function renderCampusGallery() {
+  if (!state.campus) return "";
+
+  let images = [];
+
+  if (state.campus === "University of Guelph") {
+    images = [
+      "./UGD_img/UOFG1.jpg",
+      "./UGD_img/UOFG2.jpg",
+      "./UGD_img/UOFG3.jpg"
+    ];
+  }
+
+  else if (state.campus === "University of Guelph-Humber") {
+    images = [
+      "./Gh_img/GH1.jpg",
+      "./Gh_img/GH2.jpg",
+      "./Gh_img/GH3.jpg"
+    ];
+  }
+
+  else if (
+    state.campus === "Ridgetown" ||
+    state.campus === "Ridgetown Campus"
+  ) {
+    images = [
+      "./Ridegtown_img/Rgd1.jpg",
+      "./Ridegtown_img/Rgd2.jpg",
+      "./Ridegtown_img/Rgd3.jpg"
+    ];
+  }
+
+  if (!images.length) return "";
+
+  return `
+    <div class="campus-gallery-wrapper">
+      <div class="campus-gallery-title">
+        Campus Preview
+      </div>
+
+      <div class="campus-gallery">
+        ${images.map(img => `
+          <div class="campus-gallery-card">
+            <img src="${img}" alt="Campus Image" />
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function markError(el, message = "") {
   if (!el) return;
 
