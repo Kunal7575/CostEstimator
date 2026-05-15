@@ -14934,289 +14934,337 @@
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Applied Science"
+            "Program": "Bachelor of Applied Science",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Arts"
+            "Program": "Bachelor of Arts",
+            "Coop_included": "Partial"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Arts and Science"
+            "Program": "Bachelor of Arts and Science",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Bio-Resource Management"
+            "Program": "Bachelor of Bio-Resource Management",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "54529",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Commerce"
+            "Program": "Bachelor of Commerce",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "55915",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Computing"
+            "Program": "Bachelor of Computing",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Creative Arts, Health and Wellness"
+            "Program": "Bachelor of Creative Arts, Health and Wellness",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "63160",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Engineering"
+            "Program": "Bachelor of Engineering",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Indigenous Environmental Science and Practice"
+            "Program": "Bachelor of Indigenous Environmental Science and Practice",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "54320",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Landscape Architecture"
+            "Program": "Bachelor of Landscape Architecture",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Mathematics"
+            "Program": "Bachelor of Mathematics",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of One Health"
+            "Program": "Bachelor of One Health",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Science"
+            "Program": "Bachelor of Science",
+            "Coop_included": "Partial"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Science in Agriculture"
+            "Program": "Bachelor of Science in Agriculture",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "44729",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Bachelor of Science in Environmental Science"
+            "Program": "Bachelor of Science in Environmental Science",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "96974",
             "Compulsory Fees": "1768-1930",
             "Type": "International",
-            "Program": "Doctor of Veterinary Medicine"
+            "Program": "Doctor of Veterinary Medicine",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Applied Science"
+            "Program": "Bachelor of Applied Science",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Arts"
+            "Program": "Bachelor of Arts",
+            "Coop_included": "Partial"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Arts and Science"
+            "Program": "Bachelor of Arts and Science",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Bio-Resource Management"
+            "Program": "Bachelor of Bio-Resource Management",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Commerce"
+            "Program": "Bachelor of Commerce",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Computing"
+            "Program": "Bachelor of Computing",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Creative Arts, Health and Wellness"
+            "Program": "Bachelor of Creative Arts, Health and Wellness",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Engineering"
+            "Program": "Bachelor of Engineering",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Indigenous Environmental Science and Practice"
+            "Program": "Bachelor of Indigenous Environmental Science and Practice",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Landscape Architecture"
+            "Program": "Bachelor of Landscape Architecture",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Mathematics"
+            "Program": "Bachelor of Mathematics",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of One Health"
+            "Program": "Bachelor of One Health",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Science"
+            "Program": "Bachelor of Science",
+            "Coop_included": "Partial"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Science in Agriculture"
+            "Program": "Bachelor of Science in Agriculture",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Bachelor of Science in Environmental Science"
+            "Program": "Bachelor of Science in Environmental Science",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "6091 - 11286",
             "Compulsory Fees": "1768-1930",
             "Type": "ontario",
-            "Program": "Doctor of Veterinary Medicine"
+            "Program": "Doctor of Veterinary Medicine",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Applied Science"
+            "Program": "Bachelor of Applied Science",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Arts"
+            "Program": "Bachelor of Arts",
+            "Coop_included": "Partial"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Arts and Science"
+            "Program": "Bachelor of Arts and Science",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Bio-Resource Management"
+            "Program": "Bachelor of Bio-Resource Management",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Commerce"
+            "Program": "Bachelor of Commerce",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Computing"
+            "Program": "Bachelor of Computing",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Creative Arts, Health and Wellness"
+            "Program": "Bachelor of Creative Arts, Health and Wellness",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Engineering"
+            "Program": "Bachelor of Engineering",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Indigenous Environmental Science and Practice"
+            "Program": "Bachelor of Indigenous Environmental Science and Practice",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Landscape Architecture"
+            "Program": "Bachelor of Landscape Architecture",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Mathematics"
+            "Program": "Bachelor of Mathematics",
+            "Coop_included": "No"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of One Health"
+            "Program": "Bachelor of One Health",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Science"
+            "Program": "Bachelor of Science",
+            "Coop_included": "Partial"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Science in Agriculture"
+            "Program": "Bachelor of Science in Agriculture",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Bachelor of Science in Environmental Science"
+            "Program": "Bachelor of Science in Environmental Science",
+            "Coop_included": "Yes"
         },
         {
             "Full-time Tuition": "7404 - 13718",
             "Compulsory Fees": "1768-1930",
             "Type": "Outside-ontario",
-            "Program": "Doctor of Veterinary Medicine"
+            "Program": "Doctor of Veterinary Medicine",
+            "Coop_included": "No"
         }
     ]
 }
