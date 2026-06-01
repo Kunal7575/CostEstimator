@@ -447,11 +447,11 @@ function updateChrome() {
   const gryphText = document.getElementById("sidebarGryphText");
 
   const gryphMap = {
-    0: { img: "gryph1.png", text: "Let’s get started" },
+    0: { img: "gryph2.png", text: "Let’s get started" },
     1: { img: "gryph1.png", text: "Build your profile" },
     2: { img: "gryph2.png", text: "You’re making progress" },
     3: { img: "gryph3.png", text: "Halfway there" },
-    4: { img: "gryph2.png", text: "Almost done" },
+    4: { img: "gryph1.png", text: "Almost done" },
     5: { img: "gryph4.png", text: "Your estimate is ready" }
   };
 
@@ -574,9 +574,33 @@ function renderStep0() {
         />
 
         <p class="welcome-copy">
-          Welcome to the UofG Cost Estimator. Let’s find out what your education may cost
-          based on your path, tuition, housing, and funding choices.
+          Welcome to the University of Guelph Cost Estimator. Explore tuition, living
+          costs, scholarships, housing options, and funding opportunities to help plan
+          your educational journey.
         </p>
+
+        <div class="gryph-help-card">
+          <div class="gryph-help-image">
+            <img src="./gryph5.png" alt="Gryph" />
+          </div>
+
+          <div class="gryph-help-cloud">
+            <h3>Not sure whether you're considered a domestic or international student?</h3>
+
+            <p>
+              Your immigration status may impact tuition rates and scholarship eligibility.
+              You can check eligibility requirements before starting your estimate.
+            </p>
+
+            <a
+              href="https://www.uoguelph.ca/registrar/enrolment-records/immigration-status"
+              target="_blank"
+              class="gryph-help-link"
+            >
+              Check Immigration Status Information →
+            </a>
+          </div>
+        </div>
 
         <div class="choice-row welcome-choice-row">
           <div class="choice-card ${state.studentPhase === "future" ? "selected" : ""}" data-value="future">
