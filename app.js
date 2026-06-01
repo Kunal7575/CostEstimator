@@ -38,6 +38,7 @@ const state = {
   
   fullName: "",
   email: "",
+  marketingConsent: false,
 
   matchedTuitionRecord: null,
   result: null,
@@ -1259,7 +1260,29 @@ function renderStep5() {
           <div class="form-group">
             <label for="email">Email address</label>
             <input id="email" class="step-input" type="email" value="${escapeHtml(state.email)}" placeholder="Enter your email address" />
+
+            <div style="font-size:13px; line-height:1.5; color:#555; margin-top:6px;">
+              Your name and email address are used to provide your estimate.
+            </div>
           </div>
+
+          <label class="checkbox-item">
+            <input
+              type="checkbox"
+              id="marketingConsent"
+              ${state.marketingConsent ? "checked" : ""}
+            />
+            <span>
+              I would like to receive information about programs, admissions, events,
+              scholarships, and other University of Guelph opportunities.
+            </span>
+          </label>
+
+          ${renderAlert(
+            "Privacy notice",
+            "Receiving your estimate is separate from optional communications. You can download or receive your estimate without selecting the communication checkbox.",
+            "grey"
+          )}
         </div>
       </div>
 
@@ -2086,6 +2109,7 @@ function bindStep5Events() {
 
   const fullName = document.getElementById("fullName");
   const email = document.getElementById("email");
+  const marketingConsent = document.getElementById("marketingConsent");
   const back = document.getElementById("backStep5");
   const downloadBtn = document.getElementById("downloadEstimateBtn");
   const emailBtn = document.getElementById("emailEstimateBtn");
@@ -2101,6 +2125,12 @@ function bindStep5Events() {
     email.oninput = e => {
       state.email = e.target.value;
       clearErrors();
+    };
+  }
+
+  if (marketingConsent) {
+    marketingConsent.onchange = e => {
+      state.marketingConsent = e.target.checked;
     };
   }
 
@@ -2151,6 +2181,14 @@ function bindStep5Events() {
   if (emailBtn) {
     emailBtn.onclick = () => {
       if (!validateContactFields()) return;
+
+      const payload = {
+        fullName: state.fullName,
+        email: state.email,
+        marketingConsent: state.marketingConsent
+      };
+
+      console.log("Estimate email payload:", payload);
 
       alert("Email flow can be wired next.");
     };
