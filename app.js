@@ -48,7 +48,8 @@ const state = {
   currencyLoading: false,
   currencyError: "",
   showStep2Error: false,
-  step2ErrorMessage: ""
+  step2ErrorMessage: "",
+  dataLoadError: false
 };
 
 // ======================
@@ -75,53 +76,6 @@ function renderAlert(title, message = "", color = "yellow") {
   `;
 }
 
-// CSS for alerts (injected once)
-(function injectAlertStyles() {
-  const styleId = "uog-alert-styles";
-  if (document.getElementById(styleId)) return;
-  const style = document.createElement("style");
-  style.id = styleId;
-  style.textContent = `
-    .uog-alert {
-      border: 1px solid #d6d6d6;
-      background: #fff;
-      padding: 14px;
-      margin: 14px 0;
-    }
-    .uog-alert-title {
-      font-weight: 700;
-      padding: 12px 14px;
-      font-size: 15px;
-    }
-    .uog-alert-message {
-      padding: 12px 14px 4px;
-      font-size: 14px;
-      line-height: 1.5;
-      color: #2f3640;
-    }
-    .uog-alert-yellow .uog-alert-title {
-      background: #ffc72c;
-      color: #111;
-    }
-    .uog-alert-blue .uog-alert-title {
-      background: #3178b8;
-      color: #fff;
-    }
-    .uog-alert-green .uog-alert-title {
-      background: #2f8132;
-      color: #fff;
-    }
-    .uog-alert-red .uog-alert-title {
-      background: #e51937;
-      color: #fff;
-    }
-    .uog-alert-grey .uog-alert-title {
-      background: #d9d9d9;
-      color: #111;
-    }
-  `;
-  document.head.appendChild(style);
-})();
 
 const COUNTRY_CURRENCY = {
   Afghanistan: "AFN",
@@ -340,8 +294,10 @@ async function loadData() {
     const res = await fetch("./data.json");
     if (!res.ok) throw new Error("Could not load data.json");
     state.data = await res.json();
+    state.dataLoadError = false;
   } catch (err) {
     console.error(err);
+    state.dataLoadError = true;
     const container = document.getElementById("flowContainer");
     if (container) {
       container.innerHTML = `
@@ -371,17 +327,9 @@ function bindScrollTop() {
 }
 
 function setupWelcomeImage() {
-  const img = document.getElementById("welcomeImage");
-  if (!img) return;
-
-  img.addEventListener(
-    "error",
-    () => {
-      img.style.display = "none";
-    },
-    { once: true }
-  );
+  return;
 }
+
 
 function deriveFutureResidency() {
   if (state.studentPhase !== "future") return;
@@ -405,25 +353,24 @@ function deriveFutureResidency() {
 function updateChrome() {
   const stepTitles = {
     0: "Welcome",
-    1: "Academic Profile",
-    2: "Program",
-    3: "Additional Costs & Funding",
-    4: "Living",
-    5: "Estimate Summary"
+    1: "Academic profile",
+    2: "Program and tuition",
+    3: "Additional costs and funding",
+    4: "Living costs",
+    5: "Estimate summary"
   };
 
   const stepSubtitles = {
     0: "Start your estimate.",
-    1: "Tell us who you are so we can build the right estimate path.",
-    2: "Choose your target year, campus, and program.",
-    3: "Add extra costs and review funding information.",
-    4: "Add housing and meal plan options if needed.",
-    5: "Review your estimate and enter your details."
+    1: "Choose the student and residency path that applies to you.",
+    2: "Select the year, campus, and program for the estimate.",
+    3: "Add optional costs and funding information.",
+    4: "Include housing and meal plan costs if applicable.",
+    5: "Review the estimate and choose how to save it."
   };
 
   const topStatusCard = document.getElementById("topStatusCard");
   const progressInline = document.getElementById("progressInline");
-
   const showChrome = state.currentStep > 0;
 
   if (topStatusCard) topStatusCard.style.display = showChrome ? "flex" : "none";
@@ -443,22 +390,7 @@ function updateChrome() {
 
   if (progressFill) progressFill.style.width = `${progressPct}%`;
   if (progressText) progressText.textContent = `${progressPct}% complete`;
-  const gryphImg = document.getElementById("sidebarGryphImg");
-  const gryphText = document.getElementById("sidebarGryphText");
 
-  const gryphMap = {
-    0: { img: "gryph2.png", text: "Let’s get started" },
-    1: { img: "gryph1.png", text: "Build your profile" },
-    2: { img: "gryph2.png", text: "You’re making progress" },
-    3: { img: "gryph3.png", text: "Halfway there" },
-    4: { img: "gryph1.png", text: "Almost done" },
-    5: { img: "gryph4.png", text: "Your estimate is ready" }
-  };
-
-  const gryph = gryphMap[state.currentStep] || gryphMap[0];
-
-  if (gryphImg) gryphImg.src = `./${gryph.img}`;
-  if (gryphText) gryphText.textContent = gryph.text;
   const runningTotal = document.getElementById("topRunningTotal");
   if (runningTotal) {
     const low = state.result?.low || 0;
@@ -477,45 +409,35 @@ function updateChrome() {
 
     item.onclick = () => {
       if (step < 1 || step > 5) return;
-
-      // Do not allow users to jump ahead from the sidebar.
-      // They must use Continue so required fields are validated.
       if (step > state.currentStep) {
         alert("Please complete the current step before moving forward.");
         return;
       }
-
       state.currentStep = step;
       calculateEstimate();
       renderCurrentStep();
     };
   });
 }
-function renderGryph(step) {
-  const gryphMap = {
-    1: { img: "gryph1.png", text: "Let’s get started" },
-    2: { img: "gryph2.png", text: "You’re making progress" },
-    3: { img: "gryph3.png", text: "Halfway there" },
-    4: { img: "gryph2.png", text: "Almost done" },
-    5: { img: "gryph4.png", text: "Your estimate is ready" }
-  };
 
-  const g = gryphMap[step];
-  if (!g) return "";
-
-  return `
-    <div class="gryph-assist">
-      <img src="./${g.img}" />
-      <p>${g.text}</p>
-    </div>
-  `;
+function renderGryph() {
+  return "";
 }
+
 function renderCurrentStep() {
   const container = document.getElementById("flowContainer");
   if (!container) return;
 
   if (!state.data) {
-    container.innerHTML = `
+    container.innerHTML = state.dataLoadError ? `
+      <div class="step-container">
+        <div class="step-header">
+          <p class="section-kicker">Data unavailable</p>
+          <h2 class="step-title">Unable to load estimator data</h2>
+          <p class="step-description">Make sure <strong>data.json</strong> is in the same folder as this HTML file and app.js.</p>
+        </div>
+      </div>
+    ` : `
       <div class="step-container">
         <div class="loading-spinner"></div>
       </div>
@@ -559,77 +481,100 @@ function renderCurrentStep() {
 
 function renderStep0() {
   return `
-    <div class="step-container">
+    <div class="step-container contenthub-intro">
       <div class="step-header">
+        <p class="section-kicker">Planning tool</p>
         <h2 class="step-title">Cost Estimator</h2>
-        <p class="step-description">Build a personalized estimate in a few guided steps.</p>
+        <p class="step-description">
+          Use this tool to build an estimated cost range based on student type, program,
+          living costs, and optional expenses.
+        </p>
       </div>
 
-      <div class="welcome-screen">
-        <img
-          src="./image.png"
-          alt="Cost Estimator Illustration"
-          class="welcome-image"
-          id="welcomeImage"
-        />
-
-        <p class="welcome-copy">
-          Welcome to the University of Guelph Cost Estimator. Explore tuition, living
-          costs, scholarships, housing options, and funding opportunities to help plan
-          your educational journey.
-        </p>
-
-        <div class="gryph-help-card">
-          <div class="gryph-help-image">
-            <img src="./gryph5.png" alt="Gryph" />
-          </div>
-
-          <div class="gryph-help-cloud">
-            <h3>Not sure whether you're considered a domestic or international student?</h3>
-
-            <p>
-              Your immigration status may impact tuition rates and scholarship eligibility.
-              You can check eligibility requirements before starting your estimate.
-            </p>
-
-            <a
-              href="https://www.uoguelph.ca/registrar/enrolment-records/immigration-status"
-              target="_blank"
-              class="gryph-help-link"
-            >
-              Check Immigration Status Information →
-            </a>
-          </div>
-        </div>
+      <div class="step-content">
+        ${renderAlert(
+          "Estimate notice",
+          "This estimator is for planning purposes only and does not replace official University of Guelph tuition, fee, housing, meal plan, scholarship, or funding information.",
+          "yellow"
+        )}
 
         <div class="choice-row welcome-choice-row">
-          <div class="choice-card ${state.studentPhase === "future" ? "selected" : ""}" data-value="future">
-            <h3>Future student</h3>
-            <p>Best for prospective students and applicants planning ahead.</p>
-          </div>
+          <button class="choice-card ${state.studentPhase === "future" ? "selected" : ""}" data-value="future" type="button">
+            <span class="choice-card-title">Future student</span>
+            <span class="choice-card-text">For prospective students and applicants planning ahead.</span>
+          </button>
 
-          <div class="choice-card ${state.studentPhase === "current" ? "selected" : ""}" data-value="current">
-            <h3>Current or returning student</h3>
-            <p>Best for students who already know their program and want a more tailored estimate.</p>
-          </div>
+          <button class="choice-card ${state.studentPhase === "current" ? "selected" : ""}" data-value="current" type="button">
+            <span class="choice-card-title">Current or returning student</span>
+            <span class="choice-card-text">For students who already know their program and want a more specific estimate.</span>
+          </button>
         </div>
 
         <div class="step-actions welcome-actions">
-          <button class="btn-primary btn-lg" id="startBtn" type="button">Get Started</button>
+          <button class="btn-primary btn-lg" id="startBtn" type="button">
+            Start estimate
+          </button>
         </div>
-      </div>
-    </div>
+
+        <div class="quick-links-section">
+          <p class="quick-links-heading">
+            Helpful resources
+          </p>
+
+          <div class="quick-link-row">
+
+            <a
+              class="quick-link-card"
+              href="https://www.uoguelph.ca/registrar/enrolment-records/immigration-status"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="quick-link-title">
+                Immigration Status
+              </span>
+
+              <span class="quick-link-text">
+                Determine whether you may be assessed domestic or international tuition.
+              </span>
+
+              <span class="quick-link-action">
+                Learn More 
+              </span>
+            </a>
+
+            <a
+              class="quick-link-card"
+              href="#"
+              target="_blank"
+              rel="noopener"
+            >
+              <span class="quick-link-title">
+                Scholarships & Funding
+              </span>
+
+              <span class="quick-link-text">
+                Explore scholarships, bursaries, and financial support opportunities.
+              </span>
+
+              <span class="quick-link-action">
+                Learn More
+              </span>
+            </a>
+
+          </div>
+        </div>
   `;
 }
+
 
 function renderStep1() {
   return `
     <div class="step-container">
       <div class="step-header">
-        <h2 class="step-title">Who are you?</h2>
-        <p class="step-description">Choose your student path and study type so we can build the right estimate.</p>
+        <p class="section-kicker">Academic profile</p>
+        <h2 class="step-title">Tell us about your student path</h2>
+        <p class="step-description">These answers help determine the correct tuition and fee pathway.</p>
       </div>
-     
 
       <div class="step-content">
         <div class="form-stack">
@@ -691,16 +636,14 @@ function renderStep1() {
           }
 
           <div class="form-group">
-            <label for="level">
-              ${state.studentPhase === "future" ? "What are you looking for?" : "Level"}
-            </label>
+            <label for="level">${state.studentPhase === "future" ? "Study level" : "Level"}</label>
             <select id="level" class="step-dropdown">
-              <option value="">${state.studentPhase === "future" ? "Select an option" : "Select level"}</option>
-              <option value="UG" ${state.level === "UG" ? "selected" : ""}>Undergraduate (Bachelor's degree)</option>
-              <option value="GR" ${state.level === "GR" ? "selected" : ""}>Graduate (Master’s or PhD)</option>
+              <option value="">Select level</option>
+              <option value="UG" ${state.level === "UG" ? "selected" : ""}>Undergraduate</option>
+              <option value="GR" ${state.level === "GR" ? "selected" : ""}>Graduate</option>
             </select>
           </div>
-          
+
           ${
             state.residencyType === "Domestic"
               ? `
@@ -715,32 +658,27 @@ function renderStep1() {
               `
               : ""
           }
+
           ${
-              state.studentPhase === "future"
-                ? `<div style="margin-top:-5px;">
-                    ${renderAlert(
-                      "Program tip!",
-                      "Choose Undergraduate if you're starting your first degree. Choose Graduate if you already have a degree.",
-                      "blue"
-                    )}
-                  </div>`
-                : ""
-            }
-          ${renderAlert(
-            "Estimate notice!",
-            "This estimator is a planning tool and does not replace official University of Guelph tuition, fee, housing, meal plan, scholarship, or funding information.",
-            "yellow"
-          )}
+            state.studentPhase === "future"
+              ? renderAlert(
+                  "Program tip",
+                  "Choose Undergraduate if you are starting your first degree. Choose Graduate if you already have a degree and are applying to a master’s or doctoral program.",
+                  "blue"
+                )
+              : ""
+          }
         </div>
       </div>
 
       <div class="step-footer">
         <div></div>
-        <button class="btn-primary" id="nextStep1">Continue</button>
+        <button class="btn-primary" id="nextStep1" type="button">Continue</button>
       </div>
     </div>
   `;
 }
+
 function renderStep2() {
   if (state.studentPhase === "current" && !state.cohortYear) {
     state.cohortYear = getLatestCurrentCohortYear();
@@ -750,10 +688,8 @@ function renderStep2() {
   const cohortYears = getAvailableCohortYears();
   const programs = getAvailablePrograms().sort((a, b) => a.localeCompare(b));
   const countries = getAvailableCountries();
-
   const coopStatus = getFutureProgramCoopStatus();
   const isFutureUG = state.studentPhase === "future" && state.level === "UG";
-
   const coopDisabled = isFutureUG && coopStatus === "No";
 
   if (coopDisabled) {
@@ -778,18 +714,18 @@ function renderStep2() {
   return `
     <div class="step-container">
       <div class="step-header">
-        <h2 class="step-title">Program and tuition details</h2>
-        <p class="step-description">Choose your target year, campus, and program for your estimate.</p>
+        <p class="section-kicker">Program and tuition</p>
+        <h2 class="step-title">Select your program details</h2>
+        <p class="step-description">Choose the year, campus, and program used to match tuition data.</p>
       </div>
 
       <div class="step-content">
         <div class="form-stack">
-      
           ${
             state.studentPhase === "future"
               ? `
                 <div class="form-group">
-                  <label for="cohortYear">Select your expected start year?</label>
+                  <label for="cohortYear">Expected start year</label>
                   <select id="cohortYear" class="step-dropdown">
                     <option value="">Select target year</option>
                     ${cohortYears.map(y => `<option value="${escapeHtml(y)}" ${state.cohortYear === y ? "selected" : ""}>${escapeHtml(y)}</option>`).join("")}
@@ -799,9 +735,7 @@ function renderStep2() {
               : `
                 <div class="form-group">
                   <label>Year</label>
-                  <div class="step-input" style="display:flex;align-items:center;">
-                    ${escapeHtml(currentStudentYear || "Not available")}
-                  </div>
+                  <div class="readonly-field">${escapeHtml(currentStudentYear || "Not available")}</div>
                 </div>
               `
           }
@@ -814,9 +748,7 @@ function renderStep2() {
                   <select id="country" class="step-dropdown">
                     <option value="">Select country</option>
                     ${countries.map(country => `
-                      <option value="${escapeHtml(country)}" ${state.country === country ? "selected" : ""}>
-                        ${escapeHtml(country)}
-                      </option>
+                      <option value="${escapeHtml(country)}" ${state.country === country ? "selected" : ""}>${escapeHtml(country)}</option>
                     `).join("")}
                   </select>
                   ${renderCurrencyBadge()}
@@ -832,9 +764,9 @@ function renderStep2() {
               ${campuses.map(c => `<option value="${escapeHtml(c)}" ${state.campus === c ? "selected" : ""}>${escapeHtml(c)}</option>`).join("")}
             </select>
           </div>
-          
+
           <div class="form-group">
-            <label for="program">Select the program you are interested in</label>
+            <label for="program">Program</label>
             <select id="program" class="step-dropdown">
               <option value="">Select program</option>
               ${programs.map(p => `<option value="${escapeHtml(p)}" ${state.program === p ? "selected" : ""}>${escapeHtml(p)}</option>`).join("")}
@@ -842,50 +774,37 @@ function renderStep2() {
           </div>
 
           <div class="form-group">
-            <label for="coopInterest">
-              ${state.studentPhase === "future" ? "Are you interested in co-op?" : "Are you enrolled in co-op?"}
-            </label>
+            <label for="coopInterest">${state.studentPhase === "future" ? "Interested in co-op?" : "Enrolled in co-op?"}</label>
             <select id="coopInterest" class="step-dropdown" ${coopDisabled ? "disabled" : ""}>
               <option value="No" ${state.coopInterest === "No" ? "selected" : ""}>No</option>
               <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
             </select>
           </div>
-          ${renderCampusGallery()}
+
           ${
             isFutureUG && coopStatus === "No"
-              ? renderAlert(
-                  "Co-op not available",
-                  "Co-op is not listed as available for this program, so the co-op option has been turned off.",
-                  "red"
-                )
+              ? renderAlert("Co-op not available", "Co-op is not listed as available for this program, so the co-op option has been turned off.", "red")
               : ""
           }
 
           ${
             isFutureUG && coopStatus === "Partial"
-              ? renderAlert(
-                  "Co-op availability varies by major",
-                  "Some majors in this program may offer co-op, but not all. Please confirm the exact major before relying on this estimate.",
-                  "yellow"
-                )
+              ? renderAlert("Co-op availability varies", "Some majors in this program may offer co-op, but not all. Please confirm the exact major before relying on this estimate.", "yellow")
               : ""
           }
 
-          ${renderAlert(
-            "Data source notice",
-            "The available options come directly from the tuition data for your selected study type, campus, and residency path.",
-            "blue"
-          )}
+          ${renderAlert("Data source notice", "The available options come from the tuition data for the selected study type, campus, and residency path.", "blue")}
         </div>
       </div>
 
       <div class="step-footer">
-        <button class="btn-secondary" id="backStep2">Back</button>
-        <button class="btn-primary" id="nextStep2">Continue</button>
+        <button class="btn-secondary" id="backStep2" type="button">Back</button>
+        <button class="btn-primary" id="nextStep2" type="button">Continue</button>
       </div>
     </div>
   `;
 }
+
 function renderInfoIcon(title, message) {
   const tooltipId = `tooltip-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -915,41 +834,13 @@ function renderInfoIcon(title, message) {
   `;
 }
 function renderStep3() {
-  const scholarships =
-    state.residencyType === "International"
-      ? (state.data["Scholarships for Int"] || [])
-      : (state.data["Scholarships for Dom"] || []);
-
-  const scholarshipCards = scholarships.length
-    ? scholarships.map(item => {
-        const awardName = escapeHtml(item["Award Name"] || "Unnamed award");
-        const amount = escapeHtml(item.Amount || "Amount not listed");
-        const note = escapeHtml(item["Notes"] || item["Application Required"] || item["Eligibility"] || "");
-
-        return `
-          <div class="scholarship-card">
-            <div class="scholarship-card-top">
-              <h3>${awardName}</h3>
-              <span class="scholarship-amount">${amount}</span>
-            </div>
-            ${note ? `<p class="scholarship-meta">${note}</p>` : ""}
-          </div>
-        `;
-      }).join("")
-    : `
-      ${renderAlert("No scholarships found", "No scholarship or bursary entries were found for this residency type in the current data.", "grey")}
-    `;
-
   return `
     <div class="step-container">
       <div class="step-header">
-        <h2 class="step-title">Additional costs and funding</h2>
+        <p class="section-kicker">Additional costs and funding</p>
+        <h2 class="step-title">Add optional costs and funding</h2>
         <p class="step-description">
-          ${
-            state.studentPhase === "future"
-              ? "Add optional costs and review possible funding opportunities."
-              : "Add optional costs and enter funding you already have."
-          }
+          ${state.studentPhase === "future" ? "Choose optional costs and review planning information." : "Choose optional costs and enter funding you want reflected in the estimate."}
         </p>
       </div>
 
@@ -984,24 +875,14 @@ function renderStep3() {
                     : ""
                 }
 
-                ${renderAlert(
-                  "Scholarships & bursaries",
-                  "Scholarships and bursaries will be shown in your final estimate summary for awareness.",
-                  "blue"
-                )}
-
-                ${renderAlert(
-                  "Potential earnings notice",
-                  "Part-time and co-op earnings are shown for planning awareness only and are not deducted from your estimated total.",
-                  "grey"
-                )}
+                ${renderAlert("Scholarships and bursaries", "Scholarship and bursary information will be shown in the final summary for awareness.", "blue")}
+                ${renderAlert("Potential earnings notice", "Part-time and co-op earnings are shown for planning awareness only and are not deducted from the estimated total.", "grey")}
                 ${renderOSAPInfo()}
                 ${renderSuccessStories()}
               `
               : `
                 <div class="form-group">
-                  <h3>Scholarships and bursaries</h3>
-
+                  <h3 class="subsection-title">Scholarships and bursaries</h3>
                   <div class="scholarship-checkbox-list">
                     ${getScholarshipOptions().map(item => {
                       const selected = state.selectedScholarshipKeys.includes(item.__key);
@@ -1011,72 +892,38 @@ function renderStep3() {
 
                       return `
                         <label class="scholarship-option ${selected ? "selected" : ""}">
-                          <input
-                            type="checkbox"
-                            name="selectedScholarships"
-                            value="${escapeHtml(item.__key)}"
-                            ${selected ? "checked" : ""}
-                          />
-
-                          <div class="scholarship-option-body">
-                            <div class="scholarship-option-top">
+                          <input type="checkbox" name="selectedScholarships" value="${escapeHtml(item.__key)}" ${selected ? "checked" : ""} />
+                          <span class="scholarship-option-body">
+                            <span class="scholarship-option-top">
                               <strong>${escapeHtml(item.__label)}</strong>
-                              <span>
-                                ${yearlyValue > 0 ? `${formatMoney(yearlyValue)} / year` : "Amount varies"}
-                              </span>
-                            </div>
-
-                            <div class="scholarship-option-meta">
+                              <span>${yearlyValue > 0 ? `${formatMoney(yearlyValue)} / year` : "Amount varies"}</span>
+                            </span>
+                            <span class="scholarship-option-meta">
                               ${category ? `${escapeHtml(category)} · ` : ""}
                               ${item["Application Required"] ? `Application required: ${escapeHtml(item["Application Required"])}` : ""}
-                            </div>
-
+                            </span>
                             ${
                               amount && yearlyValue <= 0
-                                ? `
-                                  <div class="scholarship-option-note" style="display:block;">
-                                    Listed award amount: ${escapeHtml(amount)}
-                                  </div>
-                                `
+                                ? `<span class="scholarship-option-note">Listed award amount: ${escapeHtml(amount)}</span>`
                                 : ""
                             }
-                          </div>
+                          </span>
                         </label>
                       `;
                     }).join("")}
                   </div>
 
-                  ${renderAlert(
-                    "Scholarship calculation",
-                    "Renewable or multi-year awards are converted to an estimated yearly amount for this calculator.",
-                    "grey"
-                  )}
+                  ${renderAlert("Scholarship calculation", "Renewable or multi-year awards are converted to an estimated yearly amount for this calculator.", "grey")}
                 </div>
 
                 <div class="form-group">
                   <label for="partTimeIncome">Expected part-time income</label>
-
-                  <input
-                    id="partTimeIncome"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.partTimeIncome)}"
-                    placeholder="Enter your expected yearly part-time income"
-                  />
+                  <input id="partTimeIncome" class="step-input" type="number" min="0" value="${escapeHtml(state.partTimeIncome)}" placeholder="Enter expected yearly part-time income" />
                 </div>
 
                 <div class="form-group">
                   <label for="otherScholarshipOffset">Other yearly scholarship / bursary</label>
-
-                  <input
-                    id="otherScholarshipOffset"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.otherScholarshipOffset)}"
-                    placeholder="Enter any additional yearly scholarship or bursary amount"
-                  />
+                  <input id="otherScholarshipOffset" class="step-input" type="number" min="0" value="${escapeHtml(state.otherScholarshipOffset)}" placeholder="Enter any additional yearly scholarship or bursary amount" />
                 </div>
 
                 ${
@@ -1084,15 +931,7 @@ function renderStep3() {
                     ? `
                       <div class="form-group">
                         <label for="coopEarningsOffset">Expected co-op earnings</label>
-
-                        <input
-                          id="coopEarningsOffset"
-                          class="step-input"
-                          type="number"
-                          min="0"
-                          value="${escapeHtml(state.coopEarningsOffset)}"
-                          placeholder="Enter your expected co-op earnings"
-                        />
+                        <input id="coopEarningsOffset" class="step-input" type="number" min="0" value="${escapeHtml(state.coopEarningsOffset)}" placeholder="Enter expected co-op earnings" />
                       </div>
                     `
                     : ""
@@ -1100,34 +939,23 @@ function renderStep3() {
 
                 <div class="form-group">
                   <label for="familySupport">Family support / savings</label>
-
-                  <input
-                    id="familySupport"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.familySupport)}"
-                    placeholder="Enter support from family, savings, or other funding"
-                  />
+                  <input id="familySupport" class="step-input" type="number" min="0" value="${escapeHtml(state.familySupport)}" placeholder="Enter support from family, savings, or other funding" />
                 </div>
 
-                ${renderAlert(
-                  "Funding deduction",
-                  "Selected scholarships, bursaries, and funding values are deducted from the final estimate for current or returning students.",
-                  "yellow"
-                )}
+                ${renderAlert("Funding deduction", "Selected scholarships, bursaries, and funding values are deducted from the final estimate for current or returning students.", "yellow")}
               `
           }
         </div>
       </div>
-      
+
       <div class="step-footer">
-        <button class="btn-secondary" id="backStep3">Back</button>
-        <button class="btn-primary" id="nextStep3">Continue</button>
+        <button class="btn-secondary" id="backStep3" type="button">Back</button>
+        <button class="btn-primary" id="nextStep3" type="button">Continue</button>
       </div>
     </div>
   `;
 }
+
 
 function renderStep4() {
   const isFutureStudent = state.studentPhase === "future";
@@ -1137,8 +965,9 @@ function renderStep4() {
   return `
     <div class="step-container">
       <div class="step-header">
-        <h2 class="step-title">Living costs</h2>
-        <p class="step-description">Choose whether you want to include housing and meal plans in the estimate.</p>
+        <p class="section-kicker">Living costs</p>
+        <h2 class="step-title">Add living cost assumptions</h2>
+        <p class="step-description">Choose whether to include housing and meal plan estimates.</p>
       </div>
 
       <div class="step-content">
@@ -1156,7 +985,7 @@ function renderStep4() {
             isFutureStudent && state.housingType !== "OnCampus"
               ? `
                 <div class="form-group">
-                  <label for="futureMealPlanInterest">Would you like to include a meal plan estimate?</label>
+                  <label for="futureMealPlanInterest">Include a meal plan estimate?</label>
                   <select id="futureMealPlanInterest" class="step-dropdown">
                     <option value="No" ${state.futureMealPlanInterest === "No" ? "selected" : ""}>No</option>
                     <option value="Yes" ${state.futureMealPlanInterest === "Yes" ? "selected" : ""}>Yes</option>
@@ -1173,11 +1002,7 @@ function renderStep4() {
                   <label for="residence">Residence</label>
                   <select id="residence" class="step-dropdown">
                     <option value="">Select residence</option>
-                    ${onCampusOptions.map(item => `
-                      <option value="${escapeHtml(item.value)}" ${state.residence === item.value ? "selected" : ""}>
-                        ${escapeHtml(item.label)}
-                      </option>
-                    `).join("")}
+                    ${onCampusOptions.map(item => `<option value="${escapeHtml(item.value)}" ${state.residence === item.value ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
                   </select>
                 </div>
 
@@ -1185,11 +1010,7 @@ function renderStep4() {
                   <label for="mealPlan">Meal plan</label>
                   <select id="mealPlan" class="step-dropdown">
                     <option value="">Select meal plan</option>
-                    ${mealPlanOptions.map(item => `
-                      <option value="${escapeHtml(item.value)}" ${state.mealPlan === item.value ? "selected" : ""}>
-                        ${escapeHtml(item.label)}
-                      </option>
-                    `).join("")}
+                    ${mealPlanOptions.map(item => `<option value="${escapeHtml(item.value)}" ${state.mealPlan === item.value ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
                   </select>
                 </div>
               `
@@ -1201,46 +1022,29 @@ function renderStep4() {
               ? `
                 <div class="form-group">
                   <label for="currentOffCampusRent">Yearly rent</label>
-                  <input
-                    id="currentOffCampusRent"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.currentOffCampusRent)}"
-                    placeholder="Enter your yearly rent"
-                  />
+                  <input id="currentOffCampusRent" class="step-input" type="number" min="0" value="${escapeHtml(state.currentOffCampusRent)}" placeholder="Enter yearly rent" />
                 </div>
 
                 <div class="form-group">
                   <label for="currentOffCampusFood">Yearly food expense</label>
-                  <input
-                    id="currentOffCampusFood"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.currentOffCampusFood)}"
-                    placeholder="Enter your yearly food expense"
-                  />
+                  <input id="currentOffCampusFood" class="step-input" type="number" min="0" value="${escapeHtml(state.currentOffCampusFood)}" placeholder="Enter yearly food expense" />
                 </div>
               `
               : ""
           }
 
-          ${renderAlert(
-            "Living cost notice",
-            "Living costs are planning estimates and may vary by year, room choice, meal plan, and market conditions.",
-            "yellow"
-          )}
+          ${renderAlert("Living cost notice", "Living costs are planning estimates and may vary by year, room choice, meal plan, and market conditions.", "yellow")}
         </div>
       </div>
 
       <div class="step-footer">
-        <button class="btn-secondary" id="backStep4">Back</button>
-        <button class="btn-primary" id="nextStep4">Build estimate</button>
+        <button class="btn-secondary" id="backStep4" type="button">Back</button>
+        <button class="btn-primary" id="nextStep4" type="button">Build estimate</button>
       </div>
     </div>
   `;
 }
+
 
 function renderStep5() {
   const result = state.result || emptyResult();
@@ -1248,34 +1052,42 @@ function renderStep5() {
   return `
     <div class="step-container">
       <div class="step-header">
-        <h2 class="step-title">Your estimate</h2>
-        <p class="step-description">Review the estimate and provide your details.</p>
+        <p class="section-kicker">Estimate summary</p>
+        <h2 class="step-title">Review your estimate</h2>
+        <p class="step-description">Review the cost range and choose whether to download or email the estimate.</p>
       </div>
 
       <div class="step-content">
-        <div class="cost-summary">
-          <div class="summary-item">
-            <label>Estimated range</label>
-            <div class="summary-value">${formatRangeValue(result.low, result.high)}</div>
-            ${getConvertedRangeText(result.low, result.high)}
-          </div>
+        <div class="estimate-total-card">
+          <span class="estimate-total-label">Estimated range</span>
+          <strong>${formatRangeValue(result.low, result.high)}</strong>
+          ${getConvertedRangeText(result.low, result.high)}
         </div>
 
         <div class="cost-summary">
           ${renderBreakdownRows("Tuition and fees", result.tuition.items).join("")}
           ${renderBreakdownRows("Living costs", result.living.items).join("")}
           ${renderBreakdownRows("Extra costs", result.extras.items).join("")}
-          ${
-            state.studentPhase === "current"
-              ? renderBreakdownRows("Funding and offsets", result.offsets.items, true).join("")
-              : ""
-          }
+          ${state.studentPhase === "current" ? renderBreakdownRows("Funding and offsets", result.offsets.items, true).join("") : ""}
+        </div>
+
+        <div class="cost-summary">
+          <div class="summary-item">
+            <label><strong>Estimated cost breakdown</strong></label>
+            <div></div>
+          </div>
+
+          <div style="height: 360px;">
+            <canvas id="costBreakdownChart"></canvas>
+          </div>
+
+          <p class="form-help-text" id="largestCostDriverText" style="margin-top: 1.2rem;"></p>
         </div>
 
         ${renderFutureFundingSummary()}
         ${renderFutureEarningsSummary()}
 
-        <div class="form-stack" style="margin-top:20px;">
+        <div class="form-stack contact-section">
           <div class="form-group">
             <label for="fullName">Full name</label>
             <input id="fullName" class="step-input" type="text" value="${escapeHtml(state.fullName)}" placeholder="Enter your full name" />
@@ -1284,39 +1096,271 @@ function renderStep5() {
           <div class="form-group">
             <label for="email">Email address</label>
             <input id="email" class="step-input" type="email" value="${escapeHtml(state.email)}" placeholder="Enter your email address" />
-
-            <div style="font-size:13px; line-height:1.5; color:#555; margin-top:6px;">
-              Your name and email address are used to provide your estimate.
-            </div>
+            <p class="form-help-text">Your name and email address are used to provide your estimate.</p>
           </div>
 
           <label class="checkbox-item">
-            <input
-              type="checkbox"
-              id="marketingConsent"
-              ${state.marketingConsent ? "checked" : ""}
-            />
-            <span>
-              I would like to receive information about programs, admissions, events,
-              scholarships, and other University of Guelph opportunities.
-            </span>
+            <input type="checkbox" id="marketingConsent" ${state.marketingConsent ? "checked" : ""} />
+            <span>I would like to receive information about programs, admissions, events, scholarships, and other University of Guelph opportunities. You can unsubscribe at any time.</span>
           </label>
 
-          ${renderAlert(
-            "Privacy notice",
-            "Receiving your estimate is separate from optional communications. You can download or receive your estimate without selecting the communication checkbox.",
-            "grey"
-          )}
+          ${renderAlert("Privacy notice", "Receiving your estimate is separate from optional communications. You can download or receive your estimate without selecting the communication checkbox.", "grey")}
         </div>
       </div>
 
       <div class="step-footer" style="flex-wrap:wrap;">
-        <button class="btn-secondary" id="backStep5">Back</button>
-        <button class="btn-gold" id="downloadEstimateBtn">Download your estimate</button>
-        <button class="btn-primary" id="emailEstimateBtn">Get your estimate by email</button>
+        <button class="btn-secondary" id="backStep5" type="button">Back</button>
+        <button class="btn-gold" id="downloadEstimateBtn" type="button">Download estimate</button>
+        <button class="btn-primary" id="emailEstimateBtn" type="button">Get estimate by email</button>
       </div>
     </div>
   `;
+}
+let costBreakdownChart = null;
+
+function getCostBreakdownChartData() {
+  const result = state.result || emptyResult();
+  const rows = [];
+
+  function addItems(items) {
+    items.forEach(item => {
+      const value = item.low !== undefined && item.high !== undefined
+        ? (Number(item.low) + Number(item.high)) / 2
+        : Number(item.value) || 0;
+
+      if (value > 0) {
+        rows.push({
+          label: item.label,
+          value
+        });
+      }
+    });
+  }
+
+  addItems(result.tuition.items || []);
+  addItems(result.living.items || []);
+  addItems(result.extras.items || []);
+
+  return rows;
+}
+
+const pieBorderPlugin = {
+  id: "pieBorder",
+  afterDraw(chart) {
+    const meta = chart.getDatasetMeta(0);
+    if (!meta.data.length) return;
+
+    const arc = meta.data[0];
+    const { ctx } = chart;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(arc.x, arc.y, arc.outerRadius + 2, 0, Math.PI * 2);
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#000000";
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+function renderCostBreakdownChart() {
+  const canvas = document.getElementById("costBreakdownChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const rows = getCostBreakdownChartData();
+  if (!rows.length) return;
+
+  const labels = rows.map(row => row.label);
+  const values = rows.map(row => row.value);
+  const total = values.reduce((sum, value) => sum + value, 0);
+
+  const uogColors = [
+    "#e51937",
+    "#ffc429",
+    "#187bb4",
+    "#318738",
+    "#000000",
+    "#555555",
+    "#b3142c",
+    "#135f8b",
+    "#27682c"
+  ];
+
+  const largest = rows.reduce((max, row) => {
+    return row.value > max.value ? row : max;
+  }, rows[0]);
+
+  const driverText = document.getElementById("largestCostDriverText");
+
+  if (driverText && total > 0) {
+    const percent = ((largest.value / total) * 100).toFixed(1);
+    driverText.textContent =
+      `Largest cost driver: ${largest.label} at ${formatMoney(largest.value)} (${percent}% of estimated costs).`;
+  }
+
+  if (costBreakdownChart) {
+    costBreakdownChart.destroy();
+  }
+
+  costBreakdownChart = new Chart(canvas, {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor: uogColors,
+          borderColor: "#ffffff",
+          borderWidth: 3
+        }
+      ]
+    },
+    plugins: [pieBorderPlugin],
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: 14
+      },
+      plugins: {
+        legend: {
+          position: "left",
+          align: "center",
+          labels: {
+            boxWidth: 18,
+            boxHeight: 18,
+            padding: 14,
+            color: "#000000",
+            font: {
+              size: 12,
+              weight: "600"
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function (context) {
+              const value = context.raw || 0;
+              const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${context.label}: ${formatMoney(value)} (${percent}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function getCostBreakdownChartData() {
+  const result = state.result || emptyResult();
+
+  const rows = [];
+
+  function addItems(items) {
+    items.forEach(item => {
+      const value = item.low !== undefined && item.high !== undefined
+        ? (Number(item.low) + Number(item.high)) / 2
+        : Number(item.value) || 0;
+
+      if (value > 0) {
+        rows.push({
+          label: item.label,
+          value
+        });
+      }
+    });
+  }
+
+  addItems(result.tuition.items || []);
+  addItems(result.living.items || []);
+  addItems(result.extras.items || []);
+
+  return rows;
+}
+
+function renderCostBreakdownChart() {
+  const canvas = document.getElementById("costBreakdownChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const rows = getCostBreakdownChartData();
+  if (!rows.length) return;
+
+  const labels = rows.map(row => row.label);
+  const values = rows.map(row => row.value);
+  const total = values.reduce((sum, value) => sum + value, 0);
+
+  const uogColors = [
+    "#e51937", // UofG red
+    "#ffc429", // UofG yellow
+    "#187bb4", // UofG blue
+    "#318738", // UofG green
+    "#000000", // black
+    "#555555", // body copy
+    "#b3142c", // red focus
+    "#135f8b", // blue focus
+    "#27682c"  // green focus
+  ];
+
+  const largest = rows.reduce((max, row) => {
+    return row.value > max.value ? row : max;
+  }, rows[0]);
+
+  const driverText = document.getElementById("largestCostDriverText");
+  if (driverText && total > 0) {
+    const percent = ((largest.value / total) * 100).toFixed(1);
+    driverText.textContent = `Largest cost driver: ${largest.label} at ${formatMoney(largest.value)} (${percent}% of estimated costs).`;
+  }
+
+  if (costBreakdownChart) {
+    costBreakdownChart.destroy();
+  }
+
+  costBreakdownChart = new Chart(canvas, {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor: uogColors,
+          borderColor: "#ffffff",
+          borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: 10
+      },
+      plugins: {
+        legend: {
+          position: "left",
+          align: "center",
+          labels: {
+            boxWidth: 18,
+            boxHeight: 18,
+            padding: 14,
+            color: "#333333",
+            font: {
+              size: 12,
+              weight: "600"
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const value = context.raw || 0;
+              const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${context.label}: ${formatMoney(value)} (${percent}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
 }
 function renderFutureEarningsSummary() {
   if (state.studentPhase !== "future") return "";
@@ -1694,17 +1738,13 @@ function renderCampusGallery() {
       "./UGD_img/UOFG2.jpg",
       "./UGD_img/UOFG3.jpg"
     ];
-  }
-
-  else if (state.campus === "University of Guelph-Humber") {
+  } else if (state.campus === "University of Guelph-Humber") {
     images = [
       "./Gh_img/GH1.jpg",
       "./Gh_img/GH2.jpg",
       "./Gh_img/GH3.jpg"
     ];
-  }
-
-  else if (
+  } else if (
     state.campus === "Ridgetown" ||
     state.campus === "Ridgetown Campus"
   ) {
@@ -1719,14 +1759,12 @@ function renderCampusGallery() {
 
   return `
     <div class="campus-gallery-wrapper">
-      <div class="campus-gallery-title">
-        Campus Preview
-      </div>
+      <div class="campus-gallery-title">Campus Preview</div>
 
       <div class="campus-gallery">
         ${images.map(img => `
           <div class="campus-gallery-card">
-            <img src="${img}" alt="Campus Image" />
+            <img src="${img}" alt="Campus preview image" />
           </div>
         `).join("")}
       </div>
@@ -2131,6 +2169,8 @@ function bindStep4Events() {
 function bindStep5Events() {
   if (state.currentStep !== 5) return;
 
+  renderCostBreakdownChart();
+
   const fullName = document.getElementById("fullName");
   const email = document.getElementById("email");
   const marketingConsent = document.getElementById("marketingConsent");
@@ -2318,16 +2358,37 @@ function getFilteredTuitionRows({ includeCampus = false, includeProgram = false,
       return typeMatch && programMatch;
     }
 
-    // Existing UG / GR tuition logic
+    // UG / GR tuition logic
     const residencyMatch =
       normalizeKey(row.Residency) === normalizeKey(state.residencyType);
 
     const provinceValue = normalizeKey(row.Province);
 
-    const provinceMatch =
-      state.residencyType === "International"
-        ? provinceValue === "int"
-        : !state.province || provinceValue === normalizeKey(state.province);
+    let provinceMatch = true;
+
+    if (state.residencyType === "International") {
+      provinceMatch =
+        provinceValue === "int" ||
+        provinceValue === "international";
+    } else {
+      // Graduate domestic tuition should not be blocked by ON / Non-ON
+      // if the GR_Tuition data does not separate graduate fees by province.
+      if (state.level === "GR") {
+        provinceMatch =
+          !provinceValue ||
+          provinceValue === "domestic" ||
+          provinceValue === "on" ||
+          provinceValue === "non-on" ||
+          provinceValue === "non ontario" ||
+          provinceValue === "outside-ontario" ||
+          provinceValue === "outside ontario" ||
+          provinceValue === normalizeKey(state.province);
+      } else {
+        provinceMatch =
+          !state.province ||
+          provinceValue === normalizeKey(state.province);
+      }
+    }
 
     const campusMatch = includeCampus
       ? normalizeKey(row.Campus) === normalizeKey(state.campus)
@@ -2842,7 +2903,6 @@ function renderSuccessStories() {
   }
 
   const stories = state.data?.SuccessStory || [];
-
   if (!stories.length) return "";
 
   const imageMap = {
@@ -2852,7 +2912,7 @@ function renderSuccessStories() {
 
   return `
     <div class="form-group">
-      <h3>Student funding examples</h3>
+      <h3 class="subsection-title">Student funding examples</h3>
 
       <div class="success-story-grid">
         ${stories.map(item => {
@@ -2864,7 +2924,7 @@ function renderSuccessStories() {
               ${image ? `<img src="./${escapeHtml(image)}" alt="${escapeHtml(name)} success story" />` : ""}
 
               <div>
-                <h3>Meet ${escapeHtml(name)}!</h3>
+                <h3>Meet ${escapeHtml(name)}</h3>
 
                 <p class="success-story-meta">
                   Program: ${escapeHtml(item.Program || "N/A")}<br>
