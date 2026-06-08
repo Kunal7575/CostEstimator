@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <title>UofG Cost Estimator</title>
+  <title>University Cost Estimator</title>
 
-  <!-- Fonts -->
+  <!-- UofG Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
   <link
@@ -14,47 +14,49 @@
     rel="stylesheet"
   />
 
-  <!-- UofG Web Components -->
+  <!-- UofG Web Components CSS -->
   <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/@uoguelph/web-components@2/dist/uofg-web-components/uofg-web-components.css"
   />
 
+  <!-- UofG Web Components JS -->
+  <script
+    type="module"
+    src="https://cdn.jsdelivr.net/npm/@uoguelph/web-components@2/dist/uofg-web-components/uofg-web-components.esm.js"
+  ></script>
+
   <style>
-    /* =========================
-       1. Design Tokens
-       ========================= */
     :root {
-      --uog-black: #000;
-      --uog-white: #fff;
-      --uog-red: #e51937;
-      --uog-yellow: #ffc429;
-      --uog-yellow-focus: #ffe299;
-      --uog-blue: #187bb4;
-      --uog-blue-dark: #135f8b;
-      --uog-green: #318738;
-      --uog-green-dark: #27682c;
+      --page-bg: var(--uog-color-grey-light-bg, #f5f5f5);
+      --surface: var(--uog-color-white, #fff);
+      --text: var(--uog-color-body-copy, #555);
+      --text-strong: var(--uog-color-body-copy-bold, #333);
+      --border: var(--uog-color-grey-light-focus, #bfbfbf);
+      --border-soft: #dedede;
 
-      --bg: #f5f5f5;
-      --text: #555;
-      --text-dark: #333;
-      --muted: #666;
-      --border: #d6d6d6;
-      --border-strong: #bfbfbf;
+      --red: var(--uog-color-red, #e51937);
+      --red-focus: var(--uog-color-red-focus, #b3142c);
+      --blue: var(--uog-color-blue, #187bb4);
+      --blue-focus: var(--uog-color-blue-focus, #135f8b);
+      --green: var(--uog-color-green, #318738);
+      --yellow: var(--uog-color-yellow, #ffc429);
+      --yellow-focus: var(--uog-color-yellow-focus, #ffe299);
 
-      --radius-sm: 10px;
-      --radius-md: 14px;
-      --radius-lg: 16px;
+      --radius-sm: 0.6rem;
+      --radius-md: 0.8rem;
+      --radius-lg: 1.2rem;
 
-      --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.10);
-      --shadow-button: 0 8px 18px rgba(0, 0, 0, 0.16);
+      --space-xs: 0.8rem;
+      --space-sm: 1.2rem;
+      --space-md: 1.6rem;
+      --space-lg: 2.4rem;
+      --space-xl: 3.2rem;
     }
 
-    /* =========================
-       2. Base
-       ========================= */
     html {
       font-size: 62.5%;
+      scroll-behavior: smooth;
     }
 
     *,
@@ -63,18 +65,26 @@
       box-sizing: border-box;
     }
 
-    html,
-    body {
-      min-height: 100%;
-    }
-
     body {
       margin: 0;
-      overflow-x: hidden;
       font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-size: 1.6rem;
+      line-height: 1.5;
       color: var(--text);
-      background: var(--bg);
+      background: var(--surface);
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: "Bitter", Georgia, serif;
+      color: var(--text-strong);
+      line-height: 1.15;
+    }
+
+    a {
+      color: var(--uog-color-body-copy-link, #187bb4);
     }
 
     uofg-header,
@@ -84,417 +94,266 @@
 
     .skip-link {
       position: absolute;
-      top: -44px;
-      left: 16px;
+      top: -5rem;
+      left: 1.6rem;
       z-index: 10000;
-      padding: 10px 14px;
-      border-radius: 8px;
-      color: var(--uog-white);
-      background: var(--uog-black);
-      font-weight: 700;
+      padding: 1rem 1.4rem;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      background: #000;
+      font-weight: 800;
       text-decoration: none;
     }
 
     .skip-link:focus {
-      top: 16px;
-      outline: 3px solid var(--uog-yellow-focus);
-      outline-offset: 2px;
-    }
-
-    /* =========================
-       3. Page Background/Layout
-       ========================= */
-    .site-main {
-      position: relative;
-      min-height: 100vh;
-      overflow: hidden;
-      isolation: isolate;
-    }
-
-    .site-main::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: -2;
-      background:
-        linear-gradient(180deg, rgba(245, 245, 245, 0.88), rgba(245, 245, 245, 0.96)),
-        url("./background.png") center / cover no-repeat;
-      filter: grayscale(10%) blur(1px);
-      transform: scale(1.03);
-    }
-
-    .site-main::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.05));
-      pointer-events: none;
+      top: 1.6rem;
+      outline: 0.3rem solid var(--yellow-focus);
+      outline-offset: 0.2rem;
     }
 
     .container {
-      width: min(100% - 36px, 1080px);
-      margin: 0 auto;
+      width: min(100% - 3.2rem, 96rem);
+      margin-inline: auto;
     }
 
     .page {
-      padding: 40px 0 48px;
+      padding: 3.6rem 0 5.6rem;
+    }
+
+    .page-header {
+      margin-bottom: 2.4rem;
     }
 
     .page-title {
-      margin: 0 0 18px;
-      font-family: "Bitter", serif;
-      font-size: clamp(3.2rem, 4vw, 4.8rem);
-      line-height: 1.08;
+      margin: 0 0 0.8rem;
+      font-size: clamp(3.2rem, 4vw, 4.6rem);
       font-weight: 800;
-      letter-spacing: -0.03em;
-      color: var(--text-dark);
+      letter-spacing: -0.02em;
+    }
+
+    .page-intro {
+      max-width: 72rem;
+      margin: 0;
+      font-size: 1.75rem;
+      color: var(--text);
     }
 
     .estimator-shell {
-      display: grid;
-      grid-template-columns: 280px minmax(0, 1fr);
-      gap: 24px;
-      align-items: start;
+      display: block;
     }
 
-    .estimator-sidebar,
     .estimator-main {
+      width: 100%;
       min-width: 0;
     }
 
-    /* =========================
-       4. Shared Cards
-       ========================= */
-    .sidebar-card,
-    .top-status-card,
-    .step-container,
-    .card {
-      border: 1px solid var(--border);
+    .estimator-panel {
+      border: 0.1rem solid var(--border-soft);
       border-radius: var(--radius-lg);
-      background: rgba(255, 255, 255, 0.97);
-      box-shadow: var(--shadow-card);
-      backdrop-filter: blur(6px);
-    }
-
-    /* =========================
-       5. Sidebar
-       ========================= */
-    .sidebar-card {
-      position: sticky;
-      top: 18px;
-      padding: 22px 18px 18px;
-      overflow: visible;
-    }
-
-    .sidebar-kicker {
-      margin: 0 0 8px;
-      font-size: 1.2rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--uog-red);
-    }
-
-    .sidebar-title {
-      margin: 0 0 10px;
-      font-family: "Bitter", serif;
-      font-size: 2.3rem;
-      line-height: 1.15;
-      color: var(--text-dark);
-    }
-
-    .sidebar-text {
-      margin: 0 0 18px;
-      font-size: 1.4rem;
-      line-height: 1.5;
-      color: var(--muted);
-    }
-
-    /* Main Gryph image fix */
-    .sidebar-gryph {
-      display: grid;
-      grid-template-columns: 86px 1fr;
-      align-items: center;
-      gap: 14px;
-      margin: 8px 0 18px;
-      padding: 14px;
-      border: 1px solid #e6e6e6;
-      border-radius: var(--radius-md);
-      background: #fafafa;
+      background: var(--surface);
       overflow: hidden;
     }
 
-    .sidebar-gryph img {
-      display: block;
-      width: 86px;
-      height: 86px;
-      object-fit: contain;
-      object-position: center;
+    .estimator-progress {
+      padding: 2.4rem;
+      border-bottom: 0.1rem solid var(--border-soft);
+      background: var(--page-bg);
     }
 
-    .sidebar-gryph p {
-      margin: 0;
-      font-size: 1.4rem;
-      font-weight: 800;
-      line-height: 1.3;
-      color: var(--text-dark);
-    }
-
-    .stepper {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding: 0;
-      overflow: visible;
-    }
-
-    .stepper-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      min-height: 48px;
-      padding: 10px 12px;
-      border: 1px solid transparent;
-      border-radius: 12px;
-      background: #f4f4f4;
-      cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-    }
-
-    .stepper-item:hover {
-      transform: translateX(2px);
-      background: #f0f4f7;
-    }
-
-    .stepper-item.active {
-      border-color: rgba(24, 123, 180, 0.35);
-      background: rgba(24, 123, 180, 0.09);
-    }
-
-    .stepper-item.done {
-      border-color: rgba(49, 135, 56, 0.55);
-      background: rgba(49, 135, 56, 0.10);
-    }
-
-    .stepper-num {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 28px;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: var(--uog-blue);
-      color: var(--uog-white);
-      font-size: 1.3rem;
-      font-weight: 800;
-    }
-
-    .stepper-item.done .stepper-num {
-      background: var(--uog-green);
-    }
-
-    .stepper-label {
-      font-size: 1.35rem;
-      font-weight: 800;
-      line-height: 1.25;
-      color: var(--text-dark);
-    }
-    .campus-gallery-wrapper {
-      margin-top: 18px;
-    }
-
-    .campus-gallery-title {
-      font-size: 15px;
-      font-weight: 700;
-      margin-bottom: 12px;
-      color: #1f1f1f;
-    }
-
-    .campus-gallery {
-      display: flex;
-      gap: 14px;
-      overflow-x: auto;
-      padding-bottom: 6px;
-    }
-
-    .campus-gallery-card {
-      min-width: 260px;
-      height: 170px;
-      border-radius: 14px;
-      overflow: hidden;
-      flex-shrink: 0;
-      background: #f4f4f4;
-      border: 1px solid #d9d9d9;
-      transition: transform 0.2s ease;
-    }
-
-    .campus-gallery-card:hover {
-      transform: translateY(-3px);
-    }
-
-    .campus-gallery-card img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-    /* =========================
-       6. Top Status + Progress
-       ========================= */
-    .top-status-card {
+    .progress-topline {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      gap: 18px;
-      padding: 20px 22px;
-      margin-bottom: 14px;
+      gap: 1.6rem;
+      align-items: flex-start;
+      margin-bottom: 1.6rem;
     }
 
-    .status-eyebrow {
-      margin: 0 0 4px;
+    .status-eyebrow,
+    .section-kicker {
+      margin: 0 0 0.4rem;
       font-size: 1.2rem;
-      font-weight: 800;
+      font-weight: 900;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--uog-blue);
+    }
+
+    .status-eyebrow,
+    .section-kicker {
+      color: var(--red);
     }
 
     .status-title {
       margin: 0;
-      font-size: 2.2rem;
-      color: var(--text-dark);
+      font-family: "Bitter", Georgia, serif;
+      font-size: 2.3rem;
+      font-weight: 800;
+      color: var(--text-strong);
     }
 
     .status-subtitle {
-      margin: 6px 0 0;
+      margin: 0.6rem 0 0;
       font-size: 1.4rem;
-      color: var(--muted);
+      color: var(--text);
     }
 
     .status-total {
-      min-width: 180px;
+      min-width: 18rem;
       text-align: right;
     }
 
     .status-total-label {
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 0.4rem;
       font-size: 1.2rem;
-      color: var(--muted);
+      color: var(--text);
     }
 
     .status-total strong {
-      font-size: 2.3rem;
+      font-size: 2.2rem;
       font-weight: 900;
-      color: var(--uog-green-dark);
+      color: var(--green);
     }
 
     .progress-inline {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 1.2rem;
+      margin-bottom: 1.6rem;
     }
 
     .progress-inline-bar {
       flex: 1;
-      height: 10px;
+      height: 1rem;
       overflow: hidden;
-      border-radius: 999px;
+      border-radius: 999rem;
       background: #dcdcdc;
     }
 
     .progress-inline-fill {
       height: 100%;
       border-radius: inherit;
-      background: linear-gradient(90deg, var(--uog-blue), var(--uog-green));
+      background: var(--blue);
       transition: width 0.25s ease;
     }
 
     .progress-inline-text {
       font-size: 1.3rem;
-      font-weight: 800;
+      font-weight: 900;
       white-space: nowrap;
-      color: var(--text-dark);
+      color: var(--text-strong);
     }
 
-    /* =========================
-       7. Step Containers
-       ========================= */
-    #flowContainer.flow-wrapper,
-    .flow-wrapper {
-      width: 100%;
-      max-width: none;
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.8rem;
+      padding: 0;
       margin: 0;
-      animation: none;
+    }
+
+    .stepper-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      min-height: 5.2rem;
+      padding: 1rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      cursor: pointer;
+      color: inherit;
+      text-align: left;
+    }
+
+    .stepper-item:hover,
+    .stepper-item.active {
+      border-color: var(--blue);
+      background: #eef6fa;
+    }
+
+    .stepper-item.done {
+      border-color: var(--green);
+      background: #eef7ef;
+    }
+
+    .stepper-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 2.8rem;
+      width: 2.8rem;
+      height: 2.8rem;
+      border-radius: 999rem;
+      background: var(--blue);
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 900;
+    }
+
+    .stepper-item.done .stepper-num {
+      background: var(--green);
+    }
+
+    .stepper-label {
+      font-size: 1.25rem;
+      font-weight: 900;
+      line-height: 1.2;
+      color: var(--text-strong);
+    }
+
+    #flowContainer {
+      width: 100%;
+      min-height: 34rem;
     }
 
     .step-container {
-      padding: clamp(24px, 4vw, 40px);
-      animation: fadeIn 0.25s ease-out;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      padding: clamp(2.4rem, 4vw, 4rem);
+      background: var(--surface);
     }
 
     .step-header {
-      margin-bottom: 28px;
-      padding-bottom: 18px;
-      border-bottom: 1px solid var(--border);
+      margin-bottom: 2.4rem;
+      padding-bottom: 1.6rem;
+      border-bottom: 0.1rem solid var(--border-soft);
     }
 
     .step-title {
-      margin: 0 0 8px;
-      font-family: "Bitter", serif;
-      font-size: 2.4rem;
-      font-weight: 700;
-      color: var(--text-dark);
+      margin: 0 0 0.8rem;
+      font-size: 2.8rem;
+      font-weight: 800;
     }
 
     .step-description {
       margin: 0;
-      font-size: 1.4rem;
-      color: var(--muted);
+      max-width: 72rem;
+      font-size: 1.55rem;
+      color: var(--text);
     }
 
     .step-content {
-      min-height: 120px;
-      margin-bottom: 28px;
+      min-height: 16rem;
+      margin-bottom: 2.4rem;
     }
 
     .form-stack {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 1.6rem;
+      max-width: 72rem;
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 0.8rem;
     }
 
-    /* =========================
-       8. Forms + Buttons
-       ========================= */
     label,
     .form-group label {
       display: block;
-      margin-bottom: 0;
-      font-size: 1.25rem;
-      font-weight: 800;
-      color: var(--text-dark);
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--text-strong);
     }
 
     select,
@@ -502,211 +361,178 @@
     input[type="email"],
     input[type="number"],
     .step-dropdown,
-    .step-input {
+    .step-input,
+    .readonly-field {
       width: 100%;
-      min-height: 46px;
-      padding: 11px 14px;
-      border: 2px solid var(--border-strong);
+      min-height: 4.8rem;
+      padding: 1.1rem 1.4rem;
+      border: 0.2rem solid var(--border);
       border-radius: var(--radius-sm);
       outline: none;
-      background: var(--uog-white);
-      color: var(--text-dark);
+      background: var(--surface);
+      color: var(--text-strong);
       font: inherit;
       font-size: 1.5rem;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .readonly-field {
+      display: flex;
+      align-items: center;
+      background: var(--page-bg);
     }
 
     select:focus,
-    select:focus-visible,
     input:focus,
-    input:focus-visible,
     button:focus,
-    button:focus-visible,
     .stepper-item:focus {
-      outline: 3px solid var(--uog-yellow-focus);
-      outline-offset: 2px;
+      outline: 0.3rem solid var(--yellow-focus);
+      outline-offset: 0.2rem;
       box-shadow: none;
-    }
-
-    select:disabled,
-    input:disabled {
-      cursor: not-allowed;
-      background: #f5f5f5;
-      color: var(--text);
     }
 
     button {
-      min-height: 44px;
-      padding: 10px 16px;
-      border: 0;
+      min-height: 4.6rem;
+      padding: 1rem 1.6rem;
       border-radius: var(--radius-sm);
       cursor: pointer;
       font: inherit;
-      font-weight: 800;
-    }
-
-    button:active {
-      transform: translateY(1px);
+      font-weight: 900;
     }
 
     .btn-primary {
-      width: auto;
-      min-width: 180px;
-      padding: 13px 24px;
-      background: var(--uog-blue);
-      color: var(--uog-white);
-      box-shadow: var(--shadow-button);
-      transition: background 0.2s ease, transform 0.2s ease;
+      min-width: 16rem;
+      border: 0;
+      background: var(--red);
+      color: #fff;
     }
 
     .btn-primary:hover {
-      background: var(--uog-blue-dark);
-      transform: translateY(-1px);
-    }
-
-    .btn-primary.btn-lg {
-      min-width: 190px;
-      padding: 14px 28px;
-      font-size: 1.5rem;
+      background: var(--red-focus);
     }
 
     .btn-secondary {
-      min-width: 140px;
-      border: 2px solid var(--border-strong);
-      background: var(--uog-white);
-      color: var(--text-dark);
-      box-shadow: none;
+      min-width: 12rem;
+      border: 0.2rem solid var(--border);
+      background: var(--surface);
+      color: var(--text-strong);
     }
 
     .btn-gold {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 180px;
-      border: 1px solid #e1b11f;
-      background: var(--uog-yellow);
-      color: var(--uog-black);
-      box-shadow: none;
+      min-width: 16rem;
+      border: 0.1rem solid #d0a21d;
+      background: var(--yellow);
+      color: #000;
     }
 
     .step-footer,
-    .step-actions {
+    .step-actions,
+    .welcome-actions {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 12px;
-      margin-top: 24px;
-    }
-
-    /* =========================
-       9. Welcome Screen
-       ========================= */
-    .welcome-screen {
-      text-align: center;
-    }
-
-    .welcome-image {
-      display: block;
-      width: min(100%, 280px);
-      max-height: 130px;
-      height: auto;
-      margin: 0 auto 22px;
-      padding: 8px;
-      border: 3px solid var(--uog-black);
-      border-radius: var(--radius-lg);
-      background: var(--uog-white);
-      object-fit: contain;
-      object-position: center;
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
-    }
-
-    .welcome-copy {
-      max-width: 700px;
-      margin: 0 auto 26px;
-      font-size: 1.85rem;
-      line-height: 1.5;
-      color: var(--text);
+      gap: 1.2rem;
+      margin-top: 2.4rem;
     }
 
     .welcome-actions {
-      justify-content: center;
+      justify-content: flex-start;
     }
 
     .choice-row {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      gap: 1.6rem;
+      margin-top: 2rem;
+      max-width: 72rem;
     }
 
     .choice-card {
-      padding: 18px;
-      border: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      width: 100%;
+      min-height: 12rem;
+      padding: 1.8rem;
+      border: 0.2rem solid var(--border-soft);
       border-radius: var(--radius-md);
-      background: var(--uog-white);
+      background: var(--surface);
       text-align: left;
-      cursor: pointer;
-      transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      color: inherit;
     }
 
     .choice-card:hover,
     .choice-card.selected {
-      border-color: var(--uog-blue);
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
-      transform: translateY(-2px);
+      border-color: var(--blue);
+      background: #eef6fa;
     }
 
-    .choice-card h3 {
-      margin: 0 0 8px;
-      font-size: 1.75rem;
-      color: var(--text-dark);
+    .choice-card-title {
+      font-family: "Bitter", Georgia, serif;
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--text-strong);
     }
 
-    .choice-card p {
-      margin: 0;
-      font-size: 1.35rem;
-      line-height: 1.45;
-      color: var(--muted);
+    .choice-card-text {
+      font-size: 1.4rem;
+      color: var(--text);
     }
 
-    /* =========================
-       10. Alerts, Summaries, Utilities
-       ========================= */
+    .checkbox-item,
+    .scholarship-option,
+    .uog-alert {
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+
     .checkbox-item {
       display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px;
-      border: 2px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: var(--uog-white);
+      align-items: flex-start;
+      gap: 1.2rem;
+      padding: 1.2rem;
       cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease;
-    }
-
-    .checkbox-item:hover {
-      border-color: var(--border-strong);
-      background: #f8f8f8;
     }
 
     .checkbox-item input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      accent-color: var(--uog-yellow);
+      width: 2rem;
+      height: 2rem;
+      margin-top: 0.2rem;
+      accent-color: var(--red);
     }
 
-    .cost-summary {
-      margin-bottom: 18px;
-      padding: 20px;
-      border-radius: 12px;
-      background: #f7f7f7;
+    .cost-summary,
+    .estimate-total-card {
+      margin-bottom: 1.8rem;
+      padding: 2rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--page-bg);
+    }
+
+    .estimate-total-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .estimate-total-label {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--text-strong);
+    }
+
+    .estimate-total-card strong {
+      font-size: 2.8rem;
+      color: var(--green);
     }
 
     .summary-item {
       display: flex;
       justify-content: space-between;
-      gap: 16px;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
+      gap: 1.6rem;
+      padding: 1.2rem 0;
+      border-bottom: 0.1rem solid var(--border-soft);
     }
 
     .summary-item:last-child {
@@ -717,63 +543,61 @@
       font-size: 1.6rem;
       font-weight: 900;
       text-align: right;
-      color: var(--uog-green-dark);
+      color: var(--green);
     }
 
     .uog-alert {
-      margin: 14px 0;
+      margin: 1.4rem 0;
       overflow: hidden;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      background: var(--uog-white);
+      max-width: 72rem;
     }
 
     .uog-alert-title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 12px 14px;
+      gap: 0.8rem;
+      padding: 1.2rem 1.4rem;
       font-size: 1.5rem;
-      font-weight: 800;
+      font-weight: 900;
     }
 
     .uog-alert-message {
-      padding: 12px 14px 14px;
+      padding: 1.2rem 1.4rem 1.4rem;
       font-size: 1.4rem;
       line-height: 1.5;
-      color: #2f3640;
+      color: var(--text-strong);
     }
 
     .uog-alert-icon {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 18px;
-      height: 18px;
-      border: 2px solid currentColor;
-      border-radius: 50%;
+      width: 1.8rem;
+      height: 1.8rem;
+      border: 0.2rem solid currentColor;
+      border-radius: 999rem;
       font-size: 1.2rem;
       font-weight: 900;
     }
 
     .uog-alert-yellow .uog-alert-title {
-      background: var(--uog-yellow);
-      color: #111;
+      background: var(--yellow);
+      color: #000;
     }
 
     .uog-alert-blue .uog-alert-title {
-      background: #3178b8;
-      color: var(--uog-white);
+      background: var(--blue);
+      color: #fff;
     }
 
     .uog-alert-green .uog-alert-title {
-      background: #2f8132;
-      color: var(--uog-white);
+      background: var(--green);
+      color: #fff;
     }
 
     .uog-alert-red .uog-alert-title {
-      background: var(--uog-red);
-      color: var(--uog-white);
+      background: var(--red);
+      color: #fff;
     }
 
     .uog-alert-grey .uog-alert-title {
@@ -781,67 +605,97 @@
       color: #111;
     }
 
+    .scholarship-checkbox-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .scholarship-option {
+      display: grid;
+      grid-template-columns: 2rem 1fr;
+      gap: 1rem;
+      align-items: flex-start;
+      padding: 1.2rem;
+    }
+
+    .scholarship-option input {
+      width: 1.8rem;
+      height: 1.8rem;
+      accent-color: var(--red);
+    }
+
+    .scholarship-option-body,
+    .scholarship-option-top,
+    .scholarship-option-meta,
+    .scholarship-option-note {
+      display: block;
+    }
+
+    .scholarship-option-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 1.2rem;
+      color: var(--text-strong);
+    }
+
+    .scholarship-option-meta,
+    .scholarship-option-note,
+    .form-help-text {
+      margin: 0;
+      font-size: 1.3rem;
+      color: var(--text);
+    }
+
+    .contact-section {
+      margin-top: 2rem;
+    }
+
     .input-error,
     [aria-invalid="true"] {
-      border-color: var(--uog-red) !important;
+      border-color: var(--red) !important;
       background: #fff5f6 !important;
     }
 
     .error-text {
-      margin-top: 4px;
+      margin-top: 0.4rem;
       font-size: 1.2rem;
-      color: var(--uog-red);
+      color: var(--red);
     }
 
     .loading-spinner {
-      width: 40px;
-      height: 40px;
-      margin: 20px auto;
-      border: 4px solid var(--border);
-      border-top-color: var(--uog-blue);
-      border-radius: 50%;
+      width: 4rem;
+      height: 4rem;
+      margin: 3rem auto;
+      border: 0.4rem solid var(--border-soft);
+      border-top-color: var(--blue);
+      border-radius: 999rem;
       animation: spin 1s linear infinite;
     }
-    
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
 
-    .legacy-form,
-    .gamification-container,
-    .card[aria-labelledby="living-heading"],
-    .card[aria-labelledby="total-estimate-heading"],
-    .card[aria-labelledby="estimate-actions-heading"] {
-      display: none !important;
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     .uofg-back-to-top {
       position: fixed;
-      right: 24px;
-      bottom: 24px;
+      right: 2.4rem;
+      bottom: 2.4rem;
       z-index: 20;
       display: none;
       align-items: center;
       justify-content: center;
-      width: 48px;
-      height: 48px;
-      padding: 8px;
-      border-radius: 50%;
+      width: 4.8rem;
+      height: 4.8rem;
+      padding: 0.8rem;
+      border: 0;
+      border-radius: 999rem;
       background: #000;
       color: #fff;
-      box-shadow: var(--shadow-card);
-      transition: all 0.25s ease;
     }
-    .uofg-back-to-top:hover svg {
-      transform: translateY(-1px);
-    }
-    /* 🔥 HOVER EFFECT */
+
     .uofg-back-to-top:hover {
-      background: var(--uog-red);   /* red background */
-      color: #fff;                  /* icon stays white */
-      transform: translateY(-2px) scale(1.05);
+      background: var(--red);
     }
 
     .uofg-back-to-top.show {
@@ -849,227 +703,175 @@
     }
 
     .uofg-back-to-top svg {
-      width: 18px;
-      height: 18px;
+      width: 1.8rem;
+      height: 1.8rem;
     }
 
     .sr-only {
       position: absolute;
-      width: 1px;
-      height: 1px;
+      width: 0.1rem;
+      height: 0.1rem;
       padding: 0;
-      margin: -1px;
+      margin: -0.1rem;
       overflow: hidden;
       clip: rect(0, 0, 0, 0);
       white-space: nowrap;
       border: 0;
     }
-    .scholarship-checkbox-list {
+    .campus-gallery-wrapper {
+      margin-top: 2rem;
+    }
+
+    .campus-gallery-title,
+    .subsection-title {
+      margin: 0 0 1.4rem;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--text-strong);
+    }
+
+    .campus-gallery {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.4rem;
+    }
+
+    .campus-gallery-card {
+      height: 17rem;
+      border-radius: 1.2rem;
+      overflow: hidden;
+      border: 0.1rem solid var(--border-soft);
+      background: #f4f4f4;
+    }
+
+    .campus-gallery-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .success-story-grid {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-    }
-
-    .scholarship-option {
-      display: grid;
-      grid-template-columns: 20px 1fr;
-      gap: 10px;
-      align-items: center;
-      padding: 10px 12px;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      background: #fff;
-      cursor: pointer;
-    }
-
-    .scholarship-option:hover,
-    .scholarship-option.selected {
-      border-color: var(--uog-blue);
-      background: #f7fbfd;
-    }
-
-    .scholarship-option input {
-      width: 16px;
-      height: 16px;
-      margin: 0;
-      accent-color: var(--uog-blue);
-    }
-
-    .scholarship-option-body {
-      min-width: 0;
-    }
-
-    .scholarship-option-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .scholarship-option-top strong {
-      font-size: 1.35rem;
-      line-height: 1.25;
-      color: var(--text-dark);
-    }
-
-    .scholarship-option-top span {
-      white-space: nowrap;
-      font-size: 1.2rem;
-      font-weight: 900;
-      color: var(--uog-blue-dark);
-    }
-
-    .scholarship-option-meta {
-      margin-top: 3px;
-      font-size: 1.15rem;
-      font-weight: 600;
-      color: #666;
-    }
-
-    .scholarship-option-note {
-      display: none;
-    }
-    .success-story-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
+      gap: 1.2rem;
     }
 
     .success-story-card {
       display: grid;
-      grid-template-columns: 82px 1fr;
-      gap: 14px;
-      padding: 16px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      background: #fff;
+      grid-template-columns: 8rem 1fr;
+      gap: 1.6rem;
+      padding: 1.4rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: 0.8rem;
+      background: var(--surface);
     }
 
     .success-story-card img {
-      width: 82px;
-      height: 82px;
+      width: 6.6rem;
+      height: 6.6rem;
       object-fit: cover;
-      border-radius: 10px;
+      border-radius: 0.8rem;
     }
 
     .success-story-card h3 {
-      margin: 0 0 6px;
+      margin: 0 0 0.6rem;
       font-size: 1.7rem;
-      color: var(--text-dark);
     }
 
     .success-story-meta {
-      margin: 0 0 8px;
-      font-size: 1.3rem;
+      margin: 0 0 1.4rem;
+      font-size: 1.25rem;
       font-weight: 700;
-      color: var(--muted);
     }
 
     .success-story-text {
-      font-size: 1.3rem;
-      line-height: 1.45;
-      color: var(--text);
+      font-size: 1.25rem;
+      line-height: 1.5;
       white-space: pre-line;
     }
 
     .success-story-total {
-      margin-top: 10px;
-      font-weight: 900;
-      color: #a71930;
-    }
-    .gryph-help-card {
-      display: grid;
-      grid-template-columns: 220px minmax(0, 1fr);
-      align-items: center;
-      gap: 24px;
-      max-width: 760px;
-      margin: 28px auto 30px;
-    }
-
-    .gryph-help-image img {
-      display: block;
-      width: 220px;
-      height: auto;
-      object-fit: contain;
-    }
-
-    .gryph-help-cloud {
-      position: relative;
-      padding: 26px 30px;
-      border: 4px solid #000;
-      border-radius: 34px;
-      background: #fff;
-      text-align: center;
-    }
-
-    /* .gryph-help-cloud::before {
-      content: "";
-      position: absolute;
-      left: -24px;
-      bottom: 42px;
-      width: 22px;
-      height: 22px;
-      border: 4px solid #000;
-      border-radius: 50%;
-      background: #fff;
-    }
-
-    .gryph-help-cloud::after {
-      content: "";
-      position: absolute;
-      left: -44px;
-      bottom: 22px;
-      width: 14px;
-      height: 14px;
-      border: 4px solid #000;
-      border-radius: 50%;
-      background: #fff;
-    } */
-
-    .gryph-help-cloud h3 {
-      margin: 0 0 12px;
-      font-size: 2.2rem;
-      line-height: 1.25;
-      color: #000;
-    }
-
-    .gryph-help-cloud p {
-      margin: 0 0 16px;
+      margin-top: 1.2rem;
       font-size: 1.45rem;
-      line-height: 1.5;
-      color: #555;
+      font-weight: 900;
+      color: var(--red);
     }
+    .quick-links-section {
+    margin-top: 2.4rem;
+    max-width: 72rem;
+  }
 
-    .gryph-help-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 11px 18px;
-      border-radius: 8px;
-      background: var(--uog-red);
-      color: #fff;
-      font-weight: 800;
-      text-decoration: none;
-    }
+  .quick-links-heading {
+    margin-bottom: 1.2rem;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--text-strong);
+  }
 
-    .gryph-help-link:hover {
-      background: #b9152c;
+  .quick-link-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.4rem;
+  }
+
+  .quick-link-card {
+    display: block;
+    padding: 1.6rem;
+    border: 0.1rem solid var(--border-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+    transition: 0.2s;
+  }
+
+  .quick-link-card:hover {
+    border-color: var(--blue);
+    background: #eef6fa;
+  }
+
+  .quick-link-title {
+    display: block;
+    margin-bottom: 0.6rem;
+    font-family: "Bitter", Georgia, serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+  }
+
+  .quick-link-text {
+    display: block;
+    margin-bottom: 1rem;
+    font-size: 1.35rem;
+  }
+
+  .quick-link-action {
+    color: var(--blue);
+    font-weight: 900;
+  }
+  @media (max-width: 768px) {
+    .stepper {
+      display: none;
     }
     
-    @media (max-width: 720px) {
-      .gryph-help-card {
+    .estimate-total-card {
+      display: none;
+    }
+    .estimator-progress {
+      padding-bottom: 1.6rem;
+    }
+  }
+  @media (max-width: 768px) {
+    .quick-link-row {
+      grid-template-columns: 1fr;
+    }
+  }
+    @media (max-width: 760px) {
+      .campus-gallery {
         grid-template-columns: 1fr;
-        gap: 12px;
       }
 
-      .gryph-help-image img {
-        width: 170px;
-        margin: 0 auto;
-      }
-
-      .gryph-help-cloud::before,
-      .gryph-help-cloud::after {
-        display: none;
+      .success-story-card {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -1077,68 +879,18 @@
       .success-story-card {
         grid-template-columns: 1fr;
       }
-
-      .success-story-card img {
-        width: 76px;
-        height: 76px;
-      }
-    }
-    @media (max-width: 640px) {
-      .scholarship-option-top {
-        align-items: flex-start;
-        flex-direction: column;
-        gap: 4px;
-      }
-    }
-    /* =========================
-       11. Responsive
-       ========================= */
-    @media (max-width: 900px) {
-      .estimator-shell {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar-card {
-        position: static;
-      }
-
-      .sidebar-gryph {
-        grid-template-columns: 76px 1fr;
-      }
-
-      .sidebar-gryph img {
-        width: 76px;
-        height: 76px;
-      }
-
-      .stepper {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 8px;
-      }
-
-      .stepper-item {
-        align-items: flex-start;
-        flex-direction: column;
-        min-height: 82px;
-      }
     }
 
-    @media (max-width: 640px) {
+    @media (max-width: 760px) {
       html {
         font-size: 58%;
       }
 
       .container {
-        width: min(100% - 24px, 1080px);
+        width: min(100% - 2.4rem, 96rem);
       }
 
-      .page {
-        padding: 24px 0 36px;
-      }
-
-      .top-status-card {
-        align-items: flex-start;
+      .progress-topline {
         flex-direction: column;
       }
 
@@ -1155,22 +907,12 @@
         width: 100%;
       }
 
-      .sidebar-gryph {
-        grid-template-columns: 64px 1fr;
-      }
-
-      .sidebar-gryph img {
-        width: 64px;
-        height: 64px;
-      }
-
       .stepper {
         grid-template-columns: 1fr;
       }
 
       .stepper-item {
-        flex-direction: row;
-        min-height: 46px;
+        min-height: 4.8rem;
       }
 
       .choice-row {
@@ -1178,7 +920,8 @@
       }
 
       .step-footer,
-      .step-actions {
+      .step-actions,
+      .welcome-actions {
         flex-direction: column;
         align-items: stretch;
       }
@@ -1189,13 +932,14 @@
         width: 100%;
       }
 
-      .welcome-image {
-        width: min(100%, 240px);
-        max-height: 115px;
+      .summary-item,
+      .scholarship-option-top {
+        flex-direction: column;
+        gap: 0.4rem;
       }
 
-      .welcome-copy {
-        font-size: 1.65rem;
+      .summary-value {
+        text-align: left;
       }
     }
   </style>
@@ -1209,84 +953,71 @@
   <main class="site-main" id="main-content">
     <div class="page">
       <div class="container">
-        <h1 class="page-title">Univeristy Cost Estimator</h1>
+        <header class="page-header">
+          <h1 class="page-title">University Cost Estimator</h1>
+          <p class="page-intro">
+            Estimate tuition, fees, living costs, and optional expenses using a guided form.
+          </p>
+        </header>
 
-        <div class="estimator-shell">
-          <!-- Sidebar -->
-          <aside class="estimator-sidebar" aria-label="Estimator progress">
-            <div class="sidebar-card">
-              <p class="sidebar-kicker">Cost Estimator</p>
+        <section class="estimator-shell" aria-label="Cost estimator">
+          <div class="estimator-main">
+            <div class="estimator-panel">
+              <div class="estimator-progress">
+                <div class="progress-topline" id="topStatusCard">
+                  <div>
+                    <p class="status-eyebrow" id="statusEyebrow">Step 0 of 5</p>
+                    <h2 class="status-title" id="statusTitle">Welcome</h2>
+                    <p class="status-subtitle" id="statusSubtitle">Start your estimate.</p>
+                  </div>
 
-              <h2 class="sidebar-title">Plan your costs step by step</h2>
+                  <div class="status-total">
+                    <span class="status-total-label">Estimated total so far</span>
+                    <strong id="topRunningTotal">CAD 0</strong>
+                  </div>
+                </div>
 
-              <p class="sidebar-text">
-                Follow the guided steps to build your estimate. Housing and meal plan choices appear near the end.
-              </p>
+                <div class="progress-inline" id="progressInline" aria-label="Progress">
+                  <div class="progress-inline-bar" aria-hidden="true">
+                    <div class="progress-inline-fill" id="progressInlineFill" style="width: 0%;"></div>
+                  </div>
+                  <span class="progress-inline-text" id="progressInlineText">0% complete</span>
+                </div>
 
-              <div class="sidebar-gryph">
-                <img id="sidebarGryphImg" src="./gryph1.png" alt="Gryph guide" />
-                <p id="sidebarGryphText">Let’s get started</p>
+                <nav class="stepper" aria-label="Estimator steps">
+                  <button class="stepper-item" data-step="1" type="button">
+                    <span class="stepper-num">1</span>
+                    <span class="stepper-label">Academic profile</span>
+                  </button>
+
+                  <button class="stepper-item" data-step="2" type="button">
+                    <span class="stepper-num">2</span>
+                    <span class="stepper-label">Program</span>
+                  </button>
+
+                  <button class="stepper-item" data-step="3" type="button">
+                    <span class="stepper-num">3</span>
+                    <span class="stepper-label">Costs & funding</span>
+                  </button>
+
+                  <button class="stepper-item" data-step="4" type="button">
+                    <span class="stepper-num">4</span>
+                    <span class="stepper-label">Living</span>
+                  </button>
+
+                  <button class="stepper-item" data-step="5" type="button">
+                    <span class="stepper-num">5</span>
+                    <span class="stepper-label">Summary</span>
+                  </button>
+                </nav>
               </div>
 
-              <nav class="stepper" aria-label="Estimator steps">
-                <div class="stepper-item" data-step="1" tabindex="0">
-                  <span class="stepper-num">1</span>
-                  <span class="stepper-label">Academic Profile</span>
-                </div>
-
-                <div class="stepper-item" data-step="2" tabindex="0">
-                  <span class="stepper-num">2</span>
-                  <span class="stepper-label">Program</span>
-                </div>
-
-                <div class="stepper-item" data-step="3" tabindex="0">
-                  <span class="stepper-num">3</span>
-                  <span class="stepper-label">Additional Costs &amp; Funding</span>
-                </div>
-
-                <div class="stepper-item" data-step="4" tabindex="0">
-                  <span class="stepper-num">4</span>
-                  <span class="stepper-label">Living</span>
-                </div>
-
-                <div class="stepper-item" data-step="5" tabindex="0">
-                  <span class="stepper-num">5</span>
-                  <span class="stepper-label">Estimate Summary</span>
-                </div>
-              </nav>
-            </div>
-          </aside>
-
-          <!-- Main Estimator -->
-          <section class="estimator-main" aria-label="Estimator form">
-            <div class="top-status-card" id="topStatusCard" style="display: none;">
-              <div>
-                <p class="status-eyebrow" id="statusEyebrow">Step 1 of 5</p>
-                <h3 class="status-title" id="statusTitle">Academic Profile</h3>
-                <p class="status-subtitle" id="statusSubtitle">
-                  Tell us who you are so we can build the right estimate path.
-                </p>
-              </div>
-
-              <div class="status-total">
-                <span class="status-total-label">Estimated total so far</span>
-                <strong id="topRunningTotal">CAD 0</strong>
+              <div id="flowContainer" class="flow-wrapper">
+                <!-- Steps render here from app.js -->
               </div>
             </div>
-
-            <div class="progress-inline" id="progressInline" style="display: none;" aria-label="Progress">
-              <div class="progress-inline-bar" aria-hidden="true">
-                <div class="progress-inline-fill" id="progressInlineFill" style="width: 0%;"></div>
-              </div>
-
-              <span class="progress-inline-text" id="progressInlineText">0% complete</span>
-            </div>
-
-            <div id="flowContainer" class="flow-wrapper">
-              <!-- Welcome and step screens render here from app.js -->
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </div>
   </main>
@@ -1306,14 +1037,10 @@
     </svg>
   </button>
 
-  <!-- Scripts -->
-  <script
-    type="module"
-    src="https://cdn.jsdelivr.net/npm/@uoguelph/web-components@2/dist/uofg-web-components/uofg-web-components.esm.js"
-  ></script>
-
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Use your full working JS logic file here -->
   <script src="./app.js"></script>
 </body>
 </html>
