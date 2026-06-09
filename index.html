@@ -638,15 +638,77 @@
       gap: 1.2rem;
       color: var(--text-strong);
     }
+    .external-campus-card {
+      margin-top: 1.6rem;
+      padding: 2.4rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--page-bg);
+    }
 
-    .scholarship-option-meta,
+    .external-campus-link {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 1.8rem;
+      text-decoration: none;
+    }
+        .scholarship-option-meta,
     .scholarship-option-note,
     .form-help-text {
       margin: 0;
       font-size: 1.3rem;
       color: var(--text);
     }
+    
+    .uog-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
+      min-height: 4.4rem;
+      padding: 0 2rem;
+
+      border-radius: 0;
+      border: none;
+
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-decoration: none;
+
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .uog-btn-primary {
+      background: #c20430;
+      color: #ffffff;
+    }
+
+    .uog-btn-primary:hover {
+      background: #a60328;
+      color: #ffffff;
+    }
+
+    .uog-btn-secondary {
+      background: #005596;
+      color: #ffffff;
+    }
+
+    .uog-btn-secondary:hover {
+      background: #00457a;
+      color: #ffffff;
+    }
+
+    .uog-btn-outline {
+      background: transparent;
+      border: 2px solid #c20430;
+      color: #c20430;
+    }
+
+    .uog-btn-outline:hover {
+      background: #c20430;
+      color: #ffffff;
+    }
     .contact-section {
       margin-top: 2rem;
     }
@@ -671,6 +733,60 @@
       border-top-color: var(--blue);
       border-radius: 999rem;
       animation: spin 1s linear infinite;
+    }
+    .global-resources-footer {
+      padding: 4rem 0;
+      background: #f5f5f5;
+      border-top: 1px solid #dedede;
+    }
+
+    .global-resources-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 4rem;
+    }
+
+    .global-resources-kicker {
+      margin: 0 0 0.5rem;
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--red);
+    }
+
+    .global-resources-title {
+      margin: 0 0 0.8rem;
+      font-size: 2.4rem;
+    }
+
+    .global-resources-text {
+      margin: 0;
+      max-width: 50rem;
+      color: var(--text);
+    }
+
+    .global-resources-links {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .global-resources-links a {
+      color: var(--blue);
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .global-resources-links a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 760px) {
+      .global-resources-inner {
+        flex-direction: column;
+      }
     }
 
     @keyframes spin {
@@ -718,36 +834,62 @@
       white-space: nowrap;
       border: 0;
     }
-    .campus-gallery-wrapper {
-      margin-top: 2rem;
-    }
-
-    .campus-gallery-title,
-    .subsection-title {
-      margin: 0 0 1.4rem;
-      font-size: 1.6rem;
-      font-weight: 900;
-      color: var(--text-strong);
-    }
-
-    .campus-gallery {
+    .campus-preview-card {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.4rem;
-    }
-
-    .campus-gallery-card {
-      height: 17rem;
-      border-radius: 1.2rem;
-      overflow: hidden;
+      grid-template-columns: 1fr 26rem;
+      gap: 1.8rem;
+      align-items: center;
+      margin-top: 0.4rem;
+      padding: 1.8rem;
       border: 0.1rem solid var(--border-soft);
-      background: #f4f4f4;
+      border-radius: var(--radius-md);
+      background: var(--page-bg);
     }
 
-    .campus-gallery-card img {
+    .campus-preview-kicker {
+      margin: 0 0 0.5rem;
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--red);
+    }
+
+    .campus-preview-title {
+      margin: 0 0 0.8rem;
+      font-size: 2rem;
+      font-weight: 800;
+    }
+
+    .campus-preview-text {
+      margin: 0;
+      font-size: 1.35rem;
+      color: var(--text);
+    }
+
+    .campus-preview-image-wrap {
+      width: 100%;
+      height: 15rem;
+      overflow: hidden;
+      border-radius: var(--radius-sm);
+      border: 0.1rem solid var(--border-soft);
+      background: #000;
+    }
+
+    .campus-preview-image {
       width: 100%;
       height: 100%;
       object-fit: cover;
+    }
+
+    @media (max-width: 760px) {
+      .campus-preview-card {
+        grid-template-columns: 1fr;
+      }
+
+      .campus-preview-image-wrap {
+        height: 20rem;
+      }
     }
 
     .success-story-grid {
@@ -847,6 +989,33 @@
   .quick-link-action {
     color: var(--blue);
     font-weight: 900;
+  }
+  .future-contact-section {
+    margin-top: 2rem;
+    padding: 2rem;
+    border: 0.1rem solid var(--border-soft);
+    border-radius: var(--radius-md);
+    background: var(--page-bg);
+  }
+
+  .future-contact-list {
+    margin: 1rem 0 1.8rem 2rem;
+    padding: 0;
+  }
+
+  .future-contact-list li {
+    margin-bottom: 0.6rem;
+    font-weight: 700;
+  }
+
+  .required-star {
+    color: var(--red);
+  }
+
+  .consent-text {
+    margin: 1.4rem 0 0;
+    font-size: 1.3rem;
+    color: var(--text);
   }
   @media (max-width: 768px) {
     .stepper {
@@ -1017,7 +1186,52 @@
               </div>
             </div>
           </div>
+        <!-- </section> -->
         </section>
+
+        <section class="global-resources-footer">
+          <div class="container">
+            <div class="global-resources-inner">
+
+              <div class="global-resources-content">
+                <p class="global-resources-kicker">
+                  Helpful Resources
+                </p>
+
+                <h2 class="global-resources-title">
+                  Additional Planning Information
+                </h2>
+
+                <p class="global-resources-text">
+                  The information below is provided for planning purposes only
+                  and is subject to change.
+                </p>
+              </div>
+
+              <div class="global-resources-links">
+
+                <a
+                  href="https://www.uoguelph.ca/registrar/enrolment-records/immigration-status"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Immigration Status
+                </a>
+
+                <a
+                  href="#"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Scholarships & Funding
+                </a>
+
+              </div>
+
+            </div>
+          </div>
+        </section>
+
       </div>
     </div>
   </main>

@@ -478,7 +478,39 @@ function renderCurrentStep() {
   setupWelcomeImage();
   updateChrome();
 }
+function renderHelpfulResourcesFooter() {
+  return `
+    <div class="resources-footer">
+      <div class="resources-footer-inner">
+        <div>
+          <p class="resources-footer-kicker">Helpful resources</p>
+          <h3 class="resources-footer-title">Additional planning information</h3>
+          <p class="resources-footer-text">
+            The information below is provided for planning purposes only and is subject to change.
+          </p>
+        </div>
 
+        <div class="resources-footer-links">
+          <a
+            href="https://www.uoguelph.ca/registrar/enrolment-records/immigration-status"
+            target="_blank"
+            rel="noopener"
+          >
+            Immigration Status
+          </a>
+
+          <a
+            href="#"
+            target="_blank"
+            rel="noopener"
+          >
+            Scholarships & Funding
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+}
 function renderStep0() {
   return `
     <div class="step-container contenthub-intro">
@@ -516,53 +548,7 @@ function renderStep0() {
           </button>
         </div>
 
-        <div class="quick-links-section">
-          <p class="quick-links-heading">
-            Helpful resources
-          </p>
-
-          <div class="quick-link-row">
-
-            <a
-              class="quick-link-card"
-              href="https://www.uoguelph.ca/registrar/enrolment-records/immigration-status"
-              target="_blank"
-              rel="noopener"
-            >
-              <span class="quick-link-title">
-                Immigration Status
-              </span>
-
-              <span class="quick-link-text">
-                Determine whether you may be assessed domestic or international tuition.
-              </span>
-
-              <span class="quick-link-action">
-                Learn More 
-              </span>
-            </a>
-
-            <a
-              class="quick-link-card"
-              href="#"
-              target="_blank"
-              rel="noopener"
-            >
-              <span class="quick-link-title">
-                Scholarships & Funding
-              </span>
-
-              <span class="quick-link-text">
-                Explore scholarships, bursaries, and financial support opportunities.
-              </span>
-
-              <span class="quick-link-action">
-                Learn More
-              </span>
-            </a>
-
-          </div>
-        </div>
+        
   `;
 }
 
@@ -648,9 +634,9 @@ function renderStep1() {
             state.residencyType === "Domestic"
               ? `
                 <div class="form-group" id="provinceGroup">
-                  <label for="province">Province status</label>
+                  <label for="province">I am applying from</label>
                   <select id="province" class="step-dropdown">
-                    <option value="">Select province status</option>
+                    <option value="">Select province</option>
                     <option value="ON" ${state.province === "ON" ? "selected" : ""}>Ontario</option>
                     <option value="Non-ON" ${state.province === "Non-ON" ? "selected" : ""}>Outside Ontario</option>
                   </select>
@@ -659,15 +645,7 @@ function renderStep1() {
               : ""
           }
 
-          ${
-            state.studentPhase === "future"
-              ? renderAlert(
-                  "Program tip",
-                  "Choose Undergraduate if you are starting your first degree. Choose Graduate if you already have a degree and are applying to a master’s or doctoral program.",
-                  "blue"
-                )
-              : ""
-          }
+          
         </div>
       </div>
 
@@ -678,7 +656,83 @@ function renderStep1() {
     </div>
   `;
 }
+function isExternalCampusSelected() {
+  return (
+    state.campus === "University of Guelph-Humber" ||
+    state.campus === "Ridgetown Campus"
+  );
+}
 
+function getExternalCampusFeeLink() {
+  if (state.campus === "University of Guelph-Humber") {
+    return "https://www.uoguelph.ca/registrar/finances-fees/tuition-fees/guelph-humber-undergrad";
+  }
+
+  if (state.campus === "Ridgetown Campus") {
+    return "https://www.uoguelph.ca/registrar/finances-fees/tuition-fees/ridgetown-dip-undergrad";
+  }
+
+  return "";
+}
+
+function renderExternalCampusNotice() {
+  if (!isExternalCampusSelected()) return "";
+
+  const link = getExternalCampusFeeLink();
+
+  return `
+    <div class="uog-alert uog-alert-yellow">
+      <div class="uog-alert-title">
+        <span class="uog-alert-icon">!</span>
+        <span>Use official campus fee information</span>
+      </div>
+
+      <div class="uog-alert-message">
+        Tuition and fee information for ${escapeHtml(state.campus)} is handled separately. 
+        Please use the official tuition and fees page for the most accurate information.
+
+        <div style="margin-top: 1.2rem;">
+          <a
+            class="btn-primary"
+            href="${escapeHtml(link)}"
+            target="_blank"
+            rel="noopener"
+            style="display:inline-flex; align-items:center; text-decoration:none;"
+          >
+            View official tuition and fees
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function renderExternalCampusStopScreen() {
+  if (!isExternalCampusSelected()) return "";
+
+  const link = getExternalCampusFeeLink();
+
+  return `
+    <div class="external-campus-card">
+      <p class="section-kicker">Official tuition information</p>
+
+      <h2 class="step-title">${escapeHtml(state.campus)}</h2>
+
+      <p class="step-description">
+        Tuition and fees for this campus are maintained separately from this estimator.
+        Please continue using the official tuition and fees page below.
+      </p>
+
+      <a
+        class="uog-btn uog-btn-primary external-campus-link"
+        href="${escapeHtml(link)}"
+        target="_blank"
+        rel="noopener"
+      >
+        Continue to official tuition and fees
+      </a>
+    </div>
+  `;
+}
 function renderStep2() {
   if (state.studentPhase === "current" && !state.cohortYear) {
     state.cohortYear = getLatestCurrentCohortYear();
@@ -691,6 +745,7 @@ function renderStep2() {
   const coopStatus = getFutureProgramCoopStatus();
   const isFutureUG = state.studentPhase === "future" && state.level === "UG";
   const coopDisabled = isFutureUG && coopStatus === "No";
+  const externalCampusSelected = isExternalCampusSelected();
 
   if (coopDisabled) {
     state.coopInterest = "No";
@@ -709,7 +764,8 @@ function renderStep2() {
     state.matchedTuitionRecord = null;
   }
 
-  const currentStudentYear = state.studentPhase === "current" ? state.cohortYear : "";
+  const currentStudentYear =
+    state.studentPhase === "current" ? state.cohortYear : "";
 
   return `
     <div class="step-container">
@@ -728,9 +784,19 @@ function renderStep2() {
                   <label for="cohortYear">Expected start year</label>
                   <select id="cohortYear" class="step-dropdown">
                     <option value="">Select target year</option>
-                    ${cohortYears.map(y => `<option value="${escapeHtml(y)}" ${state.cohortYear === y ? "selected" : ""}>${escapeHtml(y)}</option>`).join("")}
+                    ${cohortYears.map(y => `
+                      <option value="${escapeHtml(y)}" ${state.cohortYear === y ? "selected" : ""}>
+                        ${escapeHtml(y)}
+                      </option>
+                    `).join("")}
                   </select>
                 </div>
+
+                ${renderAlert(
+                  "Future tuition estimate notice",
+                  "Costs displayed are based on the most recent available academic year and may not reflect tuition, fees, residence, or meal plan rates for your selected future start year. All amounts are estimates only and are subject to change.",
+                  "yellow"
+                )}
               `
               : `
                 <div class="form-group">
@@ -741,14 +807,17 @@ function renderStep2() {
           }
 
           ${
-            state.studentPhase === "future" && state.residencyType === "International"
+            state.studentPhase === "future" &&
+            state.residencyType === "International"
               ? `
                 <div class="form-group">
-                  <label for="country">Country</label>
+                  <label for="country">Country you are applying from</label>
                   <select id="country" class="step-dropdown">
                     <option value="">Select country</option>
                     ${countries.map(country => `
-                      <option value="${escapeHtml(country)}" ${state.country === country ? "selected" : ""}>${escapeHtml(country)}</option>
+                      <option value="${escapeHtml(country)}" ${state.country === country ? "selected" : ""}>
+                        ${escapeHtml(country)}
+                      </option>
                     `).join("")}
                   </select>
                   ${renderCurrencyBadge()}
@@ -761,45 +830,84 @@ function renderStep2() {
             <label for="campus">Campus</label>
             <select id="campus" class="step-dropdown">
               <option value="">Select campus</option>
-              ${campuses.map(c => `<option value="${escapeHtml(c)}" ${state.campus === c ? "selected" : ""}>${escapeHtml(c)}</option>`).join("")}
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="program">Program</label>
-            <select id="program" class="step-dropdown">
-              <option value="">Select program</option>
-              ${programs.map(p => `<option value="${escapeHtml(p)}" ${state.program === p ? "selected" : ""}>${escapeHtml(p)}</option>`).join("")}
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="coopInterest">${state.studentPhase === "future" ? "Interested in co-op?" : "Enrolled in co-op?"}</label>
-            <select id="coopInterest" class="step-dropdown" ${coopDisabled ? "disabled" : ""}>
-              <option value="No" ${state.coopInterest === "No" ? "selected" : ""}>No</option>
-              <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
+              ${campuses.map(c => `
+                <option value="${escapeHtml(c)}" ${state.campus === c ? "selected" : ""}>
+                  ${escapeHtml(c)}
+                </option>
+              `).join("")}
             </select>
           </div>
 
           ${
-            isFutureUG && coopStatus === "No"
-              ? renderAlert("Co-op not available", "Co-op is not listed as available for this program, so the co-op option has been turned off.", "red")
-              : ""
-          }
+            externalCampusSelected
+              ? renderExternalCampusStopScreen()
+              : `
+                <div class="form-group">
+                  <label for="program">Program</label>
+                  <select id="program" class="step-dropdown">
+                    <option value="">Select program</option>
+                    ${programs.map(p => `
+                      <option value="${escapeHtml(p)}" ${state.program === p ? "selected" : ""}>
+                        ${escapeHtml(p)}
+                      </option>
+                    `).join("")}
+                  </select>
+                </div>
 
-          ${
-            isFutureUG && coopStatus === "Partial"
-              ? renderAlert("Co-op availability varies", "Some majors in this program may offer co-op, but not all. Please confirm the exact major before relying on this estimate.", "yellow")
-              : ""
-          }
+                <div class="form-group">
+                  <label for="coopInterest">
+                    ${state.studentPhase === "future" ? "Interested in co-op?" : "Enrolled in co-op?"}
+                  </label>
+                  <select id="coopInterest" class="step-dropdown" ${coopDisabled ? "disabled" : ""}>
+                    <option value="No" ${state.coopInterest === "No" ? "selected" : ""}>No</option>
+                    <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
+                  </select>
+                </div>
 
-          ${renderAlert("Data source notice", "The available options come from the tuition data for the selected study type, campus, and residency path.", "blue")}
+                ${renderCampusGallery()}
+
+                ${
+                  isFutureUG && coopStatus === "No"
+                    ? renderAlert(
+                        "Co-op not available",
+                        "Co-op is not listed as available for this program, so the co-op option has been turned off.",
+                        "red"
+                      )
+                    : ""
+                }
+
+                ${
+                  isFutureUG && coopStatus === "Partial"
+                    ? renderAlert(
+                        "Co-op availability varies",
+                        "Some majors in this program may offer co-op, but not all. Please confirm the exact major before relying on this estimate.",
+                        "yellow"
+                      )
+                    : ""
+                }
+
+                ${renderAlert(
+                  "Data source notice",
+                  "The available options come from the tuition data for the selected study type, campus, and residency path.",
+                  "blue"
+                )}
+              `
+          }
         </div>
       </div>
 
       <div class="step-footer">
         <button class="btn-secondary" id="backStep2" type="button">Back</button>
-        <button class="btn-primary" id="nextStep2" type="button">Continue</button>
+
+        ${
+          externalCampusSelected
+            ? ""
+            : `
+              <button class="btn-primary" id="nextStep2" type="button">
+                Continue
+              </button>
+            `
+        }
       </div>
     </div>
   `;
@@ -1054,10 +1162,13 @@ function renderStep5() {
       <div class="step-header">
         <p class="section-kicker">Estimate summary</p>
         <h2 class="step-title">Review your estimate</h2>
-        <p class="step-description">Review the cost range and choose whether to download or email the estimate.</p>
+        <p class="step-description">
+          Review the cost range and choose how you would like to receive your estimate.
+        </p>
       </div>
 
       <div class="step-content">
+
         <div class="estimate-total-card">
           <span class="estimate-total-label">Estimated range</span>
           <strong>${formatRangeValue(result.low, result.high)}</strong>
@@ -1068,7 +1179,15 @@ function renderStep5() {
           ${renderBreakdownRows("Tuition and fees", result.tuition.items).join("")}
           ${renderBreakdownRows("Living costs", result.living.items).join("")}
           ${renderBreakdownRows("Extra costs", result.extras.items).join("")}
-          ${state.studentPhase === "current" ? renderBreakdownRows("Funding and offsets", result.offsets.items, true).join("") : ""}
+          ${
+            state.studentPhase === "current"
+              ? renderBreakdownRows(
+                  "Funding and offsets",
+                  result.offsets.items,
+                  true
+                ).join("")
+              : ""
+          }
         </div>
 
         <div class="cost-summary">
@@ -1077,41 +1196,124 @@ function renderStep5() {
             <div></div>
           </div>
 
-          <div style="height: 360px;">
+          <div style="height:360px;">
             <canvas id="costBreakdownChart"></canvas>
           </div>
 
-          <p class="form-help-text" id="largestCostDriverText" style="margin-top: 1.2rem;"></p>
+          <p
+            class="form-help-text"
+            id="largestCostDriverText"
+            style="margin-top:1.2rem;"
+          ></p>
         </div>
 
         ${renderFutureFundingSummary()}
         ${renderFutureEarningsSummary()}
 
-        <div class="form-stack contact-section">
-          <div class="form-group">
-            <label for="fullName">Full name</label>
-            <input id="fullName" class="step-input" type="text" value="${escapeHtml(state.fullName)}" placeholder="Enter your full name" />
-          </div>
+        ${
+          state.studentPhase === "future"
+            ? `
+              <div class="future-contact-section">
 
-          <div class="form-group">
-            <label for="email">Email address</label>
-            <input id="email" class="step-input" type="email" value="${escapeHtml(state.email)}" placeholder="Enter your email address" />
-            <p class="form-help-text">Your name and email address are used to provide your estimate.</p>
-          </div>
+                <h3 class="subsection-title">
+                  Would you like the estimate emailed to you?
+                </h3>
 
-          <label class="checkbox-item">
-            <input type="checkbox" id="marketingConsent" ${state.marketingConsent ? "checked" : ""} />
-            <span>I would like to receive information about programs, admissions, events, scholarships, and other University of Guelph opportunities. You can unsubscribe at any time.</span>
-          </label>
+                <p class="form-help-text">
+                  To download your estimate or have it emailed to you,
+                  please provide your name and email address.
+                </p>
 
-          ${renderAlert("Privacy notice", "Receiving your estimate is separate from optional communications. You can download or receive your estimate without selecting the communication checkbox.", "grey")}
-        </div>
+                <p class="form-help-text">
+                  We may also send information about:
+                </p>
+
+                <ul class="future-contact-list">
+                  <li>Programs and admissions</li>
+                  <li>Scholarships and financial aid</li>
+                  <li>Events, campus life, and student opportunities</li>
+                </ul>
+
+                <div class="form-group">
+                  <label for="fullName">
+                    Full name <span class="required-star">*</span>
+                  </label>
+
+                  <input
+                    id="fullName"
+                    class="step-input"
+                    type="text"
+                    value="${escapeHtml(state.fullName)}"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="email">
+                    Email address <span class="required-star">*</span>
+                  </label>
+
+                  <input
+                    id="email"
+                    class="step-input"
+                    type="email"
+                    value="${escapeHtml(state.email)}"
+                    placeholder="Enter your email address"
+                  />
+                </div>
+
+                <div class="uog-alert uog-alert-grey">
+                  <div class="uog-alert-title">
+                    <span class="uog-alert-icon">!</span>
+                    <span>Consent notice</span>
+                  </div>
+
+                  <div class="uog-alert-message">
+                    By downloading or requesting your estimate, you consent to
+                    the University of Guelph using the information provided to
+                    send your estimate and communicate with you about programs,
+                    admissions, scholarships, events, and related opportunities.
+                    You may unsubscribe at any time.
+                  </div>
+                </div>
+
+              </div>
+            `
+            : ""
+        }
+
       </div>
 
       <div class="step-footer" style="flex-wrap:wrap;">
-        <button class="btn-secondary" id="backStep5" type="button">Back</button>
-        <button class="btn-gold" id="downloadEstimateBtn" type="button">Download estimate</button>
-        <button class="btn-primary" id="emailEstimateBtn" type="button">Get estimate by email</button>
+        <button
+          class="btn-secondary"
+          id="backStep5"
+          type="button"
+        >
+          Back
+        </button>
+
+        <button
+          class="btn-gold"
+          id="downloadEstimateBtn"
+          type="button"
+        >
+          Download estimate
+        </button>
+
+        ${
+          state.studentPhase === "future"
+            ? `
+              <button
+                class="btn-primary"
+                id="emailEstimateBtn"
+                type="button"
+              >
+                Get estimate by email
+              </button>
+            `
+            : ""
+        }
       </div>
     </div>
   `;
@@ -1203,7 +1405,7 @@ function renderCostBreakdownChart() {
   }
 
   costBreakdownChart = new Chart(canvas, {
-    type: "pie",
+    type: "doughnut",
     data: {
       labels,
       datasets: [
@@ -1219,6 +1421,7 @@ function renderCostBreakdownChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      // cutout: "70%",
       layout: {
         padding: 14
       },
@@ -1316,7 +1519,7 @@ function renderCostBreakdownChart() {
   }
 
   costBreakdownChart = new Chart(canvas, {
-    type: "pie",
+    type: "doughnut",
     data: {
       labels,
       datasets: [
@@ -1331,6 +1534,7 @@ function renderCostBreakdownChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      // cutout: "70%",
       layout: {
         padding: 10
       },
@@ -1462,7 +1666,44 @@ function bindRenderedEvents() {
     };
   }
 }
+function bindCampusCarouselEvents() {
+  const carousel = document.querySelector("[data-carousel]");
+  if (!carousel) return;
 
+  const slides = Array.from(carousel.querySelectorAll("[data-carousel-slide]"));
+  const prevBtn = carousel.querySelector("[data-carousel-prev]");
+  const nextBtn = carousel.querySelector("[data-carousel-next]");
+
+  if (!slides.length) return;
+
+  let currentIndex = slides.findIndex(slide => slide.classList.contains("active"));
+  if (currentIndex < 0) currentIndex = 0;
+
+  function showSlide(index) {
+    currentIndex = (index + slides.length) % slides.length;
+
+    slides.forEach((slide, slideIndex) => {
+      slide.classList.toggle("active", slideIndex === currentIndex);
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.onclick = () => {
+      showSlide(currentIndex - 1);
+    };
+  }
+
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      showSlide(currentIndex + 1);
+    };
+  }
+
+  if (slides.length <= 1) {
+    if (prevBtn) prevBtn.style.display = "none";
+    if (nextBtn) nextBtn.style.display = "none";
+  }
+}
 function bindStep0Events() {
   if (state.currentStep !== 0) return;
 
@@ -1730,43 +1971,41 @@ function renderCurrencyBadge() {
 function renderCampusGallery() {
   if (!state.campus) return "";
 
-  let images = [];
+  const campusImages = {
+    "University of Guelph": {
+      title: "University of Guelph",
+      folder: "./UGD_img/",
+      images: ["UOFG1.jpg"]
+    },
+    "University of Guelph-Humber": {
+      title: "University of Guelph-Humber",
+      folder: "./Gh_img/",
+      images: ["GH1.jpg"]
+    },
+    "Ridgetown Campus": {
+      title: "Ridgetown Campus",
+      folder: "./Ridegtown_img/",
+      images: ["Rgd3.jpg"]
+    }
+  };
 
-  if (state.campus === "University of Guelph") {
-    images = [
-      "./UGD_img/UOFG1.jpg",
-      "./UGD_img/UOFG2.jpg",
-      "./UGD_img/UOFG3.jpg"
-    ];
-  } else if (state.campus === "University of Guelph-Humber") {
-    images = [
-      "./Gh_img/GH1.jpg",
-      "./Gh_img/GH2.jpg",
-      "./Gh_img/GH3.jpg"
-    ];
-  } else if (
-    state.campus === "Ridgetown" ||
-    state.campus === "Ridgetown Campus"
-  ) {
-    images = [
-      "./Ridegtown_img/Rgd1.jpg",
-      "./Ridegtown_img/Rgd2.jpg",
-      "./Ridegtown_img/Rgd3.jpg"
-    ];
-  }
-
-  if (!images.length) return "";
+  const campus = campusImages[state.campus];
+  if (!campus) return "";
 
   return `
-    <div class="campus-gallery-wrapper">
-      <div class="campus-gallery-title">Campus Preview</div>
+    <div class="campus-preview-card">
+      <div class="campus-preview-copy">
+        <p class="campus-preview-kicker">Campus preview</p>
+        <h1 class="campus-preview-title">${escapeHtml(campus.title)}</h1>
+        
+      </div>
 
-      <div class="campus-gallery">
-        ${images.map(img => `
-          <div class="campus-gallery-card">
-            <img src="${img}" alt="Campus preview image" />
-          </div>
-        `).join("")}
+      <div class="campus-preview-image-wrap">
+        <img
+          class="campus-preview-image"
+          src="${escapeHtml(campus.folder + campus.images[0])}"
+          alt="${escapeHtml(campus.title)} campus preview"
+        />
       </div>
     </div>
   `;
@@ -2165,7 +2404,67 @@ function bindStep4Events() {
     };
   }
 }
+function renderFutureContactSection() {
+  return `
+    <div class="future-contact-section">
+      <h3 class="subsection-title">Would you like the estimate emailed to you?</h3>
 
+      <p class="form-help-text">
+        Please provide your name and email address to download your estimate or have it emailed to you.
+        We may also send information about:
+      </p>
+
+      <ul class="future-contact-list">
+        <li>Programs and admissions</li>
+        <li>Scholarships and financial aid</li>
+        <li>Events, campus life, and student opportunities</li>
+      </ul>
+
+      <div class="form-group">
+        <label for="fullName">Full name <span class="required-star">*</span></label>
+        <input
+          id="fullName"
+          class="step-input"
+          type="text"
+          value="${escapeHtml(state.fullName)}"
+          placeholder="Enter your full name"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email address <span class="required-star">*</span></label>
+        <input
+          id="email"
+          class="step-input"
+          type="email"
+          value="${escapeHtml(state.email)}"
+          placeholder="Enter your email address"
+        />
+      </div>
+
+      <p class="consent-text">
+        By requesting your estimate, you agree that the University of Guelph may contact you
+        regarding programs, admissions, scholarships, events, and related opportunities.
+        You may unsubscribe at any time.
+      </p>
+    </div>
+  `;
+}
+
+function renderCurrentStudentDownloadNotice() {
+  return `
+    <div class="uog-alert uog-alert-grey">
+      <div class="uog-alert-title">
+        <span class="uog-alert-icon">!</span>
+        <span>Download your estimate</span>
+      </div>
+
+      <div class="uog-alert-message">
+        Current or returning students can download this estimate without providing a name or email address.
+      </div>
+    </div>
+  `;
+}
 function bindStep5Events() {
   if (state.currentStep !== 5) return;
 
@@ -2230,7 +2529,12 @@ function bindStep5Events() {
 
   if (downloadBtn) {
     downloadBtn.onclick = async () => {
-      if (!validateContactFields()) return;
+      if (
+        state.studentPhase === "future" &&
+        !validateContactFields()
+      ) {
+        return;
+      }
 
       try {
         calculateEstimate();
