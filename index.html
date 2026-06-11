@@ -739,6 +739,7 @@
       background: #f5f5f5;
       border-top: 1px solid #dedede;
     }
+    
 
     .global-resources-inner {
       display: flex;
@@ -768,11 +769,16 @@
     }
 
     .global-resources-links {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 1.2rem;
     }
-
+    .global-resources-footer {
+      margin-top: 4rem;
+      padding: 4rem 0;
+      background: #f5f5f5;
+      border-top: 1px solid #dedede;
+    }
     .global-resources-links a {
       color: var(--blue);
       font-weight: 800;
@@ -1201,7 +1207,7 @@
                 <h2 class="global-resources-title">
                   Additional Planning Information
                 </h2>
-
+                
                 <p class="global-resources-text">
                   The information below is provided for planning purposes only
                   and is subject to change.
@@ -1224,6 +1230,21 @@
                   rel="noopener"
                 >
                   Scholarships & Funding
+                </a>
+                <a
+                  href="https://osap.gov.on.ca/AidEstimator2627Web/enterapp/enter.xhtml"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  OSAP Aid Estimator
+                </a>
+
+                <a
+                  href="https://www.uoguelph.ca/experiential-learning/employers-partners/co-op-salary-guide"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Co-op Salary Guide
                 </a>
 
               </div>

@@ -1,4 +1,5 @@
 const state = {
+  osapFunding: 0,
   data: null,
   currentStep: 0,
 
@@ -12,6 +13,7 @@ const state = {
   campus: "",
   cohortYear: "",
   program: "",
+  major: "",
   country: "",
 
   includeBooks: false,
@@ -19,7 +21,7 @@ const state = {
   includeCoop: false,
   includePartTimeEarnings: false,
   includeCoopEarnings: false,
-  coopInterest: "No",
+  coopInterest: "Yes",
   futureMealPlanInterest: "No",
 
   housingType: "None",         // None | OnCampus | OffCampus
@@ -42,6 +44,13 @@ const state = {
 
   matchedTuitionRecord: null,
   result: null,
+
+  booksAmount: 0,
+  personalAmount: 0,
+  partTimeHoursPerWeek: 10,
+  partTimeHourlyRate: 20,
+  coopWeeklyEarnings: 2500,
+  coopWeeks: 16,
 
   currencyCode: "",
   currencyRate: null,
@@ -741,11 +750,20 @@ function renderStep2() {
   const campuses = getAvailableCampuses();
   const cohortYears = getAvailableCohortYears();
   const programs = getAvailablePrograms().sort((a, b) => a.localeCompare(b));
+  const majors = getAvailableMajors();
+  const programHasMajors = majors.length > 0;
   const countries = getAvailableCountries();
-  const coopStatus = getFutureProgramCoopStatus();
-  const isFutureUG = state.studentPhase === "future" && state.level === "UG";
-  const coopDisabled = isFutureUG && coopStatus === "No";
+
   const externalCampusSelected = isExternalCampusSelected();
+
+  const coopStatus = getFutureProgramCoopStatus();
+  const isUG = state.level === "UG";
+  const coopDisabled = isUG && state.major && coopStatus !== "Yes";
+
+  if (isUG && state.major && coopStatus === "Yes" && !state.coopInterest) {
+    state.coopInterest = "Yes";
+    state.includeCoop = true;
+  }
 
   if (coopDisabled) {
     state.coopInterest = "No";
@@ -756,11 +774,18 @@ function renderStep2() {
   if (state.campus && !campuses.includes(state.campus)) {
     state.campus = "";
     state.program = "";
+    state.major = "";
     state.matchedTuitionRecord = null;
   }
 
   if (state.program && !programs.includes(state.program)) {
     state.program = "";
+    state.major = "";
+    state.matchedTuitionRecord = null;
+  }
+
+  if (state.major && !majors.includes(state.major)) {
+    state.major = "";
     state.matchedTuitionRecord = null;
   }
 
@@ -772,7 +797,7 @@ function renderStep2() {
       <div class="step-header">
         <p class="section-kicker">Program and tuition</p>
         <h2 class="step-title">Select your program details</h2>
-        <p class="step-description">Choose the year, campus, and program used to match tuition data.</p>
+        <p class="step-description">Choose the campus, program, and major used to match tuition data.</p>
       </div>
 
       <div class="step-content">
@@ -854,41 +879,55 @@ function renderStep2() {
                   </select>
                 </div>
 
-                <div class="form-group">
-                  <label for="coopInterest">
-                    ${state.studentPhase === "future" ? "Interested in co-op?" : "Enrolled in co-op?"}
-                  </label>
-                  <select id="coopInterest" class="step-dropdown" ${coopDisabled ? "disabled" : ""}>
-                    <option value="No" ${state.coopInterest === "No" ? "selected" : ""}>No</option>
-                    <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
-                  </select>
-                </div>
-
-                ${renderCampusGallery()}
-
                 ${
-                  isFutureUG && coopStatus === "No"
-                    ? renderAlert(
-                        "Co-op not available",
-                        "Co-op is not listed as available for this program, so the co-op option has been turned off.",
-                        "red"
-                      )
+                  isUG && state.program && programHasMajors
+                    ? `
+                      <div class="form-group">
+                        <label for="major">Major</label>
+                        <select id="major" class="step-dropdown">
+                          <option value="">Select major</option>
+                          ${majors.map(m => `
+                            <option value="${escapeHtml(m)}" ${state.major === m ? "selected" : ""}>
+                              ${escapeHtml(m)}
+                            </option>
+                          `).join("")}
+                        </select>
+                      </div>
+                    `
                     : ""
                 }
 
                 ${
-                  isFutureUG && coopStatus === "Partial"
+                  state.program && (!isUG || !programHasMajors || state.major)
+                    ? `
+                      <div class="form-group">
+                        <label for="coopInterest">
+                          ${state.studentPhase === "future" ? "Interested in co-op?" : "Enrolled in co-op?"}
+                        </label>
+                        <select id="coopInterest" class="step-dropdown" ${coopDisabled ? "disabled" : ""}>
+                          <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
+                          <option value="No" ${state.coopInterest === "No" ? "selected" : ""}>No</option>
+                        </select>
+                      </div>
+                    `
+                    : ""
+                }
+
+                ${renderCampusGallery()}
+
+                ${
+                  isUG && state.program && programHasMajors && state.major && coopStatus === "No"
                     ? renderAlert(
-                        "Co-op availability varies",
-                        "Some majors in this program may offer co-op, but not all. Please confirm the exact major before relying on this estimate.",
-                        "yellow"
+                        "Co-op not available",
+                        "Co-op is not listed as available for this major, so the co-op option has been turned off.",
+                        "red"
                       )
                     : ""
                 }
 
                 ${renderAlert(
                   "Data source notice",
-                  "The available options come from the tuition data for the selected study type, campus, and residency path.",
+                  "The available options come from the tuition data for the selected study type, residency path, program, and major.",
                   "blue"
                 )}
               `
@@ -942,96 +981,178 @@ function renderInfoIcon(title, message) {
   `;
 }
 function renderStep3() {
+  const defaultPartTimeRate = parseAmountFromText(
+    readField(state.data?.["Part-Time_earnings"]?.[0] || {}, ["Part-Time_earnings"])
+  ) || 20;
+
+  const defaultBooks = parseAmountFromText(
+    readField(state.data?.Textbooks?.[0] || {}, ["Txtbooks", "Textbooks"])
+  ) || 1400;
+
+  const defaultPersonal = parseAmountFromText(
+    readField(state.data?.["Personal Expenses"]?.[0] || {}, ["Personal Expenses"])
+  ) || 2500;
+
+  const coopRange = parseRangeFromText(
+    readField(state.data?.["Co-op Cost"]?.[0] || {}, ["Coop Earnings", "Co-op Earnings"])
+  );
+
+  if (!state.booksAmount) state.booksAmount = defaultBooks;
+  if (!state.personalAmount) state.personalAmount = defaultPersonal;
+  if (!state.osapFunding) state.osapFunding = 0;
+
+  if (state.studentPhase === "future") {
+    if (!state.partTimeHoursPerWeek) state.partTimeHoursPerWeek = 10;
+    if (!state.partTimeHourlyRate) state.partTimeHourlyRate = defaultPartTimeRate;
+    if (!state.coopWeeklyEarnings) state.coopWeeklyEarnings = coopRange.high || 2500;
+    if (!state.coopWeeks) state.coopWeeks = 16;
+  }
+
   return `
     <div class="step-container">
       <div class="step-header">
         <p class="section-kicker">Additional costs and funding</p>
         <h2 class="step-title">Add optional costs and funding</h2>
         <p class="step-description">
-          ${state.studentPhase === "future" ? "Choose optional costs and review planning information." : "Choose optional costs and enter funding you want reflected in the estimate."}
+          ${
+            state.studentPhase === "future"
+              ? "Review and adjust estimated expenses and potential funding."
+              : "Review and adjust estimated expenses and funding."
+          }
         </p>
       </div>
 
       <div class="step-content">
         <div class="form-stack">
-          <label class="checkbox-item">
-            <input type="checkbox" id="includeBooks" ${state.includeBooks ? "checked" : ""} />
-            <span>Include textbooks</span>
-          </label>
 
-          <label class="checkbox-item">
-            <input type="checkbox" id="includePersonal" ${state.includePersonal ? "checked" : ""} />
-            <span>Include personal expenses</span>
-          </label>
+          <div class="form-group">
+            <label for="booksAmount">Estimated textbooks / supplies</label>
+            <input
+              id="booksAmount"
+              class="step-input"
+              type="number"
+              min="0"
+              value="${escapeHtml(state.booksAmount)}"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="personalAmount">Estimated personal expenses</label>
+            <input
+              id="personalAmount"
+              class="step-input"
+              type="number"
+              min="0"
+              value="${escapeHtml(state.personalAmount)}"
+            />
+          </div>
+
+         
 
           ${
             state.studentPhase === "future"
               ? `
-                <label class="checkbox-item">
-                  <input type="checkbox" id="includePartTimeEarnings" ${state.includePartTimeEarnings ? "checked" : ""} />
-                  <span>Show potential part-time earnings</span>
-                </label>
+                <div class="form-group">
+                  <h3 class="subsection-title">Potential part-time earnings</h3>
+
+                  <label for="partTimeHoursPerWeek">Hours per week</label>
+                  <input
+                    id="partTimeHoursPerWeek"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.partTimeHoursPerWeek)}"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="partTimeHourlyRate">Hourly rate</label>
+                  <input
+                    id="partTimeHourlyRate"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.partTimeHourlyRate)}"
+                  />
+                </div>
 
                 ${
                   state.coopInterest === "Yes"
                     ? `
-                      <label class="checkbox-item">
-                        <input type="checkbox" id="includeCoopEarnings" ${state.includeCoopEarnings ? "checked" : ""} />
-                        <span>Show potential co-op earnings</span>
-                      </label>
+                      <div class="form-group">
+                        <h3 class="subsection-title">Potential co-op earnings</h3>
+
+                        <label for="coopWeeklyEarnings">Estimated weekly co-op earnings</label>
+                        <input
+                          id="coopWeeklyEarnings"
+                          class="step-input"
+                          type="number"
+                          min="0"
+                          value="${escapeHtml(state.coopWeeklyEarnings)}"
+                        />
+
+                        <p class="form-help-text">
+                          Suggested range: ${formatRangeValue(coopRange.low, coopRange.high)} per week.
+                          Use the Co-op Salary Guide in the helpful resources section below.
+                        </p>
+                      </div>
+
+                      <div class="form-group">
+                        <label for="coopWeeks">Estimated co-op weeks</label>
+                        <input
+                          id="coopWeeks"
+                          class="step-input"
+                          type="number"
+                          min="0"
+                          value="${escapeHtml(state.coopWeeks)}"
+                        />
+                      </div>
+                    `
+                    : ""
+                }
+                ${
+                  state.residencyType === "Domestic"
+                    ? `
+                      <div class="form-group">
+                        <label for="osapFunding">Estimated OSAP funding</label>
+                        <input id="osapFunding" class="step-input" type="number" min="0" value="${escapeHtml(state.osapFunding)}" placeholder="Enter estimated OSAP funding" />
+                        <p class="form-help-text">Use the OSAP Aid Estimator in the helpful resources section below.</p>
+                      </div>
                     `
                     : ""
                 }
 
-                ${renderAlert("Scholarships and bursaries", "Scholarship and bursary information will be shown in the final summary for awareness.", "blue")}
-                ${renderAlert("Potential earnings notice", "Part-time and co-op earnings are shown for planning awareness only and are not deducted from the estimated total.", "grey")}
-                ${renderOSAPInfo()}
+                ${renderAlert(
+                  "Planning estimate",
+                  "These values are pre-filled using available planning data, but you can adjust them based on your situation.",
+                  "grey"
+                )}
+
                 ${renderSuccessStories()}
               `
               : `
                 <div class="form-group">
-                  <h3 class="subsection-title">Scholarships and bursaries</h3>
-                  <div class="scholarship-checkbox-list">
-                    ${getScholarshipOptions().map(item => {
-                      const selected = state.selectedScholarshipKeys.includes(item.__key);
-                      const amount = item.Amount || "";
-                      const category = item.Category || "";
-                      const yearlyValue = getScholarshipYearlyValue(item);
-
-                      return `
-                        <label class="scholarship-option ${selected ? "selected" : ""}">
-                          <input type="checkbox" name="selectedScholarships" value="${escapeHtml(item.__key)}" ${selected ? "checked" : ""} />
-                          <span class="scholarship-option-body">
-                            <span class="scholarship-option-top">
-                              <strong>${escapeHtml(item.__label)}</strong>
-                              <span>${yearlyValue > 0 ? `${formatMoney(yearlyValue)} / year` : "Amount varies"}</span>
-                            </span>
-                            <span class="scholarship-option-meta">
-                              ${category ? `${escapeHtml(category)} · ` : ""}
-                              ${item["Application Required"] ? `Application required: ${escapeHtml(item["Application Required"])}` : ""}
-                            </span>
-                            ${
-                              amount && yearlyValue <= 0
-                                ? `<span class="scholarship-option-note">Listed award amount: ${escapeHtml(amount)}</span>`
-                                : ""
-                            }
-                          </span>
-                        </label>
-                      `;
-                    }).join("")}
-                  </div>
-
-                  ${renderAlert("Scholarship calculation", "Renewable or multi-year awards are converted to an estimated yearly amount for this calculator.", "grey")}
-                </div>
-
-                <div class="form-group">
                   <label for="partTimeIncome">Expected part-time income</label>
-                  <input id="partTimeIncome" class="step-input" type="number" min="0" value="${escapeHtml(state.partTimeIncome)}" placeholder="Enter expected yearly part-time income" />
+                  <input
+                    id="partTimeIncome"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.partTimeIncome)}"
+                    placeholder="Enter expected yearly part-time income"
+                  />
                 </div>
 
                 <div class="form-group">
-                  <label for="otherScholarshipOffset">Other yearly scholarship / bursary</label>
-                  <input id="otherScholarshipOffset" class="step-input" type="number" min="0" value="${escapeHtml(state.otherScholarshipOffset)}" placeholder="Enter any additional yearly scholarship or bursary amount" />
+                  <label for="otherScholarshipOffset">Scholarships and bursaries (yearly total)</label>
+                  <input
+                    id="otherScholarshipOffset"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.otherScholarshipOffset)}"
+                    placeholder="Enter total yearly scholarships and bursaries"
+                  />
                 </div>
 
                 ${
@@ -1039,7 +1160,17 @@ function renderStep3() {
                     ? `
                       <div class="form-group">
                         <label for="coopEarningsOffset">Expected co-op earnings</label>
-                        <input id="coopEarningsOffset" class="step-input" type="number" min="0" value="${escapeHtml(state.coopEarningsOffset)}" placeholder="Enter expected co-op earnings" />
+                        <input
+                          id="coopEarningsOffset"
+                          class="step-input"
+                          type="number"
+                          min="0"
+                          value="${escapeHtml(state.coopEarningsOffset)}"
+                          placeholder="Enter expected co-op earnings"
+                        />
+                        <p class="form-help-text">
+                          See the Co-op Salary Guide in the helpful resources section below.
+                        </p>
                       </div>
                     `
                     : ""
@@ -1047,10 +1178,15 @@ function renderStep3() {
 
                 <div class="form-group">
                   <label for="familySupport">Family support / savings</label>
-                  <input id="familySupport" class="step-input" type="number" min="0" value="${escapeHtml(state.familySupport)}" placeholder="Enter support from family, savings, or other funding" />
+                  <input
+                    id="familySupport"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    value="${escapeHtml(state.familySupport)}"
+                    placeholder="Enter support from family, savings, or other funding"
+                  />
                 </div>
-
-                ${renderAlert("Funding deduction", "Selected scholarships, bursaries, and funding values are deducted from the final estimate for current or returning students.", "yellow")}
               `
           }
         </div>
@@ -1063,7 +1199,6 @@ function renderStep3() {
     </div>
   `;
 }
-
 
 function renderStep4() {
   const isFutureStudent = state.studentPhase === "future";
@@ -1160,34 +1295,35 @@ function renderStep5() {
   return `
     <div class="step-container">
       <div class="step-header">
-        <p class="section-kicker">Estimate summary</p>
+        <p class="section-kicker">Estimate summary for 2 academic semesters (Fall & Winter)</p>
         <h2 class="step-title">Review your estimate</h2>
         <p class="step-description">
-          Review the cost range and choose how you would like to receive your estimate.
+          This is your two-semester estimate for Fall and Winter. It is not a full academic-year estimate.
         </p>
       </div>
 
       <div class="step-content">
 
         <div class="estimate-total-card">
-          <span class="estimate-total-label">Estimated range</span>
+          <span class="estimate-total-label">Estimated range for 2 academic semesters (Fall & Winter)</span>
           <strong>${formatRangeValue(result.low, result.high)}</strong>
           ${getConvertedRangeText(result.low, result.high)}
         </div>
 
         <div class="cost-summary">
-          ${renderBreakdownRows("Tuition and fees", result.tuition.items).join("")}
+          ${renderBreakdownRows(
+            state.major
+              ? `${state.major} (${state.program})`
+              : state.program || "Tuition and fees",
+            result.tuition.items
+          ).join("")}
           ${renderBreakdownRows("Living costs", result.living.items).join("")}
           ${renderBreakdownRows("Extra costs", result.extras.items).join("")}
-          ${
-            state.studentPhase === "current"
-              ? renderBreakdownRows(
-                  "Funding and offsets",
-                  result.offsets.items,
-                  true
-                ).join("")
-              : ""
-          }
+          ${renderBreakdownRows(
+            "Funding and offsets",
+            result.offsets.items,
+            true
+          ).join("")}
         </div>
 
         <div class="cost-summary">
@@ -1207,7 +1343,6 @@ function renderStep5() {
           ></p>
         </div>
 
-        ${renderFutureFundingSummary()}
         ${renderFutureEarningsSummary()}
 
         ${
@@ -2071,10 +2206,29 @@ function bindStep2Events() {
   const country = document.getElementById("country");
   const campus = document.getElementById("campus");
   const program = document.getElementById("program");
+  const major = document.getElementById("major");
   const coopInterest = document.getElementById("coopInterest");
   const back = document.getElementById("backStep2");
   const next = document.getElementById("nextStep2");
+  if (major) {
+    major.onchange = e => {
+      state.major = e.target.value;
+      state.matchedTuitionRecord = null;
+      clearErrors();
 
+      const coopStatus = getFutureProgramCoopStatus();
+
+      if (coopStatus !== "Yes") {
+        state.coopInterest = "No";
+        state.includeCoop = false;
+        state.includeCoopEarnings = false;
+
+        
+      }
+
+      renderCurrentStep();
+    };
+  }
   if (cohortYear) {
     cohortYear.onchange = e => {
       state.cohortYear = e.target.value;
@@ -2104,24 +2258,13 @@ function bindStep2Events() {
   }
 
   if (program) {
-    program.onchange = async e => {
+    program.onchange = e => {
       state.program = e.target.value;
+      state.major = "";
       state.matchedTuitionRecord = null;
+      state.coopInterest = "No";
+      state.includeCoop = false;
       clearErrors();
-
-      const coopStatus = getFutureProgramCoopStatus();
-
-      if (
-        state.studentPhase === "future" &&
-        state.level === "UG" &&
-        coopStatus === "No"
-      ) {
-        state.coopInterest = "No";
-        state.includeCoop = false;
-        state.includeCoopEarnings = false;
-      }
-
-      await updateCurrencyConversion();
       renderCurrentStep();
     };
   }
@@ -2180,6 +2323,10 @@ function bindStep2Events() {
         markError(document.getElementById("program"), "Required");
         hasError = true;
       }
+      if (state.level === "UG" && getAvailableMajors().length > 0 && !state.major) {
+        markError(document.getElementById("major"), "Required");
+        hasError = true;
+      }
 
       if (hasError) return;
 
@@ -2203,66 +2350,70 @@ function bindStep2Events() {
 function bindStep3Events() {
   if (state.currentStep !== 3) return;
 
-  const includeBooks = document.getElementById("includeBooks");
-  const includePersonal = document.getElementById("includePersonal");
-  const includeCoop = document.getElementById("includeCoop");
-  const includePartTimeEarnings = document.getElementById("includePartTimeEarnings");
-  const includeCoopEarnings = document.getElementById("includeCoopEarnings");
+  const booksAmount = document.getElementById("booksAmount");
+  const personalAmount = document.getElementById("personalAmount");
+  const osapFunding = document.getElementById("osapFunding");
 
-  const selectedScholarshipInputs = document.querySelectorAll('input[name="selectedScholarships"]');
+  const partTimeHoursPerWeek = document.getElementById("partTimeHoursPerWeek");
+  const partTimeHourlyRate = document.getElementById("partTimeHourlyRate");
+  const coopWeeklyEarnings = document.getElementById("coopWeeklyEarnings");
+  const coopWeeks = document.getElementById("coopWeeks");
+
   const otherScholarshipOffset = document.getElementById("otherScholarshipOffset");
   const partTimeIncome = document.getElementById("partTimeIncome");
   const coopEarningsOffset = document.getElementById("coopEarningsOffset");
   const familySupport = document.getElementById("familySupport");
+
   const back = document.getElementById("backStep3");
   const next = document.getElementById("nextStep3");
 
-  if (includeBooks) {
-    includeBooks.onchange = e => {
-      state.includeBooks = e.target.checked;
+  if (booksAmount) {
+    booksAmount.oninput = e => {
+      state.booksAmount = toNumber(e.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (includePersonal) {
-    includePersonal.onchange = e => {
-      state.includePersonal = e.target.checked;
+  if (personalAmount) {
+    personalAmount.oninput = e => {
+      state.personalAmount = toNumber(e.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (includeCoop) {
-    includeCoop.onchange = e => {
-      state.includeCoop = e.target.checked;
+  if (osapFunding) {
+    osapFunding.oninput = e => {
+      state.osapFunding = toNumber(e.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (includePartTimeEarnings) {
-    includePartTimeEarnings.onchange = e => {
-      state.includePartTimeEarnings = e.target.checked;
+  if (partTimeHoursPerWeek) {
+    partTimeHoursPerWeek.oninput = e => {
+      state.partTimeHoursPerWeek = toNumber(e.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (includeCoopEarnings) {
-    includeCoopEarnings.onchange = e => {
-      state.includeCoopEarnings = e.target.checked;
+  if (partTimeHourlyRate) {
+    partTimeHourlyRate.oninput = e => {
+      state.partTimeHourlyRate = toNumber(e.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (selectedScholarshipInputs.length) {
-    selectedScholarshipInputs.forEach(input => {
-      input.onchange = () => {
-        state.selectedScholarshipKeys = Array.from(selectedScholarshipInputs)
-          .filter(el => el.checked)
-          .map(el => el.value);
+  if (coopWeeklyEarnings) {
+    coopWeeklyEarnings.oninput = e => {
+      state.coopWeeklyEarnings = toNumber(e.target.value);
+      updateRunningEstimate();
+    };
+  }
 
-        state.scholarshipOffset = getSelectedScholarshipTotal();
-        updateRunningEstimate();
-      };
-    });
+  if (coopWeeks) {
+    coopWeeks.oninput = e => {
+      state.coopWeeks = toNumber(e.target.value);
+      updateRunningEstimate();
+    };
   }
 
   if (otherScholarshipOffset) {
@@ -2302,6 +2453,7 @@ function bindStep3Events() {
 
   if (next) {
     next.onclick = () => {
+      calculateEstimate();
       state.currentStep = 4;
       renderCurrentStep();
     };
@@ -2567,6 +2719,7 @@ function resetProgramPathState() {
   state.campus = "";
   state.cohortYear = "";
   state.program = "";
+  state.major = "";
   state.country = "";
   state.coopInterest = "No";
   state.includeCoop = false;
@@ -2620,49 +2773,19 @@ function emptyResult() {
     high: 0
   };
 }
-
 function getTuitionArray() {
   if (!state.data) return [];
 
-  if (state.studentPhase === "future" && state.level === "UG") {
-    return state.data.FutureStudentFee || [];
-  }
-
-  // Existing logic for others
   return state.level === "UG"
     ? (state.data.UG_Tuition || [])
     : (state.data.GR_Tuition || []);
 }
-
-function getFilteredTuitionRows({ includeCampus = false, includeProgram = false, includeCohortForCurrent = true } = {}) {
+function getFilteredTuitionRows({
+  includeProgram = false,
+  includeMajor = false,
+  includeCohortForCurrent = true
+} = {}) {
   return getTuitionArray().filter(row => {
-
-    // Future undergraduate logic using FutureStudentFee
-    if (state.studentPhase === "future" && state.level === "UG") {
-      const type = normalizeKey(row.Type);
-
-      let typeMatch = false;
-
-      if (state.residencyType === "International") {
-        typeMatch = type === "international";
-      } else if (state.province === "ON") {
-        typeMatch = type === "ontario";
-      } else if (state.province === "Non-ON") {
-        typeMatch =
-          type === "outside-ontario" ||
-          type === "outside ontario" ||
-          type === "non-on" ||
-          type === "non ontario";
-      }
-
-      const programMatch = includeProgram
-        ? normalizeKey(row.Program) === normalizeKey(state.program)
-        : true;
-
-      return typeMatch && programMatch;
-    }
-
-    // UG / GR tuition logic
     const residencyMatch =
       normalizeKey(row.Residency) === normalizeKey(state.residencyType);
 
@@ -2675,31 +2798,17 @@ function getFilteredTuitionRows({ includeCampus = false, includeProgram = false,
         provinceValue === "int" ||
         provinceValue === "international";
     } else {
-      // Graduate domestic tuition should not be blocked by ON / Non-ON
-      // if the GR_Tuition data does not separate graduate fees by province.
-      if (state.level === "GR") {
-        provinceMatch =
-          !provinceValue ||
-          provinceValue === "domestic" ||
-          provinceValue === "on" ||
-          provinceValue === "non-on" ||
-          provinceValue === "non ontario" ||
-          provinceValue === "outside-ontario" ||
-          provinceValue === "outside ontario" ||
-          provinceValue === normalizeKey(state.province);
-      } else {
-        provinceMatch =
-          !state.province ||
-          provinceValue === normalizeKey(state.province);
-      }
+      provinceMatch =
+        !state.province ||
+        provinceValue === normalizeKey(state.province);
     }
-
-    const campusMatch = includeCampus
-      ? normalizeKey(row.Campus) === normalizeKey(state.campus)
-      : true;
 
     const programMatch = includeProgram
       ? normalizeKey(row.Program) === normalizeKey(state.program)
+      : true;
+
+    const majorMatch = includeMajor && state.level === "UG"
+      ? normalizeKey(row.Major) === normalizeKey(state.major)
       : true;
 
     const cohortMatch =
@@ -2707,28 +2816,27 @@ function getFilteredTuitionRows({ includeCampus = false, includeProgram = false,
         ? !state.cohortYear || normalizeKey(row.CohortYear) === normalizeKey(state.cohortYear)
         : true;
 
-    return residencyMatch && provinceMatch && campusMatch && programMatch && cohortMatch;
+    return residencyMatch && provinceMatch && programMatch && majorMatch && cohortMatch;
   });
 }
 
-function getAvailableCampuses() {
-  // Graduate programs are only shown under University of Guelph
-  if (state.level === "GR") {
-    return ["University of Guelph"];
-  }
 
-  // Future undergraduate students can choose all three campuses
-  if (state.studentPhase === "future" && state.level === "UG") {
-    return [
-      "University of Guelph",
-      "University of Guelph-Humber",
-      "Ridgetown Campus"
-    ];
-  }
+
+function getAvailableCampuses() {
+  return [
+    "University of Guelph",
+    "University of Guelph-Humber",
+    "Ridgetown Campus"
+  ];
+}
+function getAvailableMajors() {
+  if (state.level !== "UG" || !state.program) return [];
+
+  const rows = getFilteredTuitionRows({ includeProgram: true });
 
   return [...new Set(
-    getFilteredTuitionRows()
-      .map(row => normalize(row.Campus))
+    rows
+      .map(row => normalize(row.Major))
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b));
 }
@@ -2766,7 +2874,7 @@ function getAvailableCountries() {
 
 function getAvailablePrograms() {
   return [...new Set(
-    getFilteredTuitionRows({ includeCampus: !!state.campus })
+    getFilteredTuitionRows()
       .map(row => normalize(row.Program))
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b));
@@ -2791,20 +2899,26 @@ function compareCohortDesc(a, b) {
   return be - ae;
 }
 function getFutureProgramCoopStatus() {
-  if (state.studentPhase !== "future" || state.level !== "UG" || !state.program) {
-    return "";
-  }
+  if (!state.program) return "";
 
   const rows = getFilteredTuitionRows({
-    includeProgram: true
+    includeProgram: true,
+    includeMajor: state.level === "UG"
   });
 
-  const match = rows.find(row =>
-    normalizeKey(row.Program) === normalizeKey(state.program)
-  );
+  const match = rows.find(row => {
+    const programMatch = normalizeKey(row.Program) === normalizeKey(state.program);
+
+    if (state.level === "UG") {
+      return programMatch && normalizeKey(row.Major) === normalizeKey(state.major);
+    }
+
+    return programMatch;
+  });
 
   return normalize(
     readField(match || {}, [
+      "Coop Included",
       "Coop_included",
       "coop_included",
       "Co-op Included",
@@ -2815,8 +2929,8 @@ function getFutureProgramCoopStatus() {
 }
 function matchTuitionRecord() {
   const rows = getFilteredTuitionRows({
-    includeCampus: true,
     includeProgram: true,
+    includeMajor: state.level === "UG",
     includeCohortForCurrent: true
   });
 
@@ -2825,25 +2939,7 @@ function matchTuitionRecord() {
     return;
   }
 
-  if (state.studentPhase === "current") {
-    state.matchedTuitionRecord = rows[0] || null;
-    return;
-  }
-
-  const sorted = [...rows].sort((a, b) => compareCohortDesc(normalize(a.CohortYear), normalize(b.CohortYear)));
-
-  const targetYear = Number(state.cohortYear);
-  if (!targetYear) {
-    state.matchedTuitionRecord = sorted[0] || null;
-    return;
-  }
-
-  const exactOrNearest = sorted.find(row => {
-    const range = parseCohortRange(row.CohortYear);
-    return range ? range.end === targetYear || range.start === targetYear : false;
-  });
-
-  state.matchedTuitionRecord = exactOrNearest || sorted[0] || null;
+  state.matchedTuitionRecord = rows[0] || null;
 }
 
 function getScholarshipOptions() {
@@ -2910,62 +3006,32 @@ function getTuitionCosts() {
 
   const TUITION_BUFFER = 1000;
 
-  // Future UG logic using FutureStudentFee
-  if (state.studentPhase === "future" && state.level === "UG") {
-    const tuitionValues = extractMoneyValues(row["Full-time Tuition"]);
-    const feeValues = extractMoneyValues(row["Compulsory Fees"]);
-
-    const tuitionLow = tuitionValues.length ? Math.min(...tuitionValues) : 0;
-    const tuitionHigh = tuitionValues.length ? Math.max(...tuitionValues) : tuitionLow;
-
-    const feeLow = feeValues.length ? Math.min(...feeValues) : 0;
-    const feeHigh = feeValues.length ? Math.max(...feeValues) : feeLow;
-
-    const items = [
-      {
-        label: "Full-time tuition",
-        low: tuitionLow,
-        high: tuitionHigh
-      },
-      {
-        label: "Compulsory fees",
-        low: feeLow,
-        high: feeHigh
-      }
-      
-    ];
-
-    return {
-      items,
-      low: tuitionLow + feeLow,
-      high: tuitionHigh + feeHigh + TUITION_BUFFER
-    };
-  }
-
-  // Current / graduate logic
   const fallTuition = toNumber(row.FallTuition);
   const winterTuition = toNumber(row.WinterTuition);
 
-  const fallTuitionAndFees = Math.max(
-    fallTuition,
-    toNumber(row.FallTuition_Compulsory)
-  );
-
-  const winterTuitionAndFees = Math.max(
-    winterTuition,
-    toNumber(row.WinterTuition_Compulsory)
-  );
+  const fallCompulsoryFees = toNumber(row.FallCompulsoryFees);
+  const winterCompulsoryFees = toNumber(row.WinterCompulsoryFees);
 
   const items = [
     {
-      label: "Fall tuition and fee estimate",
+      label: "Fall tuition estimate",
       low: fallTuition,
-      high: fallTuitionAndFees + TUITION_BUFFER
+      high: fallTuition + TUITION_BUFFER
     },
     {
-      label: "Winter tuition and fee estimate",
+      label: "Fall compulsory fees",
+      low: fallCompulsoryFees,
+      high: fallCompulsoryFees
+    },
+    {
+      label: "Winter tuition estimate",
       low: winterTuition,
-      high: winterTuitionAndFees + TUITION_BUFFER
+      high: winterTuition + TUITION_BUFFER
+    },
+    {
+      label: "Winter compulsory fees",
+      low: winterCompulsoryFees,
+      high: winterCompulsoryFees
     }
   ];
 
@@ -2975,6 +3041,8 @@ function getTuitionCosts() {
     high: items.reduce((sum, item) => sum + item.high, 0)
   };
 }
+
+
 function getOnCampusResidenceOptions() {
   return (state.data?.["On_campus_Living_Costs"] || [])
     .map(item => {
@@ -3259,27 +3327,19 @@ function renderSuccessStories() {
 function getExtraCosts() {
   const items = [];
 
-  if (state.includeBooks) {
-    const value = parseAmountFromText(
-      readField(state.data?.Textbooks?.[0] || {}, ["Txtbooks", "Textbooks"])
-    );
-
+  if (toNumber(state.booksAmount) > 0) {
     items.push({
-      label: "Textbooks",
-      low: value,
-      high: value
+      label: "Textbooks / supplies",
+      low: toNumber(state.booksAmount),
+      high: toNumber(state.booksAmount)
     });
   }
 
-  if (state.includePersonal) {
-    const value = parseAmountFromText(
-      readField(state.data?.["Personal Expenses"]?.[0] || {}, ["Personal Expenses"])
-    );
-
+  if (toNumber(state.personalAmount) > 0) {
     items.push({
       label: "Personal expenses",
-      low: value,
-      high: value
+      low: toNumber(state.personalAmount),
+      high: toNumber(state.personalAmount)
     });
   }
 
@@ -3288,12 +3348,12 @@ function getExtraCosts() {
       readField(state.data?.["Co-op Cost"]?.[0] || {}, ["Co-op Cost"])
     );
 
-    const yearlyFee = semesterFee * 2;
+    const twoSemesterFee = semesterFee * 2;
 
     items.push({
       label: "Co-op fee estimate, Fall and Winter",
-      low: yearlyFee,
-      high: yearlyFee
+      low: twoSemesterFee,
+      high: twoSemesterFee
     });
   }
 
@@ -3317,50 +3377,69 @@ function getExtraCosts() {
 }
 
 function getOffsets() {
-  if (state.studentPhase !== "current") {
-    return {
-      items: [],
-      total: 0
-    };
-  }
-
   const items = [];
 
-  state.scholarshipOffset = getSelectedScholarshipTotal();
-
-  if (state.scholarshipOffset > 0) {
+  if (state.residencyType === "Domestic" && toNumber(state.osapFunding) > 0) {
     items.push({
-      label: "Selected scholarships and bursaries",
-      value: state.scholarshipOffset
+      label: "Estimated OSAP funding",
+      value: toNumber(state.osapFunding)
     });
   }
 
-  if (state.otherScholarshipOffset > 0) {
-    items.push({
-      label: "Other yearly scholarship / bursary",
-      value: state.otherScholarshipOffset
-    });
+  if (state.studentPhase === "future") {
+    const partTimeEarnings =
+      toNumber(state.partTimeHoursPerWeek) *
+      toNumber(state.partTimeHourlyRate) *
+      32;
+
+    if (partTimeEarnings > 0) {
+      items.push({
+        label: "Estimated part-time earnings, two academic semesters (Fall & Winter)",
+        value: partTimeEarnings
+      });
+    }
+
+    const coopEarnings =
+      state.coopInterest === "Yes"
+        ? toNumber(state.coopWeeklyEarnings) * toNumber(state.coopWeeks)
+        : 0;
+
+    if (coopEarnings > 0) {
+      items.push({
+        label: "Estimated co-op earnings",
+        value: coopEarnings
+      });
+    }
   }
 
-  if (state.partTimeIncome > 0) {
-    items.push({
-      label: "Part-time income",
-      value: state.partTimeIncome
-    });
-  }
+  if (state.studentPhase === "current") {
+    if (toNumber(state.partTimeIncome) > 0) {
+      items.push({
+        label: "Part-time income",
+        value: toNumber(state.partTimeIncome)
+      });
+    }
 
-  if (state.coopInterest === "Yes" && state.coopEarningsOffset > 0) {
-    items.push({
-      label: "Co-op earnings",
-      value: state.coopEarningsOffset
-    });
-  }
+    if (toNumber(state.otherScholarshipOffset) > 0) {
+      items.push({
+        label: "Scholarships and bursaries, Fall and Winter total",
+        value: toNumber(state.otherScholarshipOffset)
+      });
+    }
 
-  if (state.familySupport > 0) {
-    items.push({
-      label: "Family support / savings",
-      value: state.familySupport
-    });
+    if (state.coopInterest === "Yes" && toNumber(state.coopEarningsOffset) > 0) {
+      items.push({
+        label: "Co-op earnings",
+        value: toNumber(state.coopEarningsOffset)
+      });
+    }
+
+    if (toNumber(state.familySupport) > 0) {
+      items.push({
+        label: "Family support / savings",
+        value: toNumber(state.familySupport)
+      });
+    }
   }
 
   return {
