@@ -1023,6 +1023,59 @@
     font-size: 1.3rem;
     color: var(--text);
   }
+  .feedback-card {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    margin-top: 2.4rem;
+    padding: 1.8rem;
+    border: 0.1rem solid #b9d7ec;
+    border-radius: var(--radius-md);
+    background: #f7fbff;
+  }
+
+  .feedback-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 5.2rem;
+    width: 5.2rem;
+    height: 5.2rem;
+    border-radius: 999rem;
+    background: #e4f1fb;
+    font-size: 2.4rem;
+  }
+
+  .feedback-card-content {
+    flex: 1;
+  }
+
+  .feedback-card-content h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1.8rem;
+  }
+
+  .feedback-card-content p {
+    margin: 0;
+    color: var(--text);
+  }
+
+  .feedback-card-link {
+    font-weight: 900;
+    color: var(--blue);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 760px) {
+    .feedback-card {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .feedback-card-link {
+      white-space: normal;
+    }
+  }
   @media (max-width: 768px) {
     .stepper {
       display: none;

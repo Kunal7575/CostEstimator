@@ -1,3 +1,4 @@
+const feedbackFormLink = "https://forms.office.com/Pages/DesignPageV2.aspx?origin=NeoPortalPage&subpage=design&id=K6Fivq0soUml-oX08xVqfQg36EmCKgxAmQ5JwgdfOYBUNk83N0hSRUpLQ0dPSzdSODRTMTg4UjBZOC4u";
 const state = {
   osapFunding: 0,
   data: null,
@@ -1287,7 +1288,27 @@ function renderStep4() {
     </div>
   `;
 }
+function renderFeedbackCard() {
+  return `
+    <div class="feedback-card">
+      <div class="feedback-card-icon">💬</div>
 
+      <div class="feedback-card-content">
+        <h3>Help us make this tool better!</h3>
+        <p>Your feedback helps us improve the estimator for future students.</p>
+      </div>
+
+      <a
+        class="feedback-card-link"
+        href="${escapeHtml(feedbackFormLink)}"
+        target="_blank"
+        rel="noopener"
+      >
+        Share feedback 
+      </a>
+    </div>
+  `;
+}
 
 function renderStep5() {
   const result = state.result || emptyResult();
@@ -1450,6 +1471,7 @@ function renderStep5() {
             : ""
         }
       </div>
+      ${renderFeedbackCard()}
     </div>
   `;
 }
@@ -3406,8 +3428,12 @@ function getOffsets() {
 
     if (coopEarnings > 0) {
       items.push({
-        label: "Estimated co-op earnings",
-        value: coopEarnings
+        label:
+          state.residencyType === "Domestic"
+            ? "Estimated co-op earnings (not deducted from final estimate)"
+            : "Estimated co-op earnings",
+        value: coopEarnings,
+        notDeducted: state.residencyType === "Domestic"
       });
     }
   }
@@ -3427,10 +3453,17 @@ function getOffsets() {
       });
     }
 
-    if (state.coopInterest === "Yes" && toNumber(state.coopEarningsOffset) > 0) {
+    // Do not deduct co-op earnings for domestic students
+    if (
+      state.coopInterest === "Yes" &&
+      toNumber(state.coopEarningsOffset) > 0
+    ) {
       items.push({
-        label: "Co-op earnings",
-        value: toNumber(state.coopEarningsOffset)
+        label:
+          state.residencyType === "Domestic"
+            ? `Co-op earnings: ${formatMoney(state.coopEarningsOffset)} (not deducted from final estimate)`
+            : "Co-op earnings",
+        value: state.residencyType === "Domestic" ? 0 : toNumber(state.coopEarningsOffset)
       });
     }
 
@@ -3444,12 +3477,16 @@ function getOffsets() {
 
   return {
     items,
-    total: items.reduce((sum, item) => sum + item.value, 0)
+    total: items.reduce((sum, item) => {
+      if (item.notDeducted) return sum;
+      return sum + item.value;
+    }, 0)
   };
 }
 
 function renderBreakdownRows(title, items, isOffset = false) {
   const rows = [];
+
   rows.push(`
     <div class="summary-item">
       <label><strong>${escapeHtml(title)}</strong></label>
@@ -3468,11 +3505,17 @@ function renderBreakdownRows(title, items, isOffset = false) {
   }
 
   items.forEach(item => {
-    const displayValue = isOffset
-      ? `-${formatMoney(item.value)}`
-      : item.low !== undefined && item.high !== undefined
-        ? formatRangeValue(item.low, item.high)
-        : formatMoney(item.value || 0);
+    let displayValue;
+
+    if (item.notDeducted) {
+      displayValue = formatMoney(item.value);
+    } else if (isOffset) {
+      displayValue = `-${formatMoney(item.value)}`;
+    } else if (item.low !== undefined && item.high !== undefined) {
+      displayValue = formatRangeValue(item.low, item.high);
+    } else {
+      displayValue = formatMoney(item.value || 0);
+    }
 
     rows.push(`
       <div class="summary-item">
@@ -3484,6 +3527,8 @@ function renderBreakdownRows(title, items, isOffset = false) {
 
   return rows;
 }
+
+
 function renderOSAPInfo() {
   if (state.residencyType !== "Domestic" || state.province !== "ON") {
     return "";
