@@ -1,4 +1,4 @@
-const feedbackFormLink = "https://forms.office.com/Pages/DesignPageV2.aspx?origin=NeoPortalPage&subpage=design&id=K6Fivq0soUml-oX08xVqfQg36EmCKgxAmQ5JwgdfOYBUNk83N0hSRUpLQ0dPSzdSODRTMTg4UjBZOC4u";
+const feedbackFormLink = "https://forms.cloud.microsoft/r/ZemQx8yRbg";
 const state = {
   osapFunding: 0,
   data: null,
