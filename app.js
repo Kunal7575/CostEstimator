@@ -344,20 +344,22 @@ function setupWelcomeImage() {
 function deriveFutureResidency() {
   if (state.studentPhase !== "future") return;
 
-  if (state.canadianCitizen === "Yes" || state.permanentResident === "Yes") {
+  if (state.canadianCitizen === "Yes") {
     state.residencyType = "Domestic";
     state.country = "";
 
-    // Do not force Ontario. Let the user choose ON or Non-ON.
     if (state.province === "INT") {
       state.province = "";
     }
   }
 
-  if (state.canadianCitizen === "No" && state.permanentResident === "No") {
+  if (state.canadianCitizen === "No") {
     state.residencyType = "International";
     state.province = "INT";
+    state.country = state.country || "";
   }
+
+  state.permanentResident = "";
 }
 
 function updateChrome() {
@@ -596,28 +598,13 @@ function renderStep1() {
                 </div>
 
                 <div class="form-group">
-                  <label for="canadianCitizen">Are you a Canadian citizen?</label>
+                  <label for="canadianCitizen">Are you a Canadian citizen or permanent resident of Canada?</label>
                   <select id="canadianCitizen" class="step-dropdown">
                     <option value="">Select an option</option>
                     <option value="Yes" ${state.canadianCitizen === "Yes" ? "selected" : ""}>Yes</option>
                     <option value="No" ${state.canadianCitizen === "No" ? "selected" : ""}>No</option>
                   </select>
                 </div>
-
-                ${
-                  state.canadianCitizen === "No"
-                    ? `
-                      <div class="form-group">
-                        <label for="permanentResident">Are you a permanent resident of Canada?</label>
-                        <select id="permanentResident" class="step-dropdown">
-                          <option value="">Select an option</option>
-                          <option value="Yes" ${state.permanentResident === "Yes" ? "selected" : ""}>Yes</option>
-                          <option value="No" ${state.permanentResident === "No" ? "selected" : ""}>No</option>
-                        </select>
-                      </div>
-                    `
-                    : ""
-                }
               `
               : `
                 <div class="form-group">
@@ -743,6 +730,8 @@ function renderExternalCampusStopScreen() {
     </div>
   `;
 }
+
+
 function renderStep2() {
   if (state.studentPhase === "current" && !state.cohortYear) {
     state.cohortYear = getLatestCurrentCohortYear();
@@ -798,11 +787,14 @@ function renderStep2() {
       <div class="step-header">
         <p class="section-kicker">Program and tuition</p>
         <h2 class="step-title">Select your program details</h2>
-        <p class="step-description">Choose the campus, program, and major used to match tuition data.</p>
+        <p class="step-description">
+          Choose the campus, program, and major used to match tuition data.
+        </p>
       </div>
 
       <div class="step-content">
         <div class="form-stack">
+
           ${
             state.studentPhase === "future"
               ? `
@@ -817,17 +809,13 @@ function renderStep2() {
                     `).join("")}
                   </select>
                 </div>
-
-                ${renderAlert(
-                  "Future tuition estimate notice",
-                  "Costs displayed are based on the most recent available academic year and may not reflect tuition, fees, residence, or meal plan rates for your selected future start year. All amounts are estimates only and are subject to change.",
-                  "yellow"
-                )}
               `
               : `
                 <div class="form-group">
                   <label>Year</label>
-                  <div class="readonly-field">${escapeHtml(currentStudentYear || "Not available")}</div>
+                  <div class="readonly-field">
+                    ${escapeHtml(currentStudentYear || "Not available")}
+                  </div>
                 </div>
               `
           }
@@ -917,7 +905,11 @@ function renderStep2() {
                 ${renderCampusGallery()}
 
                 ${
-                  isUG && state.program && programHasMajors && state.major && coopStatus === "No"
+                  isUG &&
+                  state.program &&
+                  programHasMajors &&
+                  state.major &&
+                  coopStatus === "No"
                     ? renderAlert(
                         "Co-op not available",
                         "Co-op is not listed as available for this major, so the co-op option has been turned off.",
@@ -925,14 +917,19 @@ function renderStep2() {
                       )
                     : ""
                 }
-
-                ${renderAlert(
-                  "Data source notice",
-                  "The available options come from the tuition data for the selected study type, residency path, program, and major.",
-                  "blue"
-                )}
               `
           }
+
+          ${
+            state.studentPhase === "future"
+              ? `
+                <p class="small-estimate-notice">
+                  Costs are based on the most recent available information and are estimates only. Amounts are subject to change.
+                </p>
+              `
+              : ""
+          }
+
         </div>
       </div>
 
@@ -1976,10 +1973,10 @@ function bindStep1Events() {
           hasError = true;
         }
 
-        if (state.canadianCitizen === "No" && !state.permanentResident) {
-          markError(document.getElementById("permanentResident"), "Required");
-          hasError = true;
-        }
+        // if (state.canadianCitizen === "No" && !state.permanentResident) {
+        //   markError(document.getElementById("permanentResident"), "Required");
+        //   hasError = true;
+        // }
       }
 
       if (!state.residencyType) {
@@ -2000,11 +1997,13 @@ function bindStep1Events() {
       if (hasError) return;
       if (state.studentPhase === "future") {
         if (!state.livingInCanada) return alert("Please select whether you are currently living in Canada.");
-        if (!state.canadianCitizen) return alert("Please select whether you are a Canadian citizen.");
-
-        if (state.canadianCitizen === "No" && !state.permanentResident) {
-          return alert("Please select whether you are a permanent resident of Canada.");
+        if (!state.canadianCitizen) {
+          return alert("Please select whether you are a Canadian citizen or permanent resident of Canada.");
         }
+
+        // if (state.canadianCitizen === "No" && !state.permanentResident) {
+        //   return alert("Please select whether you are a permanent resident of Canada.");
+        // }
 
         deriveFutureResidency();
       }
