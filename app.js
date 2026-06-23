@@ -407,7 +407,12 @@ function updateChrome() {
   if (runningTotal) {
     const low = state.result?.low || 0;
     const high = state.result?.high || 0;
-    runningTotal.textContent = formatRangeValue(low, high);
+    if (state.currentStep === 5) {
+        document.getElementById("topRunningTotal").parentElement.style.display = "none";
+    } else {
+        document.getElementById("topRunningTotal").parentElement.style.display = "block";
+        runningTotal.textContent = formatRangeValue(low, high);
+    }
   }
 
   document.querySelectorAll(".stepper-item").forEach(item => {
