@@ -1045,8 +1045,6 @@ function renderStep3() {
             />
           </div>
 
-         
-
           ${
             state.studentPhase === "future"
               ? `
@@ -1108,13 +1106,23 @@ function renderStep3() {
                     `
                     : ""
                 }
+
                 ${
                   state.residencyType === "Domestic"
                     ? `
                       <div class="form-group">
                         <label for="osapFunding">Estimated OSAP funding</label>
-                        <input id="osapFunding" class="step-input" type="number" min="0" value="${escapeHtml(state.osapFunding)}" placeholder="Enter estimated OSAP funding" />
-                        <p class="form-help-text">Use the OSAP Aid Estimator in the helpful resources section below.</p>
+                        <input
+                          id="osapFunding"
+                          class="step-input"
+                          type="number"
+                          min="0"
+                          value="${escapeHtml(state.osapFunding)}"
+                          placeholder="Enter estimated OSAP funding"
+                        />
+                        <p class="form-help-text">
+                          Use the OSAP Aid Estimator in the helpful resources section below.
+                        </p>
                       </div>
                     `
                     : ""
@@ -1140,6 +1148,27 @@ function renderStep3() {
                     placeholder="Enter expected yearly part-time income"
                   />
                 </div>
+
+                ${
+                  state.residencyType === "Domestic"
+                    ? `
+                      <div class="form-group">
+                        <label for="osapFunding">Estimated OSAP funding</label>
+                        <input
+                          id="osapFunding"
+                          class="step-input"
+                          type="number"
+                          min="0"
+                          value="${escapeHtml(state.osapFunding)}"
+                          placeholder="Enter estimated OSAP funding"
+                        />
+                        <p class="form-help-text">
+                          Use the OSAP Aid Estimator in the helpful resources section below.
+                        </p>
+                      </div>
+                    `
+                    : ""
+                }
 
                 <div class="form-group">
                   <label for="otherScholarshipOffset">Scholarships and bursaries (yearly total)</label>
