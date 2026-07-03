@@ -2745,31 +2745,153 @@ function bindStep5Events() {
 
       try {
         calculateEstimate();
+
+        if (state.studentPhase === "future") {
+          await saveFutureStudentLead("Downloaded copy");
+        }
+
         await generateEstimatePDF();
       } catch (error) {
-        console.error("PDF generation failed:", error);
-        markError(email, "PDF download failed. Please refresh and try again.");
+        console.error("Download/save failed:", error);
+        markError(email, "Download failed. Please refresh and try again.");
       }
     };
   }
 
   if (emailBtn) {
-    emailBtn.onclick = () => {
+    emailBtn.onclick = async () => {
       if (!validateContactFields()) return;
 
-      const payload = {
-        fullName: state.fullName,
-        email: state.email,
-        marketingConsent: state.marketingConsent
-      };
-
-      console.log("Estimate email payload:", payload);
-
-      alert("Email flow can be wired next.");
+      try {
+        calculateEstimate();
+        await sendEstimateEmail();
+        alert("Your estimate has been emailed successfully.");
+      } catch (error) {
+        console.error("Email failed:", error);
+        markError(email, "Email failed. Please refresh and try again.");
+      }
     };
   }
 }
+async function saveFutureStudentLead(emailStatus = "Downloaded copy") {
+  const payload = {
+    studentName: state.fullName.trim(),
+    studentEmail: state.email.trim(),
+    residency: state.residencyType,
+    level: state.level,
+    province: state.residencyType === "Domestic" ? state.province : "INT",
+    cohortYear: state.cohortYear,
+    program: state.program,
+    major: state.major || "",
+    coopInterest: state.coopInterest,
+    osapFunding: Number(state.osapFunding) || 0,
+    housing: state.housingType,
+    includeMealPlan: state.futureMealPlanInterest,
+    emailStatus: emailStatus
+  };
 
+  const response = await fetch("https://defaultbe62a12b2cad49a1a5fa85f4f3156a.7d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/5d659c8475fd4b61a77ccaae4e6cc35f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2x7e1hQTmjfH9_Qh5nAD7GCNv0FBdAl3v_aZ0M6HPCc", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error("Power Automate save failed.");
+  }
+
+  return response.json();
+}
+async function sendEstimateEmail() {
+  calculateEstimate();
+  const result = state.result || emptyResult();
+
+  const payload = {
+    studentName: state.fullName.trim(),
+    studentEmail: state.email.trim(),
+    residency: state.residencyType,
+    level: state.level,
+    province: state.residencyType === "Domestic" ? state.province : "INT",
+    cohortYear: state.cohortYear,
+    program: state.program,
+    major: state.major || "",
+    coopInterest: state.coopInterest,
+    osapFunding: Number(state.osapFunding) || 0,
+    housing: state.housingType,
+    includeMealPlan: state.futureMealPlanInterest,
+    emailStatus: "Sent",
+
+    estimateRange: formatRangeValue(result.low, result.high),
+    summaryRowsHtml: buildEmailSummaryRows(result)
+  };
+
+  const response = await fetch("https://defaultbe62a12b2cad49a1a5fa85f4f3156a.7d.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/e9e2e002a99646c1b0f01ff7542b17b4/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XSSTo_9jUavHCg_UTlvYFUn7QqCWcz6VzUc8oP-Lg20", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error("Email Power Automate flow failed.");
+  }
+
+  return response.json();
+}
+function buildEmailSummaryRows(result) {
+  const rows = [];
+
+  function addSection(title, items, isOffset = false) {
+    if (!items || !items.length) return;
+
+    rows.push(`
+      <tr>
+        <td colspan="2" style="padding:12px;border:1px solid #e5e7eb;font-weight:700;background:#f5f5f5;">
+          ${escapeHtml(title)}
+        </td>
+      </tr>
+    `);
+
+    items.forEach(item => {
+      const value =
+        item.low !== undefined && item.high !== undefined
+          ? formatRangeValue(item.low, item.high)
+          : formatMoney(item.value || 0);
+
+      rows.push(`
+        <tr>
+          <td style="padding:10px 12px;border:1px solid #e5e7eb;">
+            ${escapeHtml(item.label)}
+          </td>
+          <td style="padding:10px 12px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:${isOffset ? "#b3142c" : "#318738"};">
+            ${isOffset ? "-" : ""}${value}
+          </td>
+        </tr>
+      `);
+    });
+  }
+
+  addSection("Tuition and fees", result.tuition.items);
+  addSection("Living costs", result.living.items);
+  addSection("Extra costs", result.extras.items);
+  addSection("Funding and offsets", result.offsets.items, true);
+
+  rows.push(`
+    <tr>
+      <td style="padding:12px;border:1px solid #318738;background:#318738;color:#ffffff;font-weight:700;">
+        Estimated range for 2 academic semesters
+      </td>
+      <td style="padding:12px;border:1px solid #318738;background:#318738;color:#ffffff;font-weight:700;text-align:right;">
+        ${formatRangeValue(result.low, result.high)}
+      </td>
+    </tr>
+  `);
+
+  return rows.join("");
+}
 function resetProgramPathState() {
   state.campus = "";
   state.cohortYear = "";
