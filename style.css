@@ -1,0 +1,2063 @@
+:root {
+      --page-bg: var(--uog-color-grey-light-bg, #f5f5f5);
+      --surface: var(--uog-color-white, #fff);
+      --text: var(--uog-color-body-copy, #555);
+      --text-strong: var(--uog-color-body-copy-bold, #333);
+      --border: var(--uog-color-grey-light-focus, #bfbfbf);
+      --border-soft: #dedede;
+
+      --red: var(--uog-color-red, #e51937);
+      --red-focus: var(--uog-color-red-focus, #b3142c);
+      --blue: var(--uog-color-blue, #187bb4);
+      --blue-focus: var(--uog-color-blue-focus, #135f8b);
+      --green: var(--uog-color-green, #318738);
+      --yellow: var(--uog-color-yellow, #ffc429);
+      --yellow-focus: var(--uog-color-yellow-focus, #ffe299);
+
+      --radius-sm: 0.6rem;
+      --radius-md: 0.8rem;
+      --radius-lg: 1.2rem;
+
+      --space-xs: 0.8rem;
+      --space-sm: 1.2rem;
+      --space-md: 1.6rem;
+      --space-lg: 2.4rem;
+      --space-xl: 3.2rem;
+    }
+
+    html {
+      font-size: 62.5%;
+      scroll-behavior: smooth;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 1.6rem;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: "Bitter", Georgia, serif;
+      color: var(--text-strong);
+      line-height: 1.15;
+    }
+
+    a {
+      color: var(--uog-color-body-copy-link, #187bb4);
+    }
+
+    uofg-header,
+    uofg-footer {
+      display: block;
+    }
+
+    .skip-link {
+      position: absolute;
+      top: -5rem;
+      left: 1.6rem;
+      z-index: 10000;
+      padding: 1rem 1.4rem;
+      border-radius: var(--radius-sm);
+      color: #fff;
+      background: #000;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .skip-link:focus {
+      top: 1.6rem;
+      outline: 0.3rem solid var(--yellow-focus);
+      outline-offset: 0.2rem;
+    }
+
+    .container {
+      width: min(100% - 3.2rem, 96rem);
+      margin-inline: auto;
+    }
+
+    .page {
+      padding: 3.6rem 0 5.6rem;
+    }
+
+    .page-header {
+      margin-bottom: 2.4rem;
+    }
+
+    .page-title {
+      margin: 0 0 0.8rem;
+      font-size: clamp(3.2rem, 4vw, 4.6rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .page-intro {
+      max-width: 72rem;
+      margin: 0;
+      font-size: 1.75rem;
+      color: var(--text);
+    }
+
+    .estimator-shell {
+      display: block;
+    }
+
+    .estimator-main {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .estimator-panel {
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .estimator-progress {
+      padding: 2.4rem;
+      border-bottom: 0.1rem solid var(--border-soft);
+      background: var(--page-bg);
+    }
+
+    .progress-topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 1.6rem;
+      align-items: flex-start;
+      margin-bottom: 1.6rem;
+    }
+
+    .status-eyebrow,
+    .section-kicker {
+      margin: 0 0 0.4rem;
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-eyebrow,
+    .section-kicker {
+      color: var(--red);
+    }
+
+    .status-title {
+      margin: 0;
+      font-family: "Bitter", Georgia, serif;
+      font-size: 2.3rem;
+      font-weight: 800;
+      color: var(--text-strong);
+    }
+
+    .status-subtitle {
+      margin: 0.6rem 0 0;
+      font-size: 1.4rem;
+      color: var(--text);
+    }
+
+    .status-total {
+      min-width: 18rem;
+      text-align: right;
+    }
+
+    .status-total-label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-size: 1.2rem;
+      color: var(--text);
+    }
+
+    .status-total strong {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--green);
+    }
+
+    .progress-inline {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      margin-bottom: 1.6rem;
+    }
+
+    .progress-inline-bar {
+      flex: 1;
+      height: 1rem;
+      overflow: hidden;
+      border-radius: 999rem;
+      background: #dcdcdc;
+    }
+
+    .progress-inline-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--blue);
+      transition: width 0.25s ease;
+    }
+
+    .progress-inline-text {
+      font-size: 1.3rem;
+      font-weight: 900;
+      white-space: nowrap;
+      color: var(--text-strong);
+    }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0.8rem;
+      padding: 0;
+      margin: 0;
+    }
+
+    .stepper-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      min-height: 5.2rem;
+      padding: 1rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      cursor: pointer;
+      color: inherit;
+      text-align: left;
+    }
+
+    .stepper-item:hover,
+    .stepper-item.active {
+      border-color: var(--blue);
+      background: #eef6fa;
+    }
+
+    .stepper-item.done {
+      border-color: var(--green);
+      background: #eef7ef;
+    }
+
+    .stepper-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 2.8rem;
+      width: 2.8rem;
+      height: 2.8rem;
+      border-radius: 999rem;
+      background: var(--blue);
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 900;
+    }
+
+    .stepper-item.done .stepper-num {
+      background: var(--green);
+    }
+
+    .stepper-label {
+      font-size: 1.25rem;
+      font-weight: 900;
+      line-height: 1.2;
+      color: var(--text-strong);
+    }
+
+    #flowContainer {
+      width: 100%;
+      min-height: 34rem;
+    }
+
+    .step-container {
+      padding: clamp(2.4rem, 4vw, 4rem);
+      background: var(--surface);
+    }
+
+    .step-header {
+      margin-bottom: 2.4rem;
+      padding-bottom: 1.6rem;
+      border-bottom: 0.1rem solid var(--border-soft);
+    }
+
+    .step-title {
+      margin: 0 0 0.8rem;
+      font-size: 2.8rem;
+      font-weight: 800;
+    }
+
+    .step-description {
+      margin: 0;
+      max-width: 72rem;
+      font-size: 1.55rem;
+      color: var(--text);
+    }
+
+    .step-content {
+      min-height: 16rem;
+      margin-bottom: 2.4rem;
+    }
+
+    .form-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 1.6rem;
+      max-width: 72rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    label,
+    .form-group label {
+      display: block;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--text-strong);
+    }
+
+    select,
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    .step-dropdown,
+    .step-input,
+    .readonly-field {
+      width: 100%;
+      min-height: 4.8rem;
+      padding: 1.1rem 1.4rem;
+      border: 0.2rem solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      background: var(--surface);
+      color: var(--text-strong);
+      font: inherit;
+      font-size: 1.5rem;
+    }
+
+    .readonly-field {
+      display: flex;
+      align-items: center;
+      background: var(--page-bg);
+    }
+
+    select:focus,
+    input:focus,
+    button:focus,
+    .stepper-item:focus {
+      outline: 0.3rem solid var(--yellow-focus);
+      outline-offset: 0.2rem;
+      box-shadow: none;
+    }
+
+    button {
+      min-height: 4.6rem;
+      padding: 1rem 1.6rem;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 900;
+    }
+
+    .btn-primary {
+      min-width: 16rem;
+      border: 0;
+      background: var(--red);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--red-focus);
+    }
+
+    .btn-secondary {
+      min-width: 12rem;
+      border: 0.2rem solid var(--border);
+      background: var(--surface);
+      color: var(--text-strong);
+    }
+
+    .btn-gold {
+      min-width: 16rem;
+      border: 0.1rem solid #d0a21d;
+      background: var(--yellow);
+      color: #000;
+    }
+
+    .step-footer,
+    .step-actions,
+    .welcome-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.2rem;
+      margin-top: 2.4rem;
+    }
+
+    .welcome-actions {
+      justify-content: flex-start;
+    }
+
+    .choice-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.6rem;
+      margin-top: 2rem;
+      max-width: 72rem;
+    }
+
+    .choice-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      width: 100%;
+      min-height: 12rem;
+      padding: 1.8rem;
+      border: 0.2rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      text-align: left;
+      color: inherit;
+    }
+
+    .choice-card:hover,
+    .choice-card.selected {
+      border-color: var(--blue);
+      background: #eef6fa;
+    }
+
+    .choice-card-title {
+      font-family: "Bitter", Georgia, serif;
+      font-size: 1.9rem;
+      font-weight: 800;
+      color: var(--text-strong);
+    }
+
+    .choice-card-text {
+      font-size: 1.4rem;
+      color: var(--text);
+    }
+
+    .checkbox-item,
+    .scholarship-option,
+    .uog-alert {
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.2rem;
+      padding: 1.2rem;
+      cursor: pointer;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: 2rem;
+      height: 2rem;
+      margin-top: 0.2rem;
+      accent-color: var(--red);
+    }
+
+    .cost-summary,
+    .estimate-total-card {
+      margin-bottom: 1.8rem;
+      padding: 2rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--page-bg);
+    }
+
+    .estimate-total-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .estimate-total-label {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--text-strong);
+    }
+
+    .estimate-total-card strong {
+      font-size: 2.8rem;
+      color: var(--green);
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 1.6rem;
+      padding: 1.2rem 0;
+      border-bottom: 0.1rem solid var(--border-soft);
+    }
+
+    .summary-item:last-child {
+      border-bottom: 0;
+    }
+
+    .summary-value {
+      font-size: 1.6rem;
+      font-weight: 900;
+      text-align: right;
+      color: var(--green);
+    }
+    .summary-section-heading {
+      margin: 0 -2rem 0.4rem;
+      padding: 1.4rem 2rem;
+      border-bottom: 0.2rem solid var(--red);
+      background: #fff;
+    }
+
+    .summary-section-heading:not(:first-child) {
+      margin-top: 2rem;
+      border-top: 0.1rem solid var(--border-soft);
+    }
+
+    .summary-section-heading h3 {
+      margin: 0;
+      font-size: 1.8rem;
+      color: var(--text-strong);
+    }
+
+    .summary-section-heading p {
+      margin: 0.4rem 0 0;
+      font-size: 1.3rem;
+      color: var(--text);
+    }
+
+    .summary-item-label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .summary-item-label small {
+      font-size: 1.25rem;
+      line-height: 1.4;
+    }
+
+    .potential-coop-summary {
+      background: var(--page-bg);
+      border-color: var(--border-soft);
+    }
+
+    .potential-coop-summary .summary-section-heading {
+      border-bottom: 0;
+    }
+    .potential-coop-summary .summary-item {
+      border-bottom: 0;
+    }
+
+    .potential-coop-summary .coop-not-included-note {
+      border-top: 0;
+      padding-top: 0.4rem;
+    }
+    .potential-coop-value {
+      font-size: 1.6rem;
+      font-weight: 900;
+      text-align: right;
+      color: var(--text-strong);
+    }
+
+    .coop-not-included-note {
+      display: block;
+      width: 100%;
+      margin: 0.8rem 0 0;
+      padding-top: 1.2rem;
+      border-top: 0.1rem solid var(--border-soft);
+      color: var(--text);
+      font-size: 1.3rem;
+      line-height: 1.6;
+    }
+
+    .coop-not-included-note a {
+      display: inline;
+      margin-left: 0.3rem;
+      font-weight: 700;
+    }
+
+    .coop-not-included-note strong {
+      color: var(--text-strong);
+    }
+
+    .potential-coop-summary {
+      background: var(--page-bg);
+      border-color: var(--border-soft);
+    }
+
+    .potential-coop-summary .summary-section-heading {
+      background: transparent;
+      border-bottom-color: var(--border-soft);
+    }
+
+    .potential-coop-value {
+      font-size: 1.6rem;
+      font-weight: 900;
+      text-align: right;
+      color: #e6a606de;
+    }
+    .cost-chart-layout {
+      display: grid;
+      grid-template-columns:
+        minmax(20rem, 0.9fr)
+        minmax(28rem, 1.1fr);
+      gap: 2rem;
+      align-items: center;
+      padding-top: 1.6rem;
+    }
+
+    .cost-chart-legend-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .cost-chart-legend-item {
+      display: grid;
+      grid-template-columns: 1.8rem minmax(0, 1fr);
+      gap: 0.8rem;
+      align-items: start;
+      color: var(--text-strong);
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .cost-chart-legend-colour {
+      display: block;
+      width: 1.8rem;
+      height: 1.8rem;
+      margin-top: 0.1rem;
+      border: 0.1rem solid rgba(0, 0, 0, 0.12);
+    }
+
+    .cost-chart-canvas {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+      height: 34rem;
+    }
+
+    #largestCostDriverText {
+      margin-top: 1.6rem;
+    }
+   
+
+    .coop-not-included-note strong {
+      color: var(--text-strong);
+    }
+
+    .coop-not-included-note a {
+      font-weight: 700;
+    }
+    .summary-value-awareness {
+      font-size: 1.6rem;
+      font-weight: 900;
+      text-align: right;
+      color: #9a6700;
+    }
+
+    .summary-value-offset {
+      font-size: 1.6rem;
+      font-weight: 900;
+      text-align: right;
+      color: var(--red);
+    }
+
+    .uog-alert {
+      margin: 1.4rem 0;
+      overflow: hidden;
+      max-width: 72rem;
+    }
+
+    .uog-alert-title {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 1.2rem 1.4rem;
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .uog-alert-message {
+      padding: 1.2rem 1.4rem 1.4rem;
+      font-size: 1.4rem;
+      line-height: 1.5;
+      color: var(--text-strong);
+    }
+
+    .uog-alert-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.8rem;
+      height: 1.8rem;
+      border: 0.2rem solid currentColor;
+      border-radius: 999rem;
+      font-size: 1.2rem;
+      font-weight: 900;
+    }
+
+    .uog-alert-yellow .uog-alert-title {
+      background: var(--yellow);
+      color: #000;
+    }
+
+    .uog-alert-blue .uog-alert-title {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .uog-alert-green .uog-alert-title {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .uog-alert-red .uog-alert-title {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .uog-alert-grey .uog-alert-title {
+      background: #d9d9d9;
+      color: #111;
+    }
+
+    .scholarship-checkbox-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .scholarship-option {
+      display: grid;
+      grid-template-columns: 2rem 1fr;
+      gap: 1rem;
+      align-items: flex-start;
+      padding: 1.2rem;
+    }
+
+    .scholarship-option input {
+      width: 1.8rem;
+      height: 1.8rem;
+      accent-color: var(--red);
+    }
+
+    .scholarship-option-body,
+    .scholarship-option-top,
+    .scholarship-option-meta,
+    .scholarship-option-note {
+      display: block;
+    }
+
+    .scholarship-option-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 1.2rem;
+      color: var(--text-strong);
+    }
+    .external-campus-card {
+      margin-top: 1.6rem;
+      padding: 2.4rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--page-bg);
+    }
+
+    .external-campus-link {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 1.8rem;
+      text-decoration: none;
+    }
+        .scholarship-option-meta,
+    .scholarship-option-note,
+    .form-help-text {
+      margin: 0;
+      font-size: 1.3rem;
+      color: var(--text);
+    }
+    
+    .uog-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      min-height: 4.4rem;
+      padding: 0 2rem;
+
+      border-radius: 0;
+      border: none;
+
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-decoration: none;
+
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .uog-btn-primary {
+      background: #c20430;
+      color: #ffffff;
+    }
+
+    .uog-btn-primary:hover {
+      background: #a60328;
+      color: #ffffff;
+    }
+
+    .uog-btn-secondary {
+      background: #005596;
+      color: #ffffff;
+    }
+
+    .uog-btn-secondary:hover {
+      background: #00457a;
+      color: #ffffff;
+    }
+
+    .uog-btn-outline {
+      background: transparent;
+      border: 2px solid #c20430;
+      color: #c20430;
+    }
+
+    .uog-btn-outline:hover {
+      background: #c20430;
+      color: #ffffff;
+    }
+    .contact-section {
+      margin-top: 2rem;
+    }
+
+    .input-error,
+    [aria-invalid="true"] {
+      border-color: var(--red) !important;
+      background: #fff5f6 !important;
+    }
+
+    .error-text {
+      margin-top: 0.4rem;
+      font-size: 1.2rem;
+      color: var(--red);
+    }
+
+    .loading-spinner {
+      width: 4rem;
+      height: 4rem;
+      margin: 3rem auto;
+      border: 0.4rem solid var(--border-soft);
+      border-top-color: var(--blue);
+      border-radius: 999rem;
+      animation: spin 1s linear infinite;
+    }
+    .global-resources-footer {
+      margin-top: 4rem;
+      padding: 3.2rem 0 2.4rem;
+      background: #f5f5f5;
+      border-top: 0.1rem solid var(--border-soft);
+    }
+
+    .global-resources-inner {
+      display: grid;
+      grid-template-columns: minmax(28rem, 1fr) minmax(40rem, 1fr);
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .global-resources-kicker {
+      margin: 0 0 0.5rem;
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--red);
+    }
+
+    .global-resources-title {
+      margin: 0;
+      font-size: 2.4rem;
+    }
+
+    .global-resources-links {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(18rem, 1fr));
+      gap: 1.4rem 3rem;
+      padding-top: 0.6rem;
+    }
+
+    .global-resources-links a {
+      color: var(--blue);
+      font-size: 1.5rem;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .global-resources-links a:hover {
+      text-decoration: underline;
+    }
+
+    .global-disclaimer {
+      width: 100%;
+      margin-top: 2.8rem;
+      padding-top: 1.8rem;
+      border-top: 0.1rem solid var(--border-soft);
+      font-size: 1.25rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .global-disclaimer strong {
+      color: var(--text-strong);
+    }
+
+    @media (max-width: 760px) {
+      .global-resources-inner {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+
+      .global-resources-links {
+        grid-template-columns: 1fr;
+      }
+      .potential-coop-value {
+        text-align: left;
+      }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .uofg-back-to-top {
+      position: fixed;
+      right: 2.4rem;
+      bottom: 2.4rem;
+      z-index: 20;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 4.8rem;
+      height: 4.8rem;
+      padding: 0.8rem;
+      border: 0;
+      border-radius: 999rem;
+      background: #000;
+      color: #fff;
+    }
+
+    .uofg-back-to-top:hover {
+      background: var(--red);
+    }
+
+    .uofg-back-to-top.show {
+      display: inline-flex;
+    }
+
+    .uofg-back-to-top svg {
+      width: 1.8rem;
+      height: 1.8rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 0.1rem;
+      height: 0.1rem;
+      padding: 0;
+      margin: -0.1rem;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .campus-preview-card {
+      display: grid;
+      grid-template-columns: 1fr 26rem;
+      gap: 1.8rem;
+      align-items: center;
+      margin-top: 0.4rem;
+      padding: 1.8rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--page-bg);
+    }
+
+    .campus-preview-kicker {
+      margin: 0 0 0.5rem;
+      font-size: 1.15rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--red);
+    }
+
+    .campus-preview-title {
+      margin: 0 0 0.8rem;
+      font-size: 2rem;
+      font-weight: 800;
+    }
+
+    .campus-preview-text {
+      margin: 0;
+      font-size: 1.35rem;
+      color: var(--text);
+    }
+
+    .campus-preview-image-wrap {
+      width: 100%;
+      height: 15rem;
+      overflow: hidden;
+      border-radius: var(--radius-sm);
+      border: 0.1rem solid var(--border-soft);
+      background: #000;
+    }
+
+    .campus-preview-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    @media (max-width: 760px) {
+      .campus-preview-card {
+        grid-template-columns: 1fr;
+      }
+
+      .campus-preview-image-wrap {
+        height: 20rem;
+      }
+    }
+
+    .success-story-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    .success-story-card {
+      display: grid;
+      grid-template-columns: 8rem 1fr;
+      gap: 1.6rem;
+      padding: 1.4rem;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: 0.8rem;
+      background: var(--surface);
+    }
+
+    .success-story-card img {
+      width: 6.6rem;
+      height: 6.6rem;
+      object-fit: cover;
+      border-radius: 0.8rem;
+    }
+
+    .success-story-card h3 {
+      margin: 0 0 0.6rem;
+      font-size: 1.7rem;
+    }
+
+    .success-story-meta {
+      margin: 0 0 1.4rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .success-story-text {
+      font-size: 1.25rem;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .success-story-total {
+      margin-top: 1.2rem;
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: var(--red);
+    }
+    .quick-links-section {
+      margin-top: 2.4rem;
+      max-width: 72rem;
+    }
+
+  .quick-links-heading {
+    margin-bottom: 1.2rem;
+    font-size: 1.4rem;
+    font-weight: 900;
+    color: var(--text-strong);
+  }
+
+  .quick-link-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.4rem;
+  }
+
+  .quick-link-card {
+    display: block;
+    padding: 1.6rem;
+    border: 0.1rem solid var(--border-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+    transition: 0.2s;
+  }
+
+  .quick-link-card:hover {
+    border-color: var(--blue);
+    background: #eef6fa;
+  }
+
+  .quick-link-title {
+    display: block;
+    margin-bottom: 0.6rem;
+    font-family: "Bitter", Georgia, serif;
+    font-size: 1.8rem;
+    font-weight: 800;
+  }
+
+  .quick-link-text {
+    display: block;
+    margin-bottom: 1rem;
+    font-size: 1.35rem;
+  }
+
+  .quick-link-action {
+    color: var(--blue);
+    font-weight: 900;
+  }
+  .global-resources-text {
+    margin: 0;
+    max-width: 55rem;
+    font-size: 1.25rem;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .future-contact-section {
+    margin-top: 2rem;
+    padding: 2rem;
+    border: 0.1rem solid var(--border-soft);
+    border-radius: var(--radius-md);
+    background: var(--page-bg);
+  }
+
+  .future-contact-list {
+    margin: 1rem 0 1.8rem 2rem;
+    padding: 0;
+  }
+
+  .future-contact-list li {
+    margin-bottom: 0.6rem;
+    font-weight: 700;
+  }
+
+  .required-star {
+    color: var(--red);
+  }
+
+  .consent-text {
+    margin: 1.4rem 0 0;
+    font-size: 1.3rem;
+    color: var(--text);
+  }
+  .feedback-card {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    margin-top: 2.4rem;
+    padding: 1.8rem;
+    border: 0.1rem solid #b9d7ec;
+    border-radius: var(--radius-md);
+    background: #f7fbff;
+  }
+
+  .feedback-card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 5.2rem;
+    width: 5.2rem;
+    height: 5.2rem;
+    border-radius: 999rem;
+    background: #e4f1fb;
+    font-size: 2.4rem;
+  }
+
+  .feedback-card-content {
+    flex: 1;
+  }
+
+  .feedback-card-content h3 {
+    margin: 0 0 0.4rem;
+    font-size: 1.8rem;
+  }
+
+  .feedback-card-content p {
+    margin: 0;
+    color: var(--text);
+  }
+
+  .feedback-card-link {
+    font-weight: 900;
+    color: var(--blue);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 760px) {
+    .feedback-card {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .feedback-card-link {
+      white-space: normal;
+    }
+  }
+  @media (max-width: 768px) {
+    .stepper {
+      display: none;
+    }
+
+    .estimator-progress {
+      padding-bottom: 1.6rem;
+    }
+
+    .estimate-total-card {
+      display: flex;
+      margin-bottom: 1.6rem;
+    }
+  }
+  @media (max-width: 768px) {
+    .quick-link-row {
+      grid-template-columns: 1fr;
+    }
+  }
+    @media (max-width: 760px) {
+      .campus-gallery {
+        grid-template-columns: 1fr;
+      }
+
+      .success-story-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .success-story-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Estimate type cards must be global styles, not mobile-only. */
+    .estimate-scope-section {
+      margin-top: 2.4rem;
+      padding-top: 2.4rem;
+      border-top: 0.1rem solid var(--border-soft);
+    }
+
+    .estimate-scope-heading {
+      margin-bottom: 1.4rem;
+    }
+
+    .estimate-scope-heading .subsection-title {
+      margin: 0 0 0.6rem;
+      font-size: 2rem;
+    }
+
+    .estimate-scope-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1.2rem;
+    }
+
+    .estimate-scope-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.2rem;
+      width: 100%;
+      min-height: 11rem;
+      padding: 1.6rem;
+      border: 0.2rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .estimate-scope-card:hover {
+      border-color: var(--blue);
+      background: #f7fbfd;
+    }
+
+    .estimate-scope-card.selected {
+      border-color: var(--green);
+      background: #eef7ef;
+      box-shadow: 0 0 0 0.1rem var(--green);
+    }
+
+    .estimate-scope-radio {
+      flex: 0 0 auto;
+      width: 2rem;
+      height: 2rem;
+      margin-top: 0.2rem;
+      border: 0.2rem solid #777;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .estimate-scope-card.selected .estimate-scope-radio {
+      border: 0.6rem solid var(--green);
+    }
+
+    .estimate-scope-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .estimate-scope-content strong {
+      font-size: 1.55rem;
+      font-weight: 900;
+      color: var(--text-strong);
+    }
+
+    .estimate-scope-content span {
+      font-size: 1.35rem;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    .summary-expense-guide {
+      margin: 1.8rem 0;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .housing-guide-card {
+      margin: 1.6rem 0;
+      border: 0.1rem solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .housing-guide-card > summary,
+    .residence-group > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.6rem;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .housing-guide-card > summary::-webkit-details-marker,
+    .residence-group > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .housing-guide-card > summary {
+      padding: 1.4rem 1.6rem;
+      background: var(--page-bg);
+    }
+
+    .housing-guide-card > summary::before {
+      content: "+";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 2rem;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .housing-guide-card[open] > summary::before {
+      content: "−";
+    }
+
+    .housing-guide-summary-title {
+      flex: 1;
+      font-weight: 900;
+      color: var(--text-strong);
+    }
+
+    .housing-guide-summary-note {
+      font-size: 1.25rem;
+      color: var(--text);
+    }
+
+    .housing-guide-body {
+      padding: 1.6rem;
+    }
+
+    .housing-guide-table,
+    .residence-group > summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1.6rem;
+    }
+
+    .housing-guide-header {
+      padding: 1rem 1.2rem;
+      font-size: 1.2rem;
+      font-weight: 900;
+      background: var(--page-bg);
+    }
+
+    .residence-group {
+      margin: 0.6rem 0;
+      border: 0.1rem solid transparent;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+    }
+
+    .residence-group > summary {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 1.6rem;
+      padding: 1.2rem;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .residence-group > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .residence-summary-left {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      min-width: 0;
+    }
+
+    .residence-expand-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 2rem;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 900;
+    }
+
+    .residence-expand-icon::before {
+      content: "+";
+    }
+
+    .residence-group[open] .residence-expand-icon::before {
+      content: "−";
+    }
+
+    .residence-name {
+      font-weight: 700;
+      color: var(--text-strong);
+    }
+
+    .residence-range {
+        color: var(--red);
+        text-align: right;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .residence-group > summary:hover {
+      background: #eef6fa;
+    }
+
+    .residence-group[open] {
+      border-color: #b8d9ea;
+      background: #f5fafd;
+    }
+
+    .residence-group[open] > summary {
+      border-bottom: 0.1rem solid #cfe3ee;
+      background: #eaf5fa;
+    }
+
+    .residence-group[open] .residence-name {
+      color: var(--blue-focus);
+    }
+
+    .residence-group[open] .residence-option-table {
+      padding: 1.2rem;
+      background: #fff;
+    }
+
+    .residence-group:last-child {
+      border-bottom: 0;
+    }
+
+    .residence-group > summary {
+      padding: 1.2rem;
+    }
+
+    .residence-group > summary:hover {
+      background: #eef6fa;
+    }
+
+    .residence-group > summary strong {
+        color: var(--red);
+        text-align: right;
+        }
+
+    .residence-option-table {
+      padding: 0 1.2rem 1.2rem;
+    }
+
+    .residence-option-header,
+    .residence-option-row,
+    .meal-plan-header,
+    .meal-plan-row {
+      display: grid;
+      grid-template-columns:
+        minmax(15rem, 1.8fr)
+        repeat(3, minmax(8rem, 1fr));
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .residence-option-header,
+    .meal-plan-header {
+      padding: 0.8rem 0;
+      border-bottom: 0.1rem solid var(--border-soft);
+      font-size: 1.2rem;
+      font-weight: 900;
+    }
+
+    .residence-option-row,
+    .meal-plan-row {
+      padding: 0.9rem 0;
+      border-bottom: 0.1rem solid var(--border-soft);
+    }
+
+    .residence-option-row:last-child,
+    .meal-plan-row:last-child {
+      border-bottom: 0;
+    }
+
+    .meal-plan-row strong {
+        color: var(--green);
+        }
+
+    .housing-guide-deposit-note {
+      margin-top: 1.2rem;
+    }
+    .residence-option-row:nth-child(even) {
+      background: #fafafa;
+    }
+
+    .residence-option-row {
+      padding-inline: 0.8rem;
+    }
+
+    .residence-option-header {
+      padding-inline: 0.8rem;
+      background: var(--page-bg);
+    }
+
+    @media (max-width: 700px) {
+      .residence-option-header,
+      .meal-plan-header {
+        display: none;
+      }
+
+      .residence-option-row,
+      .meal-plan-row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .residence-option-row span:first-child,
+      .meal-plan-row span:first-child {
+        grid-column: 1 / -1;
+        font-weight: 900;
+      }
+    }
+    .summary-expense-guide summary {
+      padding: 1.5rem 1.8rem;
+      cursor: pointer;
+      list-style: none;
+      font-weight: 900;
+      color: var(--text-strong);
+      background: var(--page-bg);
+    }
+
+    .summary-expense-guide summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .summary-expense-guide summary::before {
+      content: "+";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      margin-right: 0.8rem;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: 1.4rem;
+    }
+
+    .summary-expense-guide[open] summary::before {
+      content: "−";
+    }
+
+    .summary-expense-guide summary:hover {
+      background: #eef6fa;
+    }
+
+    .living-cost-details-content {
+      padding: 1.6rem 1.8rem;
+    }
+
+    .living-cost-guide-list {
+      margin-top: 1.2rem;
+      border-top: 0.1rem solid var(--border-soft);
+    }
+
+    .living-cost-guide-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 2rem;
+      padding: 1rem 0;
+      border-bottom: 0.1rem solid var(--border-soft);
+    }
+
+    .living-cost-guide-row:last-child {
+      border-bottom: 0;
+    }
+
+    .living-cost-guide-row span {
+      flex: 1;
+    }
+
+    .living-cost-guide-row strong {
+      flex: 0 0 auto;
+      text-align: right;
+      color: var(--green);
+    }
+    .future-contact-section .form-group + .form-group {
+      margin-top: 1.6rem;
+    }
+
+    .future-contact-section .uog-alert {
+      margin-top: 1.6rem;
+    }
+
+    @media (max-width: 600px) {
+      .living-cost-guide-row {
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+
+      .living-cost-guide-row strong {
+        text-align: left;
+      }
+    }
+    @media (max-width: 600px) {
+      .cost-chart-layout {
+        grid-template-columns: 1fr;
+        gap: 1.8rem;
+      }
+
+      .cost-chart-legend {
+        order: 1;
+      }
+
+      .cost-chart-canvas {
+        order: 2;
+        width: 100%;
+        height: 27rem;
+      }
+
+      .cost-chart-legend-item {
+        font-size: 1.3rem;
+      }
+
+      .potential-coop-value {
+        text-align: left;
+      }
+    }
+    @media (max-width: 760px) {
+      html {
+        font-size: 58%;
+      }
+
+      .container {
+        width: min(100% - 2.4rem, 96rem);
+      }
+
+      .progress-topline {
+        flex-direction: column;
+      }
+
+      .status-total {
+        text-align: left;
+      }
+
+      .progress-inline {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .progress-inline-bar {
+        width: 100%;
+      }
+
+      .stepper {
+        grid-template-columns: 1fr;
+      }
+
+      .stepper-item {
+        min-height: 4.8rem;
+      }
+
+      .choice-row,
+      .estimate-scope-options {
+        grid-template-columns: 1fr;
+      }
+
+      .step-footer,
+      .step-actions,
+      .welcome-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn-primary,
+      .btn-secondary,
+      .btn-gold {
+        width: 100%;
+      }
+
+      .summary-item,
+      .scholarship-option-top {
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+
+      .summary-value,
+      .summary-value-awareness,
+      .summary-value-offset {
+        text-align: left;
+      }
+
+      .global-disclaimer-list {
+        margin: 0.8rem 0 0;
+        padding-left: 1.8rem;
+      }
+
+      .global-disclaimer-list li {
+        margin-bottom: 0.6rem;
+        line-height: 1.6;
+      }
+
+      .estimate-scope-card {
+        min-height: auto;
+      }
+
+
+
+    }
+
+/* ==============================
+   Housing guide refinements
+   ============================== */
+
+/* Off-campus overview cards, used by renderOffCampusExpenseGuide(). */
+
+
+
+.off-campus-guide-note {
+  margin-bottom: 1.2rem;
+}
+
+.off-campus-cost-table {
+  width: 100%;
+  border-top: 0.1rem solid var(--border-soft);
+}
+
+.off-campus-cost-header,
+.off-campus-cost-row {
+  display: grid;
+  grid-template-columns:
+    minmax(22rem, 1.8fr)
+    minmax(11rem, 0.8fr)
+    minmax(11rem, 0.8fr);
+  gap: 1.6rem;
+  align-items: center;
+}
+
+.off-campus-cost-header {
+  padding: 1rem 0;
+  border-bottom: 0.1rem solid var(--border-soft);
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--text-strong);
+}
+
+.off-campus-cost-header span:nth-child(2),
+.off-campus-cost-header span:nth-child(3) {
+  text-align: right;
+}
+
+.off-campus-cost-row {
+  padding: 1rem 0;
+  border-bottom: 0.1rem solid var(--border-soft);
+}
+
+.off-campus-cost-row:last-child {
+  border-bottom: 0;
+}
+
+.off-campus-expense-name {
+  color: var(--text);
+}
+
+.off-campus-semester-cost{
+    color: var(--green);
+    font-weight:700;
+}
+
+.off-campus-yearly-cost{
+    color: var(--green);
+    font-weight:900;
+}
+
+.off-campus-yearly-cost {
+  color: var(--green);
+  font-weight: 900;
+}
+.money-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.money-input-prefix {
+  position: absolute;
+  top: 50%;
+  left: 1.4rem;
+  z-index: 1;
+  transform: translateY(-50%);
+  color: var(--text-strong);
+  font-size: 1.5rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+.funding-section-heading {
+  margin-top: 2.4rem;
+  padding-top: 2.4rem;
+  border-top: 0.1rem solid var(--border-soft);
+}
+
+.funding-group-title {
+  margin: 0 0 1rem;
+  font-family: "Bitter", Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-strong);
+}
+
+.form-help-text a,
+.international-funding-tip a {
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.international-funding-tip {
+  padding: 1.8rem;
+  border-left: 0.5rem solid var(--blue);
+  border-radius: var(--radius-sm);
+  background: #eef7fc;
+}
+
+.international-funding-tip h3 {
+  margin: 0 0 0.8rem;
+  font-size: 1.8rem;
+}
+
+.international-funding-tip p {
+  margin: 0 0 1rem;
+}
+.money-input-wrap .money-input {
+  padding-left: 3.2rem;
+}
+/* Make the prices inside an expanded residence easier to distinguish. */
+.residence-option-row > span:nth-child(2),
+.residence-option-row > span:nth-child(3),
+.residence-option-row > strong:last-child,
+.residence-term-price {
+  text-align: right;
+  color: #9a6b00;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.residence-yearly-price {
+  text-align: right;
+  color: var(--red);
+  font-weight: 900;
+  white-space: nowrap;
+}
+.campus-choice-heading {
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.campus-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.4rem;
+  margin-top: 1.2rem;
+}
+
+.campus-choice-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0.2rem solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-strong);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.campus-choice-card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 0.6rem 1.8rem rgba(0, 0, 0, 0.1);
+  transform: translateY(-0.2rem);
+}
+
+.campus-choice-card.selected {
+  border-color: var(--red);
+  box-shadow: 0 0 0 0.2rem rgba(229, 25, 55, 0.15);
+}
+
+.campus-choice-card:focus-visible {
+  outline: 0.3rem solid var(--yellow);
+  outline-offset: 0.3rem;
+}
+
+.campus-choice-title {
+  display: flex;
+  align-items: center;
+  min-height: 6.4rem;
+  padding: 1.2rem 1.4rem;
+  font-family: "Bitter", Georgia, serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.campus-choice-image-wrap {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--page-bg);
+}
+
+.campus-choice-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.campus-choice-grid.input-error {
+  padding: 0.8rem;
+  border: 0.2rem solid var(--red);
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 760px) {
+  .campus-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .campus-choice-title {
+    min-height: auto;
+  }
+}
+.residence-option-row > strong:last-child,
+
+
+/* Keep meal-plan yearly values green while residence prices use yellow. */
+.meal-plan-row strong {
+  color: var(--green);
+}
+
+@media (max-width: 650px) {
+  .off-campus-cost-header {
+    display: none;
+  }
+
+  .off-campus-cost-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 1rem;
+  }
+
+  .off-campus-expense-name {
+    grid-column: 1 / -1;
+    font-weight: 800;
+  }
+
+  .off-campus-semester-cost,
+  .off-campus-yearly-cost {
+    text-align: left;
+  }
+
+  .off-campus-semester-cost::before {
+    content: "Semester: ";
+    font-weight: 700;
+  }
+
+  .off-campus-yearly-cost::before {
+    content: "Year: ";
+    color: var(--text-strong);
+  }
+}

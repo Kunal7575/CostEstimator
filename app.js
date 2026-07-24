@@ -1,4 +1,17 @@
 const feedbackFormLink = "https://forms.cloud.microsoft/r/ZemQx8yRbg";
+const coopSalaryGuideLink =
+  "https://www.uoguelph.ca/experiential-learning/employers-partners/co-op-salary-guide";
+
+const osapLink =
+  "https://osap.gov.on.ca/AidEstimator2627Web/enterapp/enter.xhtml";
+
+const undergraduateAwardSearchLink =
+  "https://www.uoguelph.ca/regweb/studentfinance/apps/awards";
+
+const internationalFundingTipsLink =
+  "https://www.uoguelph.ca/admission/undergraduate/international/funding/student-tips/";
+
+const COMPULSORY_FEE_RANGE_ALLOWANCE = 500;
 const state = {
   osapFunding: 0,
   data: null,
@@ -7,6 +20,7 @@ const state = {
   studentPhase: "",            // future | current
   residencyType: "",           // Domestic | International
   province: "",                // ON | Non-ON | INT
+  canadaRegion: "",             // ON | Non-ON, used only for current location in Canada
   livingInCanada: "",
   canadianCitizen: "",
   permanentResident: "",
@@ -16,6 +30,7 @@ const state = {
   program: "",
   major: "",
   country: "",
+  estimateScope: "full",
 
   includeBooks: false,
   includePersonal: false,
@@ -24,9 +39,10 @@ const state = {
   includeCoopEarnings: false,
   coopInterest: "Yes",
   futureMealPlanInterest: "No",
-
-  housingType: "None",         // None | OnCampus | OffCampus
+  
+  housingType: "",            // None | OnCampus | OffCampus
   residence: "",
+  roomType: "",
   mealPlan: "",
   offCampusType: "",
   currentOffCampusRent: 0,
@@ -50,8 +66,7 @@ const state = {
   personalAmount: 0,
   partTimeHoursPerWeek: 10,
   partTimeHourlyRate: 20,
-  coopWeeklyEarnings: 2500,
-  coopWeeks: 16,
+  coopWeeklyEarnings: null,
 
   currencyCode: "",
   currencyRate: null,
@@ -323,6 +338,50 @@ async function loadData() {
   }
 }
 
+function getAvailableProgramGroups() {
+  const rows = getFilteredTuitionRows();
+  const groupedPrograms = new Map();
+
+  rows.forEach(row => {
+    const program = normalize(row.Program);
+    const major = normalize(row.Major);
+
+    if (!program) return;
+
+    if (!groupedPrograms.has(program)) {
+      groupedPrograms.set(program, new Map());
+    }
+
+    const programChoices = groupedPrograms.get(program);
+
+    /*
+      Undergraduate records normally use the major as the selectable label.
+
+      Graduate records, or records without a major, use the program name
+      itself as the selectable option.
+    */
+    const optionLabel = major || program;
+    const optionKey = `${program}|||${major}`;
+
+    if (!programChoices.has(optionKey)) {
+      programChoices.set(optionKey, {
+        program,
+        major,
+        label: optionLabel
+      });
+    }
+  });
+
+  return [...groupedPrograms.entries()]
+    .sort(([programA], [programB]) => programA.localeCompare(programB))
+    .map(([program, choices]) => ({
+      program,
+      choices: [...choices.values()].sort((a, b) =>
+        a.label.localeCompare(b.label)
+      )
+    }));
+}
+
 function bindScrollTop() {
   const btn = document.getElementById("scrollTopBtn");
   if (!btn) return;
@@ -346,17 +405,35 @@ function deriveFutureResidency() {
 
   if (state.canadianCitizen === "Yes") {
     state.residencyType = "Domestic";
-    state.country = "";
 
-    if (state.province === "INT") {
-      state.province = "";
-    }
-  }
+    /*
+      Canadian citizen or permanent resident living in Canada:
+      use their selected Ontario / outside Ontario value.
 
-  if (state.canadianCitizen === "No") {
+      Canadian citizen or permanent resident living outside Canada:
+      use Non-ON for domestic tuition matching.
+    */
+    state.province =
+      state.livingInCanada === "Yes"
+        ? state.canadaRegion
+        : "Non-ON";
+  } else if (state.canadianCitizen === "No") {
     state.residencyType = "International";
     state.province = "INT";
-    state.country = state.country || "";
+  } else {
+    state.residencyType = "";
+    state.province = "";
+  }
+
+  if (state.livingInCanada === "Yes") {
+    state.country = "";
+    state.currencyCode = "";
+    state.currencyRate = null;
+    state.currencyError = "";
+  }
+
+  if (state.livingInCanada === "No") {
+    state.canadaRegion = "";
   }
 
   state.permanentResident = "";
@@ -367,23 +444,31 @@ function updateChrome() {
     0: "Welcome",
     1: "Academic profile",
     2: "Program and tuition",
-    3: "Additional costs and funding",
-    4: "Living costs",
+    3: "Additional and living costs",
+    4: "Funding and earnings",
     5: "Estimate summary"
   };
 
   const stepSubtitles = {
     0: "Start your estimate.",
     1: "Choose the student and residency path that applies to you.",
-    2: "Select the year, campus, and program for the estimate.",
-    3: "Add optional costs and funding information.",
-    4: "Include housing and meal plan costs if applicable.",
+    2: "Select the year, campus and program for the estimate.",
+    3: "Review textbooks, personal expenses, housing and food costs.",
+    4: "Add potential funding and earnings that may help offset your costs.",
     5: "Review the estimate and choose how to save it."
   };
 
   const topStatusCard = document.getElementById("topStatusCard");
   const progressInline = document.getElementById("progressInline");
   const showChrome = state.currentStep > 0;
+
+  const osapResourceLink = [...document.querySelectorAll(".global-resources-links a")]
+    .find(link => link.textContent.trim() === "OSAP Aid Estimator");
+
+  if (osapResourceLink) {
+    osapResourceLink.href = osapLink;
+    osapResourceLink.hidden = state.residencyType === "International";
+  }
 
   if (topStatusCard) topStatusCard.style.display = showChrome ? "flex" : "none";
   if (progressInline) progressInline.style.display = showChrome ? "flex" : "none";
@@ -392,11 +477,29 @@ function updateChrome() {
   const statusTitle = document.getElementById("statusTitle");
   const statusSubtitle = document.getElementById("statusSubtitle");
 
-  if (statusEyebrow) statusEyebrow.textContent = `Step ${state.currentStep} of 5`;
+  const tuitionOnly = state.estimateScope === "tuition-only";
+
+  const visibleSteps = tuitionOnly
+    ? [1, 2, 5]
+    : [1, 2, 3, 4, 5];
+
+  const currentVisiblePosition = Math.max(
+    1,
+    visibleSteps.indexOf(state.currentStep) + 1
+  );
+
+  if (statusEyebrow) {
+    statusEyebrow.textContent = tuitionOnly
+      ? `Step ${currentVisiblePosition} of ${visibleSteps.length}`
+      : `Step ${state.currentStep} of 5`;
+  }
   if (statusTitle) statusTitle.textContent = stepTitles[state.currentStep] || "";
   if (statusSubtitle) statusSubtitle.textContent = stepSubtitles[state.currentStep] || "";
 
-  const progressPct = Math.round((state.currentStep / 5) * 100);
+  const progressPct = Math.round(
+    (currentVisiblePosition / visibleSteps.length) * 100
+  );
+
   const progressFill = document.getElementById("progressInlineFill");
   const progressText = document.getElementById("progressInlineText");
 
@@ -417,6 +520,32 @@ function updateChrome() {
 
   document.querySelectorAll(".stepper-item").forEach(item => {
     const step = Number(item.dataset.step);
+
+    const isSkippedStep =
+      tuitionOnly &&
+      (step === 3 || step === 4);
+
+    item.style.display = isSkippedStep ? "none" : "";
+
+    if (isSkippedStep) {
+      item.onclick = null;
+      return;
+    }
+
+    const stepNumber = item.querySelector(".stepper-num");
+
+    if (stepNumber) {
+      if (tuitionOnly) {
+        const visiblePosition = visibleSteps.indexOf(step) + 1;
+
+        if (visiblePosition > 0) {
+          stepNumber.textContent = visiblePosition;
+        }
+      } else {
+        stepNumber.textContent = step;
+      }
+    }
+
     item.classList.remove("active", "done");
 
     if (showChrome) {
@@ -492,6 +621,11 @@ function renderCurrentStep() {
 
   container.innerHTML = html;
   bindRenderedEvents();
+
+  if (state.currentStep === 5) {
+    bindResidenceAccordion();
+  }
+
   setupWelcomeImage();
   updateChrome();
 }
@@ -534,28 +668,34 @@ function renderStep0() {
       <div class="step-header">
         <p class="section-kicker">Planning tool</p>
         <h2 class="step-title">Cost Estimator</h2>
+
         <p class="step-description">
-          Use this tool to build an estimated cost range based on student type, program,
-          living costs, and optional expenses.
+          Use this tool to build an estimated cost range based on student type, program, living costs and optional expenses.
         </p>
       </div>
 
       <div class="step-content">
-        ${renderAlert(
-          "Estimate notice",
-          "This estimator is for planning purposes only and does not replace official University of Guelph tuition, fee, housing, meal plan, scholarship, or funding information.",
-          "yellow"
-        )}
-
         <div class="choice-row welcome-choice-row">
-          <button class="choice-card ${state.studentPhase === "future" ? "selected" : ""}" data-value="future" type="button">
+          <button
+            class="choice-card ${state.studentPhase === "future" ? "selected" : ""}"
+            data-value="future"
+            type="button"
+          >
             <span class="choice-card-title">Future student</span>
-            <span class="choice-card-text">For prospective students and applicants planning ahead.</span>
+            <span class="choice-card-text">
+              For prospective students and applicants planning ahead.
+            </span>
           </button>
 
-          <button class="choice-card ${state.studentPhase === "current" ? "selected" : ""}" data-value="current" type="button">
+          <button
+            class="choice-card ${state.studentPhase === "current" ? "selected" : ""}"
+            data-value="current"
+            type="button"
+          >
             <span class="choice-card-title">Current or returning student</span>
-            <span class="choice-card-text">For students who already know their program and want a more specific estimate.</span>
+            <span class="choice-card-text">
+              For students who already know their program and want a more specific estimate.
+            </span>
           </button>
         </div>
 
@@ -564,29 +704,49 @@ function renderStep0() {
             Start estimate
           </button>
         </div>
-
-        
+      </div>
+    </div>
   `;
 }
 
-
 function renderStep1() {
+  const countries = getAvailableCountries();
+
   return `
     <div class="step-container">
       <div class="step-header">
         <p class="section-kicker">Academic profile</p>
         <h2 class="step-title">Tell us about your student path</h2>
-        <p class="step-description">These answers help determine the correct tuition and fee pathway.</p>
+
+        <p class="step-description">
+          These answers help determine the correct tuition and fee pathway.
+        </p>
       </div>
 
       <div class="step-content">
         <div class="form-stack">
+
           <div class="form-group">
-            <label for="studentPhase">Student type</label>
+            <label for="studentPhase">
+              Student type <span class="required-star">*</span>
+            </label>
+
             <select id="studentPhase" class="step-dropdown">
               <option value="">Select student type</option>
-              <option value="future" ${state.studentPhase === "future" ? "selected" : ""}>Future student</option>
-              <option value="current" ${state.studentPhase === "current" ? "selected" : ""}>Current / returning student</option>
+
+              <option
+                value="future"
+                ${state.studentPhase === "future" ? "selected" : ""}
+              >
+                Future student
+              </option>
+
+              <option
+                value="current"
+                ${state.studentPhase === "current" ? "selected" : ""}
+              >
+                Current / returning student
+              </option>
             </select>
           </div>
 
@@ -594,66 +754,216 @@ function renderStep1() {
             state.studentPhase === "future"
               ? `
                 <div class="form-group">
-                  <label for="livingInCanada">Are you currently living in Canada?</label>
+                  <label for="livingInCanada">
+                    Are you currently living in Canada?
+                    <span class="required-star">*</span>
+                  </label>
+
                   <select id="livingInCanada" class="step-dropdown">
                     <option value="">Select an option</option>
-                    <option value="Yes" ${state.livingInCanada === "Yes" ? "selected" : ""}>Yes</option>
-                    <option value="No" ${state.livingInCanada === "No" ? "selected" : ""}>No</option>
+
+                    <option
+                      value="Yes"
+                      ${state.livingInCanada === "Yes" ? "selected" : ""}
+                    >
+                      Yes
+                    </option>
+
+                    <option
+                      value="No"
+                      ${state.livingInCanada === "No" ? "selected" : ""}
+                    >
+                      No
+                    </option>
                   </select>
                 </div>
 
+                ${
+                  state.livingInCanada === "Yes"
+                    ? `
+                      <div class="form-group">
+                        <label for="canadaRegion">
+                          I am applying from
+                          <span class="required-star">*</span>
+                        </label>
+
+                        <select id="canadaRegion" class="step-dropdown">
+                          <option value="">Select an option</option>
+
+                          <option
+                            value="ON"
+                            ${state.canadaRegion === "ON" ? "selected" : ""}
+                          >
+                            Ontario
+                          </option>
+
+                          <option
+                            value="Non-ON"
+                            ${state.canadaRegion === "Non-ON" ? "selected" : ""}
+                          >
+                            Outside Ontario
+                          </option>
+                        </select>
+                      </div>
+                    `
+                    : ""
+                }
+
+                ${
+                  state.livingInCanada === "No"
+                    ? `
+                      <div class="form-group">
+                        <label for="country">
+                          I am applying from
+                          <span class="required-star">*</span>
+                        </label>
+
+                        <select id="country" class="step-dropdown">
+                          <option value="">Select country</option>
+
+                          ${countries.map(country => `
+                            <option
+                              value="${escapeHtml(country)}"
+                              ${state.country === country ? "selected" : ""}
+                            >
+                              ${escapeHtml(country)}
+                            </option>
+                          `).join("")}
+                        </select>
+                      </div>
+                    `
+                    : ""
+                }
+
                 <div class="form-group">
-                  <label for="canadianCitizen">Are you a Canadian citizen or permanent resident of Canada?</label>
+                  <label for="canadianCitizen">
+                    Are you a Canadian citizen or permanent resident of Canada?
+                    <span class="required-star">*</span>
+                  </label>
+
                   <select id="canadianCitizen" class="step-dropdown">
                     <option value="">Select an option</option>
-                    <option value="Yes" ${state.canadianCitizen === "Yes" ? "selected" : ""}>Yes</option>
-                    <option value="No" ${state.canadianCitizen === "No" ? "selected" : ""}>No</option>
+
+                    <option
+                      value="Yes"
+                      ${state.canadianCitizen === "Yes" ? "selected" : ""}
+                    >
+                      Yes
+                    </option>
+
+                    <option
+                      value="No"
+                      ${state.canadianCitizen === "No" ? "selected" : ""}
+                    >
+                      No
+                    </option>
                   </select>
+
+                  <p class="form-help-text">
+                    Review the
+                    <a
+                      href="https://www.uoguelph.ca/registrar/enrolment-records/immigration-status"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      University of Guelph immigration status information
+                    </a>
+                    before making your selection.
+                  </p>
                 </div>
               `
               : `
                 <div class="form-group">
-                  <label for="residencyType">Residency type</label>
+                  <label for="residencyType">
+                    Residency type <span class="required-star">*</span>
+                  </label>
+
                   <select id="residencyType" class="step-dropdown">
                     <option value="">Select residency type</option>
-                    <option value="Domestic" ${state.residencyType === "Domestic" ? "selected" : ""}>Domestic</option>
-                    <option value="International" ${state.residencyType === "International" ? "selected" : ""}>International</option>
+
+                    <option
+                      value="Domestic"
+                      ${state.residencyType === "Domestic" ? "selected" : ""}
+                    >
+                      Domestic
+                    </option>
+
+                    <option
+                      value="International"
+                      ${state.residencyType === "International" ? "selected" : ""}
+                    >
+                      International
+                    </option>
                   </select>
                 </div>
+
+                ${
+                  state.residencyType === "Domestic"
+                    ? `
+                      <div class="form-group">
+                        <label for="province">
+                          I am applying from
+                          <span class="required-star">*</span>
+                        </label>
+
+                        <select id="province" class="step-dropdown">
+                          <option value="">Select an option</option>
+
+                          <option
+                            value="ON"
+                            ${state.province === "ON" ? "selected" : ""}
+                          >
+                            Ontario
+                          </option>
+
+                          <option
+                            value="Non-ON"
+                            ${state.province === "Non-ON" ? "selected" : ""}
+                          >
+                            Outside Ontario
+                          </option>
+                        </select>
+                      </div>
+                    `
+                    : ""
+                }
               `
           }
 
           <div class="form-group">
-            <label for="level">${state.studentPhase === "future" ? "Study level" : "Level"}</label>
+            <label for="level">
+              ${state.studentPhase === "future" ? "Study level" : "Level"}
+              <span class="required-star">*</span>
+            </label>
+
             <select id="level" class="step-dropdown">
               <option value="">Select level</option>
-              <option value="UG" ${state.level === "UG" ? "selected" : ""}>Undergraduate</option>
-              <option value="GR" ${state.level === "GR" ? "selected" : ""}>Graduate</option>
+
+              <option
+                value="UG"
+                ${state.level === "UG" ? "selected" : ""}
+              >
+                Undergraduate
+              </option>
+
+              <option
+                value="GR"
+                ${state.level === "GR" ? "selected" : ""}
+              >
+                Graduate
+              </option>
             </select>
           </div>
 
-          ${
-            state.residencyType === "Domestic"
-              ? `
-                <div class="form-group" id="provinceGroup">
-                  <label for="province">I am applying from</label>
-                  <select id="province" class="step-dropdown">
-                    <option value="">Select province</option>
-                    <option value="ON" ${state.province === "ON" ? "selected" : ""}>Ontario</option>
-                    <option value="Non-ON" ${state.province === "Non-ON" ? "selected" : ""}>Outside Ontario</option>
-                  </select>
-                </div>
-              `
-              : ""
-          }
-
-          
         </div>
       </div>
 
       <div class="step-footer">
         <div></div>
-        <button class="btn-primary" id="nextStep1" type="button">Continue</button>
+
+        <button class="btn-primary" id="nextStep1" type="button">
+          Continue
+        </button>
       </div>
     </div>
   `;
@@ -735,7 +1045,18 @@ function renderExternalCampusStopScreen() {
     </div>
   `;
 }
+function isMandatoryCoopProgram() {
+  const program = normalizeKey(state.program);
 
+  if (!program) return false;
+
+  return (
+    program.includes("engineering") ||
+    program === "beng" ||
+    program === "b eng" ||
+    program.includes("bachelor of engineering")
+  );
+}
 
 function renderStep2() {
   if (state.studentPhase === "current" && !state.cohortYear) {
@@ -744,27 +1065,21 @@ function renderStep2() {
 
   const campuses = getAvailableCampuses();
   const cohortYears = getAvailableCohortYears();
-  const programs = getAvailablePrograms().sort((a, b) => a.localeCompare(b));
-  const majors = getAvailableMajors();
-  const programHasMajors = majors.length > 0;
-  const countries = getAvailableCountries();
+  const programGroups = getAvailableProgramGroups();
 
   const externalCampusSelected = isExternalCampusSelected();
-
-  const coopStatus = getFutureProgramCoopStatus();
   const isUG = state.level === "UG";
-  const coopDisabled = isUG && state.major && coopStatus !== "Yes";
 
-  if (isUG && state.major && coopStatus === "Yes" && !state.coopInterest) {
-    state.coopInterest = "Yes";
-    state.includeCoop = true;
-  }
+  const selectedProgramValue = state.program
+    ? `${state.program}|||${state.major || ""}`
+    : "";
 
-  if (coopDisabled) {
-    state.coopInterest = "No";
-    state.includeCoop = false;
-    state.includeCoopEarnings = false;
-  }
+  const selectedProgramExists = programGroups.some(group =>
+    group.choices.some(choice =>
+      choice.program === state.program &&
+      choice.major === (state.major || "")
+    )
+  );
 
   if (state.campus && !campuses.includes(state.campus)) {
     state.campus = "";
@@ -773,27 +1088,60 @@ function renderStep2() {
     state.matchedTuitionRecord = null;
   }
 
-  if (state.program && !programs.includes(state.program)) {
+  if (state.program && !selectedProgramExists) {
     state.program = "";
     state.major = "";
     state.matchedTuitionRecord = null;
   }
 
-  if (state.major && !majors.includes(state.major)) {
-    state.major = "";
-    state.matchedTuitionRecord = null;
+  const coopStatus = getFutureProgramCoopStatus();
+  const mandatoryCoop = isUG && isMandatoryCoopProgram();
+
+  if (mandatoryCoop) {
+    state.coopInterest = "Yes";
+    state.includeCoop = true;
+  } else if (
+    state.program &&
+    coopStatus !== "Yes"
+  ) {
+    state.coopInterest = "No";
+    state.includeCoop = false;
+    state.includeCoopEarnings = false;
   }
 
   const currentStudentYear =
-    state.studentPhase === "current" ? state.cohortYear : "";
+    state.studentPhase === "current"
+      ? state.cohortYear
+      : "";
+
+  const latestApprovedCohort =
+    getLatestApprovedTuitionCohort();
+
+  const selectedStartYear =
+    Number.parseInt(state.cohortYear, 10);
+
+  const firstUnapprovedYear =
+    latestApprovedCohort
+      ? latestApprovedCohort.end + 1
+      : null;
+
+  const showFutureTuitionWarning =
+    state.studentPhase === "future" &&
+    latestApprovedCohort &&
+    Number.isFinite(selectedStartYear) &&
+    selectedStartYear > latestApprovedCohort.end;
 
   return `
     <div class="step-container">
       <div class="step-header">
         <p class="section-kicker">Program and tuition</p>
-        <h2 class="step-title">Select your program details</h2>
+
+        <h2 class="step-title">
+          Select your program details
+        </h2>
+
         <p class="step-description">
-          Choose the campus, program, and major used to match tuition data.
+          Choose the campus and program used to match tuition data.
         </p>
       </div>
 
@@ -804,20 +1152,42 @@ function renderStep2() {
             state.studentPhase === "future"
               ? `
                 <div class="form-group">
-                  <label for="cohortYear">Expected start year</label>
+                  <label for="cohortYear">
+                    Expected start year
+                    <span class="required-star">*</span>
+                  </label>
+
                   <select id="cohortYear" class="step-dropdown">
                     <option value="">Select target year</option>
-                    ${cohortYears.map(y => `
-                      <option value="${escapeHtml(y)}" ${state.cohortYear === y ? "selected" : ""}>
-                        ${escapeHtml(y)}
+
+                    ${cohortYears.map(option => `
+                      <option
+                        value="${escapeHtml(option.value)}"
+                        ${state.cohortYear === option.value ? "selected" : ""}
+                      >
+                        ${escapeHtml(option.label)}
                       </option>
                     `).join("")}
                   </select>
+
+                  ${
+                    showFutureTuitionWarning
+                      ? `
+                        <p class="form-help-text">
+                          Tuition information is currently available for the
+                          ${escapeHtml(latestApprovedCohort.raw)} cohort.
+                          Estimates for Fall ${escapeHtml(firstUnapprovedYear)}
+                          or later use the most recent approved tuition information.
+                        </p>
+                      `
+                      : ""
+                  }
                 </div>
               `
               : `
                 <div class="form-group">
                   <label>Year</label>
+
                   <div class="readonly-field">
                     ${escapeHtml(currentStudentYear || "Not available")}
                   </div>
@@ -825,128 +1195,194 @@ function renderStep2() {
               `
           }
 
-          ${
-            state.studentPhase === "future" &&
-            state.residencyType === "International"
-              ? `
-                <div class="form-group">
-                  <label for="country">Country you are applying from</label>
-                  <select id="country" class="step-dropdown">
-                    <option value="">Select country</option>
-                    ${countries.map(country => `
-                      <option value="${escapeHtml(country)}" ${state.country === country ? "selected" : ""}>
-                        ${escapeHtml(country)}
-                      </option>
-                    `).join("")}
-                  </select>
-                  ${renderCurrencyBadge()}
-                </div>
-              `
-              : ""
-          }
-
-          <div class="form-group">
-            <label for="campus">Campus</label>
-            <select id="campus" class="step-dropdown">
-              <option value="">Select campus</option>
-              ${campuses.map(c => `
-                <option value="${escapeHtml(c)}" ${state.campus === c ? "selected" : ""}>
-                  ${escapeHtml(c)}
-                </option>
-              `).join("")}
-            </select>
-          </div>
+          ${renderCampusChoices()}
 
           ${
             externalCampusSelected
               ? renderExternalCampusStopScreen()
-              : `
-                <div class="form-group">
-                  <label for="program">Program</label>
-                  <select id="program" class="step-dropdown">
-                    <option value="">Select program</option>
-                    ${programs.map(p => `
-                      <option value="${escapeHtml(p)}" ${state.program === p ? "selected" : ""}>
-                        ${escapeHtml(p)}
+              : state.campus
+                ? `
+                  <div class="form-group">
+                    <label for="program">
+                      Program <span class="required-star">*</span>
+                    </label>
+
+                    <select id="program" class="step-dropdown">
+                      <option value="">
+                        Select program or major
                       </option>
-                    `).join("")}
-                  </select>
-                </div>
 
-                ${
-                  isUG && state.program && programHasMajors
-                    ? `
-                      <div class="form-group">
-                        <label for="major">Major</label>
-                        <select id="major" class="step-dropdown">
-                          <option value="">Select major</option>
-                          ${majors.map(m => `
-                            <option value="${escapeHtml(m)}" ${state.major === m ? "selected" : ""}>
-                              ${escapeHtml(m)}
-                            </option>
-                          `).join("")}
-                        </select>
-                      </div>
-                    `
-                    : ""
-                }
+                      ${programGroups.map(group => `
+                        <optgroup label="${escapeHtml(group.program)}">
+                          ${group.choices.map(choice => {
+                            const choiceValue =
+                              `${choice.program}|||${choice.major}`;
 
-                ${
-                  state.program && (!isUG || !programHasMajors || state.major)
-                    ? `
-                      <div class="form-group">
-                        <label for="coopInterest">
-                          ${state.studentPhase === "future" ? "Interested in co-op?" : "Enrolled in co-op?"}
-                        </label>
-                        <select id="coopInterest" class="step-dropdown" ${coopDisabled ? "disabled" : ""}>
-                          <option value="Yes" ${state.coopInterest === "Yes" ? "selected" : ""}>Yes</option>
-                          <option value="No" ${state.coopInterest === "No" ? "selected" : ""}>No</option>
-                        </select>
-                      </div>
-                    `
-                    : ""
-                }
+                            return `
+                              <option
+                                value="${escapeHtml(choiceValue)}"
+                                ${
+                                  selectedProgramValue === choiceValue
+                                    ? "selected"
+                                    : ""
+                                }
+                              >
+                                ${escapeHtml(choice.label)}
+                              </option>
+                            `;
+                          }).join("")}
+                        </optgroup>
+                      `).join("")}
+                    </select>
 
-                ${renderCampusGallery()}
+                    <p class="form-help-text">
+                      Programs are organized by degree. Select your major
+                      from the applicable section.
+                    </p>
+                  </div>
 
-                ${
-                  isUG &&
-                  state.program &&
-                  programHasMajors &&
-                  state.major &&
-                  coopStatus === "No"
-                    ? renderAlert(
-                        "Co-op not available",
-                        "Co-op is not listed as available for this major, so the co-op option has been turned off.",
-                        "red"
-                      )
-                    : ""
-                }
-              `
-          }
+                  ${
+                    state.program && mandatoryCoop
+                      ? `
+                        <div class="form-group">
+                          <label>Co-op requirement</label>
 
-          ${
-            state.studentPhase === "future"
-              ? `
-                <p class="small-estimate-notice">
-                  Costs are based on the most recent available information and are estimates only. Amounts are subject to change.
-                </p>
-              `
-              : ""
+                          <div class="readonly-field">
+                            Yes, co-op is required
+                          </div>
+
+                          <p class="form-help-text">
+                            Co-op is mandatory for this engineering program and is
+                            automatically included in your estimate.
+                          </p>
+                        </div>
+                      `
+                      : state.program && coopStatus === "Yes"
+                        ? `
+                          <div class="form-group">
+                            <label for="coopInterest">
+                              ${
+                                state.studentPhase === "future"
+                                  ? "Interested in co-op?"
+                                  : "Enrolled in co-op?"
+                              }
+                            </label>
+
+                            <select
+                              id="coopInterest"
+                              class="step-dropdown"
+                            >
+                              <option
+                                value="Yes"
+                                ${state.coopInterest === "Yes" ? "selected" : ""}
+                              >
+                                Yes
+                              </option>
+
+                              <option
+                                value="No"
+                                ${state.coopInterest === "No" ? "selected" : ""}
+                              >
+                                No
+                              </option>
+                            </select>
+                          </div>
+                        `
+                        : ""
+                  }
+
+                  <div class="estimate-scope-section">
+                    <div class="estimate-scope-heading">
+                      <h3 class="subsection-title">
+                        What would you like to estimate?
+                      </h3>
+
+                      <p class="form-help-text">
+                         You can calculate tuition and compulsory fees only or include living expenses and potential funding.
+                        fees only.
+                      </p>
+                    </div>
+
+                    <div class="estimate-scope-options">
+                      <button
+                        type="button"
+                        class="estimate-scope-card ${
+                          state.estimateScope === "full"
+                            ? "selected"
+                            : ""
+                        }"
+                        data-estimate-scope="full"
+                        aria-pressed="${
+                          state.estimateScope === "full"
+                        }"
+                      >
+                        <span class="estimate-scope-radio"></span>
+
+                        <span class="estimate-scope-content">
+                          <strong>Full cost estimate</strong>
+
+                          <span>
+                            Continue through the calculator to include living expenses and ways to fund your education.
+                          </span>
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="estimate-scope-card ${
+                          state.estimateScope === "tuition-only"
+                            ? "selected"
+                            : ""
+                        }"
+                        data-estimate-scope="tuition-only"
+                        aria-pressed="${
+                          state.estimateScope === "tuition-only"
+                        }"
+                      >
+                        <span class="estimate-scope-radio"></span>
+
+                        <span class="estimate-scope-content">
+                          <strong>Tuition only</strong>
+
+                          <span>
+                            Skip the remaining calculator steps and go directly to your tuition and compulsory-fee estimate.
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  
+                `
+                : ""
           }
 
         </div>
       </div>
 
       <div class="step-footer">
-        <button class="btn-secondary" id="backStep2" type="button">Back</button>
+        <button
+          class="btn-secondary"
+          id="backStep2"
+          type="button"
+        >
+          Back
+        </button>
 
         ${
           externalCampusSelected
             ? ""
             : `
-              <button class="btn-primary" id="nextStep2" type="button">
-                Continue
+              <button
+                class="btn-primary"
+                id="nextStep2"
+                type="button"
+              >
+                ${
+                  state.estimateScope === "tuition-only"
+                    ? "Skip to estimate summary"
+                    : "Continue to costs and funding"
+                }
               </button>
             `
         }
@@ -983,45 +1419,222 @@ function renderInfoIcon(title, message) {
     </span>
   `;
 }
+function getJsonCost(sectionName, fieldName, fallbackAmount = 0) {
+  const record = state.data?.[sectionName]?.[0] || {};
+  const rawValue = normalize(readField(record, [fieldName]));
+
+  let period = "per year";
+
+  if (/semester/i.test(rawValue)) {
+    period = "per semester";
+  } else if (/week/i.test(rawValue)) {
+    period = "per week";
+  } else if (/year/i.test(rawValue)) {
+    period = "per year";
+  }
+
+  return {
+    rawValue,
+    amount: parseAmountFromText(rawValue) || fallbackAmount,
+    period
+  };
+}
+
+function renderMoneyInput({
+  id,
+  value,
+  placeholder = "",
+  min = 0,
+  max = ""
+}) {
+  return `
+    <div class="money-input-wrap">
+      <span class="money-input-prefix" aria-hidden="true">$</span>
+
+      <input
+        id="${escapeHtml(id)}"
+        class="step-input money-input"
+        type="number"
+        min="${escapeHtml(min)}"
+        ${max !== "" ? `max="${escapeHtml(max)}"` : ""}
+        step="5"
+        value="${escapeHtml(value)}"
+        placeholder="${escapeHtml(placeholder)}"
+      />
+    </div>
+  `;
+}
+function getResidenceAreas() {
+  return [...new Set(
+    (state.data?.["On_campus_Living_Costs"] || [])
+      .map(item =>
+        normalize(
+          readField(item, [
+            "ResidenceArea",
+            "Residence Area"
+          ])
+        )
+      )
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
+}
+
+function getRoomOptionsForResidence(residenceArea) {
+  if (!residenceArea) return [];
+
+  return (state.data?.["On_campus_Living_Costs"] || [])
+    .filter(item => {
+      const area = normalize(
+        readField(item, [
+          "ResidenceArea",
+          "Residence Area"
+        ])
+      );
+
+      return normalizeKey(area) === normalizeKey(residenceArea);
+    })
+    .map(item => {
+      const roomType = normalize(
+        readField(item, [
+          "RoomType",
+          "Room Type"
+        ])
+      );
+
+      /*
+        Cost already includes Fall, Winter and the deposit
+        in the supplied JSON.
+      */
+      const yearlyCost = toNumber(
+        readField(item, ["Cost"])
+      );
+
+      return {
+        value: roomType,
+        label: `${roomType} (${formatMoney(yearlyCost)}/year)`,
+        yearlyCost
+      };
+    })
+    .filter(option => option.value)
+    .sort((a, b) => a.yearlyCost - b.yearlyCost);
+}
+
+function selectedResidenceRequiresMealPlan() {
+  const residence = normalizeKey(state.residence);
+  const roomType = normalizeKey(state.roomType);
+
+  if (!residence || !roomType) return false;
+
+  /*
+    All room types in these residence areas have access
+    to kitchen facilities.
+  */
+  const optionalMealPlanResidences = [
+    "east residences",
+    "east village townhouses",
+    "west village",
+    "university houses"
+  ];
+
+  if (optionalMealPlanResidences.includes(residence)) {
+    return false;
+  }
+
+  /*
+    Only apartment room types in North and South Residence
+    are exempt from the mandatory meal plan.
+  */
+  const isNorthOrSouth =
+    residence === "north residence" ||
+    residence === "south residence";
+
+  const isExemptApartment =
+    roomType === "one-person apartment" ||
+    roomType === "two-bedroom apartment";
+
+  if (isNorthOrSouth && isExemptApartment) {
+    return false;
+  }
+
+  return true;
+}
+
 function renderStep3() {
-  const defaultPartTimeRate = parseAmountFromText(
-    readField(state.data?.["Part-Time_earnings"]?.[0] || {}, ["Part-Time_earnings"])
-  ) || 20;
-
-  const defaultBooks = parseAmountFromText(
-    readField(state.data?.Textbooks?.[0] || {}, ["Txtbooks", "Textbooks"])
-  ) || 1400;
-
-  const defaultPersonal = parseAmountFromText(
-    readField(state.data?.["Personal Expenses"]?.[0] || {}, ["Personal Expenses"])
-  ) || 2500;
-
-  const coopRange = parseRangeFromText(
-    readField(state.data?.["Co-op Cost"]?.[0] || {}, ["Coop Earnings", "Co-op Earnings"])
+  const textbooks = getJsonCost(
+    "Textbooks",
+    "Textbooks",
+    1400
   );
 
-  if (!state.booksAmount) state.booksAmount = defaultBooks;
-  if (!state.personalAmount) state.personalAmount = defaultPersonal;
-  if (!state.osapFunding) state.osapFunding = 0;
+  const personalExpenses = getJsonCost(
+    "Personal Expenses",
+    "Personal Expenses",
+    2500
+  );
 
-  if (state.studentPhase === "future") {
-    if (!state.partTimeHoursPerWeek) state.partTimeHoursPerWeek = 10;
-    if (!state.partTimeHourlyRate) state.partTimeHourlyRate = defaultPartTimeRate;
-    if (!state.coopWeeklyEarnings) state.coopWeeklyEarnings = coopRange.high || 2500;
-    if (!state.coopWeeks) state.coopWeeks = 16;
+  if (!state.booksAmount) {
+    state.booksAmount = textbooks.amount;
   }
+
+  if (!state.personalAmount) {
+    state.personalAmount = personalExpenses.amount;
+  }
+
+  const residenceAreas = getResidenceAreas();
+
+  const roomOptions =
+    getRoomOptionsForResidence(state.residence);
+
+  const mealPlanOptions =
+    getMealPlanOptions();
+
+  const isOnCampus =
+    state.housingType === "OnCampus";
+
+  const isOffCampus =
+    state.housingType === "OffCampus";
+
+  const mealPlanRequired =
+    isOnCampus &&
+    selectedResidenceRequiresMealPlan();
+
+  const showMealPlanSelection =
+    (
+      isOnCampus &&
+      state.residence &&
+      state.roomType
+    ) ||
+    (
+      isOffCampus &&
+      state.futureMealPlanInterest === "Yes"
+    );
+
+  const residenceInformationLink =
+    getInformationLink(
+      "On_campus_Living_Costs",
+      "https://www.uoguelph.ca/housing/fees-deposits"
+    );
+
+  const mealPlanInformationLink =
+    getInformationLink(
+      "Meal_Plan",
+      "https://www.uoguelph.ca/hospitality-services/campus-meal-plans"
+    );
 
   return `
     <div class="step-container">
       <div class="step-header">
-        <p class="section-kicker">Additional costs and funding</p>
-        <h2 class="step-title">Add optional costs and funding</h2>
+        <p class="section-kicker">
+          Additional and living costs
+        </p>
+
+        <h2 class="step-title">
+          Add your estimated expenses
+        </h2>
+
         <p class="step-description">
-          ${
-            state.studentPhase === "future"
-              ? "Review and adjust estimated expenses and potential funding."
-              : "Review and adjust estimated expenses and funding."
-          }
+          Review textbooks, personal expenses, residence and
+          meal-plan costs before adding potential funding.
         </p>
       </div>
 
@@ -1029,34 +1642,454 @@ function renderStep3() {
         <div class="form-stack">
 
           <div class="form-group">
-            <label for="booksAmount">Estimated textbooks / supplies</label>
-            <input
-              id="booksAmount"
-              class="step-input"
-              type="number"
-              min="0"
-              value="${escapeHtml(state.booksAmount)}"
-            />
+            <label for="booksAmount">
+              Estimated textbooks and supplies
+              (${escapeHtml(textbooks.period)})
+            </label>
+
+            ${renderMoneyInput({
+              id: "booksAmount",
+              value: state.booksAmount
+            })}
+
+            <p class="form-help-text">
+              The default amount is taken from the yearly
+              textbooks estimate.
+            </p>
           </div>
 
           <div class="form-group">
-            <label for="personalAmount">Estimated personal expenses</label>
-            <input
-              id="personalAmount"
-              class="step-input"
-              type="number"
-              min="0"
-              value="${escapeHtml(state.personalAmount)}"
-            />
+            <label for="personalAmount">
+              Estimated personal expenses
+              (${escapeHtml(personalExpenses.period)})
+            </label>
+
+            ${renderMoneyInput({
+              id: "personalAmount",
+              value: state.personalAmount
+            })}
+
+            <p class="form-help-text">
+              The default amount is taken from the yearly
+              personal-expense estimate.
+            </p>
+          </div>
+
+          <div class="form-group">
+            <h3 class="subsection-title">
+              Residence and meal plan
+            </h3>
+
+            <label for="housingType">
+              Do you plan to live on campus or off campus?
+              <span class="required-star">*</span>
+            </label>
+
+            <select
+              id="housingType"
+              class="step-dropdown"
+            >
+              <option value="">
+                Select where you plan to live
+              </option>
+
+              <option
+                value="OnCampus"
+                ${
+                  state.housingType === "OnCampus"
+                    ? "selected"
+                    : ""
+                }
+              >
+                On campus
+              </option>
+
+              <option
+                value="OffCampus"
+                ${
+                  state.housingType === "OffCampus"
+                    ? "selected"
+                    : ""
+                }
+              >
+                Off campus
+              </option>
+            </select>
+
+            ${
+              state.studentPhase === "future"
+                ? `
+                  <p class="form-help-text">
+                    Eligible first-year students are guaranteed
+                    residence when they meet the applicable
+                    application, admission acceptance and deposit
+                    deadlines. Review the
+                    <a
+                      href="https://www.uoguelph.ca/housing/apply"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      residence eligibility and application requirements
+                    </a>.
+                  </p>
+                `
+                : ""
+            }
+          </div>
+
+          ${
+            isOnCampus
+              ? `
+                <div class="form-group">
+                  <label for="residence">
+                    Which residence would you prefer?
+                    <span class="required-star">*</span>
+                  </label>
+
+                  <select
+                    id="residence"
+                    class="step-dropdown"
+                  >
+                    <option value="">
+                      Select a residence
+                    </option>
+
+                    ${residenceAreas.map(area => `
+                      <option
+                        value="${escapeHtml(area)}"
+                        ${
+                          state.residence === area
+                            ? "selected"
+                            : ""
+                        }
+                      >
+                        ${escapeHtml(area)}
+                      </option>
+                    `).join("")}
+                  </select>
+
+                  <p class="form-help-text">
+                    Review current
+                    <a
+                      href="${escapeHtml(residenceInformationLink)}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      residence fees and deposits
+                    </a>.
+                  </p>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            isOnCampus && state.residence
+              ? `
+                <div class="form-group">
+                  <label for="roomType">
+                    Which room type would you prefer?
+                    <span class="required-star">*</span>
+                  </label>
+
+                  <select
+                    id="roomType"
+                    class="step-dropdown"
+                  >
+                    <option value="">
+                      Select a room type
+                    </option>
+
+                    ${roomOptions.map(option => `
+                      <option
+                        value="${escapeHtml(option.value)}"
+                        ${
+                          state.roomType === option.value
+                            ? "selected"
+                            : ""
+                        }
+                      >
+                        ${escapeHtml(option.label)}
+                      </option>
+                    `).join("")}
+                  </select>
+
+                  <p class="form-help-text">
+                    The displayed amount is the yearly residence
+                    cost from the available planning data.
+                  </p>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            isOffCampus
+              ? `
+                <div class="form-group">
+                  <label for="futureMealPlanInterest">
+                    Would you like to include a meal plan?
+                    <span class="required-star">*</span>
+                  </label>
+
+                  <select
+                    id="futureMealPlanInterest"
+                    class="step-dropdown"
+                  >
+                    <option value="">
+                      Select Yes or No
+                    </option>
+
+                    <option
+                      value="Yes"
+                      ${
+                        state.futureMealPlanInterest === "Yes"
+                          ? "selected"
+                          : ""
+                      }
+                    >
+                      Yes
+                    </option>
+
+                    <option
+                      value="No"
+                      ${
+                        state.futureMealPlanInterest === "No"
+                          ? "selected"
+                          : ""
+                      }
+                    >
+                      No
+                    </option>
+                  </select>
+
+                  <p class="form-help-text">
+                    Students living off campus can still purchase
+                    a University meal plan.
+                  </p>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            showMealPlanSelection
+              ? `
+                <div class="form-group">
+                  <label for="mealPlan">
+                    What is your meal-plan preference?
+                    <span class="required-star">*</span>
+                  </label>
+
+                  <select
+                    id="mealPlan"
+                    class="step-dropdown"
+                  >
+                    <option value="">
+                      Select a meal-plan preference
+                    </option>
+
+                    ${
+                      isOnCampus && !mealPlanRequired
+                        ? `
+                          <option
+                            value="None"
+                            ${
+                              state.mealPlan === "None"
+                                ? "selected"
+                                : ""
+                            }
+                          >
+                            No meal plan
+                          </option>
+                        `
+                        : ""
+                    }
+
+                    ${mealPlanOptions.map(option => `
+                      <option
+                        value="${escapeHtml(option.value)}"
+                        ${
+                          state.mealPlan === option.value
+                            ? "selected"
+                            : ""
+                        }
+                      >
+                        ${escapeHtml(option.label)}
+                      </option>
+                    `).join("")}
+                  </select>
+
+                  <p class="form-help-text">
+                    ${
+                      isOnCampus && mealPlanRequired
+                        ? `
+                          A meal plan is required for this residence
+                          and room type because kitchen access is not
+                          included.
+                        `
+                        : isOnCampus
+                          ? `
+                            A meal plan is optional for this residence
+                            and room type because kitchen access is
+                            available.
+                          `
+                          : `
+                            Select the meal plan you would like to
+                            include in your estimate.
+                          `
+                    }
+
+                    Review the
+                    <a
+                      href="${escapeHtml(mealPlanInformationLink)}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      University of Guelph campus meal plans
+                    </a>
+                    for more information.
+                  </p>
+                </div>
+              `
+              : ""
+          }
+
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <button
+          class="btn-secondary"
+          id="backStep3"
+          type="button"
+        >
+          Back
+        </button>
+
+        <button
+          class="btn-primary"
+          id="nextStep3"
+          type="button"
+        >
+          Continue to funding
+        </button>
+      </div>
+    </div>
+  `;
+}
+function getOffCampusLivingRows() {
+  return state.data?.["Off_campus_Living_Costs"] || [];
+}
+
+
+
+function getOffCampusHousingRange() {
+  const housingRow = getOffCampusLivingRows().find(item => {
+    const expense = normalize(
+      readField(item, ["Expense"])
+    ).toLowerCase();
+
+    return expense.includes("off-campus housing");
+  });
+
+  if (!housingRow) {
+    return {
+      low: 0,
+      high: 0,
+      display: ""
+    };
+  }
+
+  const display = readField(
+    housingRow,
+    ["Costs by Year"]
+  );
+
+  const range = parseRangeFromText(display);
+
+  return {
+    low: range.low,
+    high: range.high,
+    display
+  };
+}
+function renderStep4() {
+  const defaultPartTimeRate = parseAmountFromText(
+    readField(
+      state.data?.["Part-Time_earnings"]?.[0] || {},
+      ["Part-Time_earnings"]
+    )
+  ) || 20;
+
+  const coopRange = parseRangeFromText(
+    readField(
+      state.data?.["Co-op Cost"]?.[0] || {},
+      ["Coop Earnings", "Co-op Earnings"]
+    )
+  );
+  const coopWeeklyMidpoint =
+    coopRange.low > 0 && coopRange.high > 0
+      ? Math.round((coopRange.low + coopRange.high) / 2)
+      : 0;
+
+  if (state.coopWeeklyEarnings === null) {
+    state.coopWeeklyEarnings = coopWeeklyMidpoint;
+  }
+  if (!state.osapFunding) {
+    state.osapFunding = 0;
+  }
+
+  if (state.studentPhase === "future") {
+    if (!state.partTimeHoursPerWeek) {
+      state.partTimeHoursPerWeek = 10;
+    }
+
+    if (!state.partTimeHourlyRate) {
+      state.partTimeHourlyRate = defaultPartTimeRate;
+    }
+  }
+
+  return `
+    <div class="step-container">
+      <div class="step-header">
+        <p class="section-kicker">Funding and earnings</p>
+
+        <h2 class="step-title">
+          Add potential funding
+        </h2>
+
+        <p class="step-description">
+          Include anticipated employment earnings, government assistance,
+          scholarships and other funding that may help offset your costs.
+        </p>
+      </div>
+
+      <div class="step-content">
+        <div class="form-stack">
+
+          <div class="form-group">
+            <h3 class="subsection-title">
+              Employment earnings
+            </h3>
+
+            <p class="form-help-text">
+              Add potential earnings from part-time employment or co-op work terms.
+            </p>
           </div>
 
           ${
             state.studentPhase === "future"
               ? `
                 <div class="form-group">
-                  <h3 class="subsection-title">Potential part-time earnings</h3>
+                  <h4 class="funding-group-title">
+                    Potential part-time earnings
+                  </h4>
 
-                  <label for="partTimeHoursPerWeek">Hours per week</label>
+                  <label for="partTimeHoursPerWeek">
+                    Hours per week
+                  </label>
+
                   <input
                     id="partTimeHoursPerWeek"
                     class="step-input"
@@ -1064,259 +2097,299 @@ function renderStep3() {
                     min="0"
                     value="${escapeHtml(state.partTimeHoursPerWeek)}"
                   />
+
+                  <p class="form-help-text">
+                    Part-time earnings are calculated using 12 working weeks
+                    per semester across Fall and Winter, for 24 weeks in total.
+                  </p>
                 </div>
 
                 <div class="form-group">
-                  <label for="partTimeHourlyRate">Hourly rate</label>
-                  <input
-                    id="partTimeHourlyRate"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.partTimeHourlyRate)}"
-                  />
+                  <label for="partTimeHourlyRate">
+                    Hourly rate (CAD)
+                  </label>
+
+                  ${renderMoneyInput({
+                    id: "partTimeHourlyRate",
+                    value: state.partTimeHourlyRate
+                  })}
                 </div>
-
-                ${
-                  state.coopInterest === "Yes"
-                    ? `
-                      <div class="form-group">
-                        <h3 class="subsection-title">Potential co-op earnings</h3>
-
-                        <label for="coopWeeklyEarnings">Estimated weekly co-op earnings</label>
-                        <input
-                          id="coopWeeklyEarnings"
-                          class="step-input"
-                          type="number"
-                          min="0"
-                          value="${escapeHtml(state.coopWeeklyEarnings)}"
-                        />
-
-                        <p class="form-help-text">
-                          Suggested range: ${formatRangeValue(coopRange.low, coopRange.high)} per week.
-                          Use the Co-op Salary Guide in the helpful resources section below.
-                        </p>
-                      </div>
-
-                      <div class="form-group">
-                        <label for="coopWeeks">Estimated co-op weeks</label>
-                        <input
-                          id="coopWeeks"
-                          class="step-input"
-                          type="number"
-                          min="0"
-                          value="${escapeHtml(state.coopWeeks)}"
-                        />
-                      </div>
-                    `
-                    : ""
-                }
-
-                ${
-                  state.residencyType === "Domestic"
-                    ? `
-                      <div class="form-group">
-                        <label for="osapFunding">Estimated OSAP funding</label>
-                        <input
-                          id="osapFunding"
-                          class="step-input"
-                          type="number"
-                          min="0"
-                          value="${escapeHtml(state.osapFunding)}"
-                          placeholder="Enter estimated OSAP funding"
-                        />
-                        <p class="form-help-text">
-                          Use the OSAP Aid Estimator in the helpful resources section below.
-                        </p>
-                      </div>
-                    `
-                    : ""
-                }
-
-                ${renderAlert(
-                  "Planning estimate",
-                  "These values are pre-filled using available planning data, but you can adjust them based on your situation.",
-                  "grey"
-                )}
-
-                ${renderSuccessStories()}
               `
               : `
                 <div class="form-group">
-                  <label for="partTimeIncome">Expected part-time income</label>
-                  <input
-                    id="partTimeIncome"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.partTimeIncome)}"
-                    placeholder="Enter expected yearly part-time income"
-                  />
-                </div>
+                  <label for="partTimeIncome">
+                    Expected yearly part-time income (CAD)
+                  </label>
 
-                ${
-                  state.residencyType === "Domestic"
-                    ? `
-                      <div class="form-group">
-                        <label for="osapFunding">Estimated OSAP funding</label>
-                        <input
-                          id="osapFunding"
-                          class="step-input"
-                          type="number"
-                          min="0"
-                          value="${escapeHtml(state.osapFunding)}"
-                          placeholder="Enter estimated OSAP funding"
-                        />
-                        <p class="form-help-text">
-                          Use the OSAP Aid Estimator in the helpful resources section below.
-                        </p>
-                      </div>
-                    `
-                    : ""
-                }
-
-                <div class="form-group">
-                  <label for="otherScholarshipOffset">Scholarships and bursaries (yearly total)</label>
-                  <input
-                    id="otherScholarshipOffset"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.otherScholarshipOffset)}"
-                    placeholder="Enter total yearly scholarships and bursaries"
-                  />
-                </div>
-
-                ${
-                  state.coopInterest === "Yes"
-                    ? `
-                      <div class="form-group">
-                        <label for="coopEarningsOffset">Expected co-op earnings</label>
-                        <input
-                          id="coopEarningsOffset"
-                          class="step-input"
-                          type="number"
-                          min="0"
-                          value="${escapeHtml(state.coopEarningsOffset)}"
-                          placeholder="Enter expected co-op earnings"
-                        />
-                        <p class="form-help-text">
-                          See the Co-op Salary Guide in the helpful resources section below.
-                        </p>
-                      </div>
-                    `
-                    : ""
-                }
-
-                <div class="form-group">
-                  <label for="familySupport">Family support / savings</label>
-                  <input
-                    id="familySupport"
-                    class="step-input"
-                    type="number"
-                    min="0"
-                    value="${escapeHtml(state.familySupport)}"
-                    placeholder="Enter support from family, savings, or other funding"
-                  />
+                  ${renderMoneyInput({
+                    id: "partTimeIncome",
+                    value: state.partTimeIncome,
+                    placeholder: "Enter expected yearly part-time income"
+                  })}
                 </div>
               `
           }
+
+          ${
+            state.coopInterest === "Yes"
+              ? `
+                <div class="form-group">
+                  <h4 class="funding-group-title">
+                    Potential co-op earnings
+                  </h4>
+
+                  <p class="form-help-text">
+                    This estimate uses one 16-week co-op work term. The weekly
+                    amount is pre-filled using the midpoint of the earnings range
+                    in the planning data, but you can adjust it.
+                  </p>
+
+                  <p class="form-help-text">
+                    Review the
+                    <a
+                      href="${coopSalaryGuideLink}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      University of Guelph Co-op Salary Guide
+                    </a>
+                    for more information.
+                  </p>
+
+                  ${
+                    coopRange.low || coopRange.high
+                      ? `
+                        <p class="form-help-text">
+                          Suggested weekly earnings range:
+                          ${formatRangeValue(coopRange.low, coopRange.high)}.
+                          The pre-filled amount is the midpoint of this range.
+                        </p>
+                      `
+                      : ""
+                  }
+                </div>
+
+                <div class="form-group">
+                  <label for="coopWeeklyEarnings">
+                    Estimated weekly co-op earnings (CAD)
+                  </label>
+
+                  ${renderMoneyInput({
+                    id: "coopWeeklyEarnings",
+                    value: state.coopWeeklyEarnings,
+                    placeholder: "Enter estimated weekly earnings"
+                  })}
+
+                  <p class="form-help-text">
+                    For future students, potential co-op earnings are calculated using one 16-week work term. They are shown for planning only and are not deducted from the final estimate.
+                  </p>
+                </div>
+              `
+              : ""
+          }
+
+          <div class="form-group funding-section-heading">
+            <h3 class="subsection-title">
+              OSAP and scholarships
+            </h3>
+
+            <p class="form-help-text">
+              Add anticipated government assistance, University of Guelph
+              scholarships, bursaries and other awards.
+            </p>
+          </div>
+
+          ${
+            state.residencyType === "Domestic"
+              ? `
+                <div class="form-group">
+                  <label for="osapFunding">
+                    Anticipated OSAP funding (CAD)
+                  </label>
+
+                  ${renderMoneyInput({
+                    id: "osapFunding",
+                    value: state.osapFunding,
+                    placeholder: "Enter anticipated OSAP funding"
+                  })}
+
+                  <p class="form-help-text">
+                    Use the
+                    <a
+                      href="${osapLink}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      OSAP website and aid estimator
+                    </a>
+                    to estimate the amount you may receive.
+                  </p>
+                </div>
+              `
+              : ""
+          }
+
+          <div class="form-group">
+            <label for="otherScholarshipOffset">
+              Anticipated scholarships and bursaries (CAD)
+            </label>
+
+            ${renderMoneyInput({
+              id: "otherScholarshipOffset",
+              value: state.otherScholarshipOffset,
+              placeholder: "Enter anticipated yearly scholarships and bursaries"
+            })}
+
+            <p class="form-help-text">
+              Include anticipated University of Guelph scholarships, bursaries
+              and other awards. Browse the
+              <a
+                href="${undergraduateAwardSearchLink}"
+                target="_blank"
+                rel="noopener"
+              >
+                University of Guelph Undergraduate Award Search
+              </a>
+              to explore available funding.
+            </p>
+          </div>
+
+          ${
+            state.studentPhase === "current"
+              ? `
+                <div class="form-group">
+                  <label for="familySupport">
+                    Family support or savings (CAD)
+                  </label>
+
+                  ${renderMoneyInput({
+                    id: "familySupport",
+                    value: state.familySupport,
+                    placeholder: "Enter family support, savings or other funding"
+                  })}
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            state.residencyType === "International"
+              ? `
+                <div class="international-funding-tip">
+                  <h3>Looking for more ways to fund your education?</h3>
+
+                  <p>
+                    Check out more tips and strategies for planning and funding
+                    your University of Guelph education.
+                  </p>
+
+                  <a
+                    href="${internationalFundingTipsLink}"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    Explore international student funding tips
+                  </a>
+                </div>
+              `
+              : ""
+          }
+
+
+
         </div>
       </div>
 
       <div class="step-footer">
-        <button class="btn-secondary" id="backStep3" type="button">Back</button>
-        <button class="btn-primary" id="nextStep3" type="button">Continue</button>
+        <button
+          class="btn-secondary"
+          id="backStep4"
+          type="button"
+        >
+          Back
+        </button>
+
+        <button
+          class="btn-primary"
+          id="nextStep4"
+          type="button"
+        >
+          Build estimate
+        </button>
       </div>
     </div>
   `;
 }
+function renderOffCampusExpenseGuide() {
+  const rows =
+    state.data?.["Off_campus_Living_Costs"] || [];
 
-function renderStep4() {
-  const isFutureStudent = state.studentPhase === "future";
-  const onCampusOptions = getOnCampusResidenceOptions();
-  const mealPlanOptions = getMealPlanOptions();
+  if (!rows.length) return "";
 
   return `
-    <div class="step-container">
-      <div class="step-header">
-        <p class="section-kicker">Living costs</p>
-        <h2 class="step-title">Add living cost assumptions</h2>
-        <p class="step-description">Choose whether to include housing and meal plan estimates.</p>
-      </div>
+    <details class="housing-guide-card off-campus-guide">
+      <summary>
+        <span class="housing-guide-summary-title">
+          Typical off-campus living costs
+        </span>
 
-      <div class="step-content">
-        <div class="form-stack">
-          <div class="form-group">
-            <label for="housingType">Housing</label>
-            <select id="housingType" class="step-dropdown">
-              <option value="None" ${state.housingType === "None" ? "selected" : ""}>None</option>
-              <option value="OnCampus" ${state.housingType === "OnCampus" ? "selected" : ""}>On-campus</option>
-              <option value="OffCampus" ${state.housingType === "OffCampus" ? "selected" : ""}>Off-campus</option>
-            </select>
+        <span class="housing-guide-summary-note">
+          Planning information
+        </span>
+      </summary>
+
+      <div class="housing-guide-body">
+        <p class="form-help-text off-campus-guide-note">
+          These typical costs are provided for planning purposes
+          and are not automatically added to the estimate above.
+        </p>
+
+        <div class="off-campus-cost-table">
+          <div class="off-campus-cost-header">
+            <span>Expense</span>
+            <span>Semester</span>
+            <span>Year</span>
           </div>
 
-          ${
-            isFutureStudent && state.housingType !== "OnCampus"
-              ? `
-                <div class="form-group">
-                  <label for="futureMealPlanInterest">Include a meal plan estimate?</label>
-                  <select id="futureMealPlanInterest" class="step-dropdown">
-                    <option value="No" ${state.futureMealPlanInterest === "No" ? "selected" : ""}>No</option>
-                    <option value="Yes" ${state.futureMealPlanInterest === "Yes" ? "selected" : ""}>Yes</option>
-                  </select>
-                </div>
-              `
-              : ""
-          }
+          ${rows.map(item => {
+            const expense = readField(
+              item,
+              ["Expense"]
+            );
 
-          ${
-            !isFutureStudent && state.housingType === "OnCampus"
-              ? `
-                <div class="form-group">
-                  <label for="residence">Residence</label>
-                  <select id="residence" class="step-dropdown">
-                    <option value="">Select residence</option>
-                    ${onCampusOptions.map(item => `<option value="${escapeHtml(item.value)}" ${state.residence === item.value ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
-                  </select>
-                </div>
+            const semesterCost = readField(
+              item,
+              ["Costs by Semester"]
+            );
 
-                <div class="form-group">
-                  <label for="mealPlan">Meal plan</label>
-                  <select id="mealPlan" class="step-dropdown">
-                    <option value="">Select meal plan</option>
-                    ${mealPlanOptions.map(item => `<option value="${escapeHtml(item.value)}" ${state.mealPlan === item.value ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
-                  </select>
-                </div>
-              `
-              : ""
-          }
+            const yearlyCost = readField(
+              item,
+              ["Costs by Year"]
+            );
 
-          ${
-            !isFutureStudent && state.housingType === "OffCampus"
-              ? `
-                <div class="form-group">
-                  <label for="currentOffCampusRent">Yearly rent</label>
-                  <input id="currentOffCampusRent" class="step-input" type="number" min="0" value="${escapeHtml(state.currentOffCampusRent)}" placeholder="Enter yearly rent" />
-                </div>
+            return `
+              <div class="off-campus-cost-row">
+                <span class="off-campus-expense-name">
+                  ${escapeHtml(expense)}
+                </span>
 
-                <div class="form-group">
-                  <label for="currentOffCampusFood">Yearly food expense</label>
-                  <input id="currentOffCampusFood" class="step-input" type="number" min="0" value="${escapeHtml(state.currentOffCampusFood)}" placeholder="Enter yearly food expense" />
-                </div>
-              `
-              : ""
-          }
+                <span class="off-campus-semester-cost">
+                  ${escapeHtml(
+                    semesterCost || "Not available"
+                  )}
+                </span>
 
-          ${renderAlert("Living cost notice", "Living costs are planning estimates and may vary by year, room choice, meal plan, and market conditions.", "yellow")}
+                <strong class="off-campus-yearly-cost">
+                  ${escapeHtml(
+                    yearlyCost || "Not available"
+                  )}
+                </strong>
+              </div>
+            `;
+          }).join("")}
         </div>
       </div>
-
-      <div class="step-footer">
-        <button class="btn-secondary" id="backStep4" type="button">Back</button>
-        <button class="btn-primary" id="nextStep4" type="button">Build estimate</button>
-      </div>
-    </div>
+    </details>
   `;
 }
 function renderFeedbackCard() {
@@ -1341,61 +2414,388 @@ function renderFeedbackCard() {
   `;
 }
 
+function getOnCampusResidenceGroups() {
+  const rows =
+    state.data?.["On_campus_Living_Costs"] || [];
+
+  const groups = new Map();
+
+  rows.forEach(item => {
+    const residenceArea = normalize(
+      readField(item, [
+        "ResidenceArea",
+        "Residence Area"
+      ])
+    );
+
+    const roomType = normalize(
+      readField(item, [
+        "RoomType",
+        "Room Type"
+      ])
+    );
+
+    const deposit = toNumber(
+      readField(item, ["Deposit"])
+    );
+
+    const fallCost = toNumber(
+      readField(item, [
+        "Fall Term",
+        "FallTerm"
+      ])
+    );
+
+    const winterCost = toNumber(
+      readField(item, [
+        "Winter Term",
+        "WinterTerm"
+      ])
+    );
+
+    const yearlyCost = toNumber(
+      readField(item, ["Cost"])
+    );
+
+    if (!residenceArea || !roomType || yearlyCost <= 0) {
+      return;
+    }
+
+    if (!groups.has(residenceArea)) {
+      groups.set(residenceArea, []);
+    }
+
+    groups.get(residenceArea).push({
+      roomType,
+      deposit,
+      fallCost,
+      winterCost,
+      yearlyCost
+    });
+  });
+
+  return [...groups.entries()]
+    .map(([residenceArea, options]) => {
+      options.sort(
+        (a, b) => a.yearlyCost - b.yearlyCost
+      );
+
+      const yearlyCosts = options
+        .map(option => option.yearlyCost)
+        .filter(value => value > 0);
+
+      return {
+        residenceArea,
+        options,
+        low: Math.min(...yearlyCosts),
+        high: Math.max(...yearlyCosts)
+      };
+    })
+    .sort((a, b) =>
+      a.residenceArea.localeCompare(b.residenceArea)
+    );
+}
+
+function renderOnCampusResidenceGuide() {
+  const groups = getOnCampusResidenceGroups();
+
+  if (!groups.length) return "";
+
+  return `
+    <details class="housing-guide-card">
+      <summary>
+        <span class="housing-guide-summary-title">
+          On-campus residence cost guide
+        </span>
+
+        <span class="housing-guide-summary-note">
+          ${groups.length} residence areas
+        </span>
+      </summary>
+
+      <div class="housing-guide-body">
+        <p class="form-help-text">
+          Expand a residence to compare available room types.
+          Amounts below are planning estimates.
+        </p>
+
+        <div class="housing-guide-table housing-guide-header">
+          <span>Residence</span>
+          <span>Yearly range</span>
+        </div>
+
+        <div class="residence-group-list">
+          ${groups.map(group => `
+            <details class="residence-group">
+              <summary>
+                <span class="residence-summary-left">
+                  <span class="residence-expand-icon"></span>
+
+                  <span class="residence-name">
+                    ${escapeHtml(group.residenceArea)}
+                  </span>
+                </span>
+
+                <strong class="residence-range">
+                  ${formatRangeValue(
+                    group.low,
+                    group.high
+                  )}
+                </strong>
+              </summary>
+
+              <div class="residence-option-table">
+                <div class="residence-option-header">
+                  <span>Room type</span>
+                  <span>Fall</span>
+                  <span>Winter</span>
+                  <span>Yearly</span>
+                </div>
+
+                ${group.options.map(option => `
+                  <div class="residence-option-row">
+                    <span>
+                      ${escapeHtml(option.roomType)}
+                    </span>
+
+                    <span>
+                      ${formatMoney(option.fallCost)}
+                    </span>
+
+                    <span>
+                      ${formatMoney(option.winterCost)}
+                    </span>
+
+                    <strong>
+                      ${formatMoney(option.yearlyCost)}
+                    </strong>
+                  </div>
+                `).join("")}
+              </div>
+            </details>
+          `).join("")}
+        </div>
+
+        <p class="form-help-text housing-guide-deposit-note">
+          A residence deposit may also apply. Deposit amounts are
+          not included in the room prices shown above unless already
+          included in the source data.
+        </p>
+      </div>
+    </details>
+  `;
+}
+
+
+function renderMealPlanGuide() {
+  const rows =
+    state.data?.["Meal_Plan"] || [];
+
+  const plans = rows
+    .map(item => {
+      const name = normalize(
+        readField(item, [
+          "Meal Plan Size",
+          "MealPlanSize"
+        ])
+      );
+
+      const fallCost = toNumber(
+        readField(item, [
+          "Semesterly cost (Fall)",
+          "Semester cost (Fall)",
+          "Fall Term",
+          "Fall cost",
+          "Fall Cost"
+        ])
+      );
+
+      const winterCost = toNumber(
+        readField(item, [
+          "Semesterly cost (Winter)",
+          "Semester cost (Winter)",
+          "Winter Term",
+          "Winter cost",
+          "Winter Cost"
+        ])
+      );
+
+      const yearlyCost = toNumber(
+        readField(item, [
+          "Total cost per year",
+          "TotalCostPerYear"
+        ])
+      );
+
+      if (!name || yearlyCost <= 0) {
+        return null;
+      }
+
+      return {
+        name,
+        fallCost,
+        winterCost,
+        yearlyCost
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) =>
+      a.yearlyCost - b.yearlyCost
+    );
+
+  if (!plans.length) return "";
+
+  return `
+    <details class="housing-guide-card meal-plan-guide-card">
+      <summary>
+        <span class="housing-guide-summary-title">
+          Meal plan cost guide
+        </span>
+
+        <span class="housing-guide-summary-note">
+          ${plans.length} options
+        </span>
+      </summary>
+
+      <div class="housing-guide-body">
+        <p class="form-help-text">
+          Compare available meal plans and their estimated costs.
+        </p>
+
+        <div class="meal-plan-table">
+          <div class="meal-plan-header">
+            <span>Meal plan</span>
+            <span>Fall</span>
+            <span>Winter</span>
+            <span>Yearly</span>
+          </div>
+
+          ${plans.map(plan => `
+            <div class="meal-plan-row">
+              <span>
+                ${escapeHtml(plan.name)}
+              </span>
+
+              <span>
+                ${formatMoney(plan.fallCost)}
+              </span>
+
+              <span>
+                ${formatMoney(plan.winterCost)}
+              </span>
+
+              <strong>
+                ${formatMoney(plan.yearlyCost)}
+              </strong>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
 function renderStep5() {
   const result = state.result || emptyResult();
 
+  const showOnCampusGuide =
+    state.housingType === "OnCampus";
+
+  const showMealPlanGuide =
+    Boolean(state.mealPlan) &&
+    state.mealPlan !== "None";
+
   return `
     <div class="step-container">
+
       <div class="step-header">
-        <p class="section-kicker">Estimate summary for 2 academic semesters (Fall & Winter)</p>
-        <h2 class="step-title">Review your estimate</h2>
+        <p class="section-kicker">
+          Estimate summary for 2 academic semesters (Fall & Winter)
+        </p>
+
+        <h2 class="step-title">
+          Review your estimate
+        </h2>
+
         <p class="step-description">
-          This is your two-semester estimate for Fall and Winter. It is not a full academic-year estimate.
+          This is your two-semester estimate for Fall and Winter.
+          It is not a full academic-year estimate.
         </p>
       </div>
 
       <div class="step-content">
 
         <div class="estimate-total-card">
-          <span class="estimate-total-label">Estimated range for 2 academic semesters (Fall & Winter)</span>
-          <strong>${formatRangeValue(result.low, result.high)}</strong>
+          <span class="estimate-total-label">
+            Estimated range for 2 academic semesters (Fall & Winter)
+          </span>
+
+          <strong>
+            ${formatRangeValue(result.low, result.high)}
+          </strong>
+
           ${getConvertedRangeText(result.low, result.high)}
         </div>
 
         <div class="cost-summary">
+
           ${renderBreakdownRows(
+            "Tuition and compulsory fees",
+            result.tuition.items,
+            false,
             state.major
               ? `${state.major} (${state.program})`
-              : state.program || "Tuition and fees",
-            result.tuition.items
+              : state.program || ""
           ).join("")}
-          ${renderBreakdownRows("Living costs", result.living.items).join("")}
-          ${renderBreakdownRows("Extra costs", result.extras.items).join("")}
+
+          ${renderBreakdownRows(
+            "Living costs",
+            result.living.items
+          ).join("")}
+
+          ${renderBreakdownRows(
+            "Extra costs",
+            result.extras.items
+          ).join("")}
+
           ${renderBreakdownRows(
             "Funding and offsets",
             result.offsets.items,
             true
           ).join("")}
+
         </div>
 
-        <div class="cost-summary">
-          <div class="summary-item">
-            <label><strong>Estimated cost breakdown</strong></label>
-            <div></div>
+        
+
+        ${renderFutureEarningsSummary()}
+
+        <div class="cost-summary cost-chart-card">
+          <div class="summary-section-heading">
+            <h3>Estimated cost breakdown</h3>
+
+            <p>
+              Percentage of estimated costs by category
+            </p>
           </div>
 
-          <div style="height:360px;">
-            <canvas id="costBreakdownChart"></canvas>
+          <div class="cost-chart-layout">
+            <div
+              class="cost-chart-legend"
+              id="costBreakdownLegend"
+              aria-label="Cost breakdown categories"
+            ></div>
+
+            <div class="cost-chart-canvas">
+              <canvas id="costBreakdownChart"></canvas>
+            </div>
           </div>
 
           <p
             class="form-help-text"
             id="largestCostDriverText"
-            style="margin-top:1.2rem;"
           ></p>
         </div>
-
-        ${renderFutureEarningsSummary()}
 
         ${
           state.studentPhase === "future"
@@ -1418,12 +2818,15 @@ function renderStep5() {
                 <ul class="future-contact-list">
                   <li>Programs and admissions</li>
                   <li>Scholarships and financial aid</li>
-                  <li>Events, campus life, and student opportunities</li>
+                  <li>
+                    Events, campus life and student opportunities
+                  </li>
                 </ul>
 
                 <div class="form-group">
                   <label for="fullName">
-                    Full name <span class="required-star">*</span>
+                    Full name
+                    <span class="required-star">*</span>
                   </label>
 
                   <input
@@ -1437,7 +2840,8 @@ function renderStep5() {
 
                 <div class="form-group">
                   <label for="email">
-                    Email address <span class="required-star">*</span>
+                    Email address
+                    <span class="required-star">*</span>
                   </label>
 
                   <input
@@ -1451,16 +2855,22 @@ function renderStep5() {
 
                 <div class="uog-alert uog-alert-grey">
                   <div class="uog-alert-title">
-                    <span class="uog-alert-icon">!</span>
-                    <span>Consent notice</span>
+                    <span class="uog-alert-icon">
+                      !
+                    </span>
+
+                    <span>
+                      Consent notice
+                    </span>
                   </div>
 
                   <div class="uog-alert-message">
-                    By downloading or requesting your estimate, you consent to
-                    the University of Guelph using the information provided to
-                    send your estimate and communicate with you about programs,
-                    admissions, scholarships, events, and related opportunities.
-                    You may unsubscribe at any time.
+                    By downloading or requesting your estimate,
+                    you consent to the University of Guelph using
+                    the information provided to send your estimate
+                    and communicate with you about programs,
+                    admissions, scholarships, events and related
+                    opportunities. You may unsubscribe at any time.
                   </div>
                 </div>
 
@@ -1471,7 +2881,10 @@ function renderStep5() {
 
       </div>
 
-      <div class="step-footer" style="flex-wrap:wrap;">
+      <div
+        class="step-footer"
+        style="flex-wrap:wrap;"
+      >
         <button
           class="btn-secondary"
           id="backStep5"
@@ -1502,10 +2915,13 @@ function renderStep5() {
             : ""
         }
       </div>
+
       ${renderFeedbackCard()}
+
     </div>
   `;
 }
+
 let costBreakdownChart = null;
 
 function getCostBreakdownChartData() {
@@ -1514,9 +2930,10 @@ function getCostBreakdownChartData() {
 
   function addItems(items) {
     items.forEach(item => {
-      const value = item.low !== undefined && item.high !== undefined
-        ? (Number(item.low) + Number(item.high)) / 2
-        : Number(item.value) || 0;
+      const value =
+        item.low !== undefined && item.high !== undefined
+          ? (Number(item.low) + Number(item.high)) / 2
+          : Number(item.value) || 0;
 
       if (value > 0) {
         rows.push({
@@ -1554,15 +2971,37 @@ const pieBorderPlugin = {
 };
 
 function renderCostBreakdownChart() {
-  const canvas = document.getElementById("costBreakdownChart");
-  if (!canvas || typeof Chart === "undefined") return;
+  const canvas =
+    document.getElementById("costBreakdownChart");
+
+  const legendContainer =
+    document.getElementById("costBreakdownLegend");
+
+  if (
+    !canvas ||
+    !legendContainer ||
+    typeof Chart === "undefined"
+  ) {
+    return;
+  }
 
   const rows = getCostBreakdownChartData();
-  if (!rows.length) return;
 
-  const labels = rows.map(row => row.label);
-  const values = rows.map(row => row.value);
-  const total = values.reduce((sum, value) => sum + value, 0);
+  if (!rows.length) {
+    legendContainer.innerHTML = "";
+    return;
+  }
+
+  const labels =
+    rows.map(row => row.label);
+
+  const values =
+    rows.map(row => row.value);
+
+  const total = values.reduce(
+    (sum, value) => sum + value,
+    0
+  );
 
   const uogColors = [
     "#e51937",
@@ -1576,16 +3015,48 @@ function renderCostBreakdownChart() {
     "#27682c"
   ];
 
-  const largest = rows.reduce((max, row) => {
-    return row.value > max.value ? row : max;
-  }, rows[0]);
+  legendContainer.innerHTML = `
+    <ul class="cost-chart-legend-list">
+      ${rows.map((row, index) => `
+        <li class="cost-chart-legend-item">
+          <span
+            class="cost-chart-legend-colour"
+            style="background-color:${
+              uogColors[index % uogColors.length]
+            };"
+            aria-hidden="true"
+          ></span>
 
-  const driverText = document.getElementById("largestCostDriverText");
+          <span>
+            ${escapeHtml(row.label)}
+          </span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+
+  const largest = rows.reduce(
+    (max, row) =>
+      row.value > max.value ? row : max,
+    rows[0]
+  );
+
+  const driverText =
+    document.getElementById(
+      "largestCostDriverText"
+    );
 
   if (driverText && total > 0) {
-    const percent = ((largest.value / total) * 100).toFixed(1);
+    const percentage =
+      (
+        (largest.value / total) *
+        100
+      ).toFixed(1);
+
     driverText.textContent =
-      `Largest cost driver: ${largest.label} at ${formatMoney(largest.value)} (${percent}% of estimated costs).`;
+      `Largest cost driver: ${largest.label} at ` +
+      `${formatMoney(largest.value)} ` +
+      `(${percentage}% of estimated costs).`;
   }
 
   if (costBreakdownChart) {
@@ -1594,122 +3065,10 @@ function renderCostBreakdownChart() {
 
   costBreakdownChart = new Chart(canvas, {
     type: "doughnut",
+
     data: {
       labels,
-      datasets: [
-        {
-          data: values,
-          backgroundColor: uogColors,
-          borderColor: "#ffffff",
-          borderWidth: 3
-        }
-      ]
-    },
-    plugins: [pieBorderPlugin],
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      // cutout: "70%",
-      layout: {
-        padding: 14
-      },
-      plugins: {
-        legend: {
-          position: "left",
-          align: "center",
-          labels: {
-            boxWidth: 18,
-            boxHeight: 18,
-            padding: 14,
-            color: "#000000",
-            font: {
-              size: 12,
-              weight: "600"
-            }
-          }
-        },
-        tooltip: {
-          callbacks: {
-            label: function (context) {
-              const value = context.raw || 0;
-              const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-              return `${context.label}: ${formatMoney(value)} (${percent}%)`;
-            }
-          }
-        }
-      }
-    }
-  });
-}
 
-function getCostBreakdownChartData() {
-  const result = state.result || emptyResult();
-
-  const rows = [];
-
-  function addItems(items) {
-    items.forEach(item => {
-      const value = item.low !== undefined && item.high !== undefined
-        ? (Number(item.low) + Number(item.high)) / 2
-        : Number(item.value) || 0;
-
-      if (value > 0) {
-        rows.push({
-          label: item.label,
-          value
-        });
-      }
-    });
-  }
-
-  addItems(result.tuition.items || []);
-  addItems(result.living.items || []);
-  addItems(result.extras.items || []);
-
-  return rows;
-}
-
-function renderCostBreakdownChart() {
-  const canvas = document.getElementById("costBreakdownChart");
-  if (!canvas || typeof Chart === "undefined") return;
-
-  const rows = getCostBreakdownChartData();
-  if (!rows.length) return;
-
-  const labels = rows.map(row => row.label);
-  const values = rows.map(row => row.value);
-  const total = values.reduce((sum, value) => sum + value, 0);
-
-  const uogColors = [
-    "#e51937", // UofG red
-    "#ffc429", // UofG yellow
-    "#187bb4", // UofG blue
-    "#318738", // UofG green
-    "#000000", // black
-    "#555555", // body copy
-    "#b3142c", // red focus
-    "#135f8b", // blue focus
-    "#27682c"  // green focus
-  ];
-
-  const largest = rows.reduce((max, row) => {
-    return row.value > max.value ? row : max;
-  }, rows[0]);
-
-  const driverText = document.getElementById("largestCostDriverText");
-  if (driverText && total > 0) {
-    const percent = ((largest.value / total) * 100).toFixed(1);
-    driverText.textContent = `Largest cost driver: ${largest.label} at ${formatMoney(largest.value)} (${percent}% of estimated costs).`;
-  }
-
-  if (costBreakdownChart) {
-    costBreakdownChart.destroy();
-  }
-
-  costBreakdownChart = new Chart(canvas, {
-    type: "doughnut",
-    data: {
-      labels,
       datasets: [
         {
           data: values,
@@ -1719,34 +3078,44 @@ function renderCostBreakdownChart() {
         }
       ]
     },
+
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      // cutout: "70%",
+      cutout: "58%",
+
       layout: {
-        padding: 10
+        padding: 8
       },
+
       plugins: {
+        /*
+          The accessible HTML legend is rendered above,
+          so the canvas legend is disabled.
+        */
         legend: {
-          position: "left",
-          align: "center",
-          labels: {
-            boxWidth: 18,
-            boxHeight: 18,
-            padding: 14,
-            color: "#333333",
-            font: {
-              size: 12,
-              weight: "600"
-            }
-          }
+          display: false
         },
+
         tooltip: {
           callbacks: {
-            label: function(context) {
-              const value = context.raw || 0;
-              const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-              return `${context.label}: ${formatMoney(value)} (${percent}%)`;
+            label(context) {
+              const value =
+                context.raw || 0;
+
+              const percentage =
+                total > 0
+                  ? (
+                      (value / total) *
+                      100
+                    ).toFixed(1)
+                  : 0;
+
+              return (
+                `${context.label}: ` +
+                `${formatMoney(value)} ` +
+                `(${percentage}%)`
+              );
             }
           }
         }
@@ -1754,62 +3123,68 @@ function renderCostBreakdownChart() {
     }
   });
 }
+
+
+
+
 function renderFutureEarningsSummary() {
-  if (state.studentPhase !== "future") return "";
-
-  const rows = [];
-
-  if (state.includePartTimeEarnings) {
-    const partTimeText = readField(
-      state.data?.["Part-Time_earnings"]?.[0] || {},
-      ["Part-Time_earnings", "Part-Time earnings", "Part Time Earnings"]
-    );
-
-    const range = parseRangeFromText(partTimeText);
-
-    if (range.low > 0 || range.high > 0) {
-      rows.push({
-        label: "Potential part-time earnings",
-        value: `${formatRangeValue(range.low, range.high)} / year`
-      });
-    }
+  if (state.studentPhase !== "future") {
+    return "";
   }
 
-  if (state.includeCoopEarnings && state.coopInterest === "Yes") {
-    const coopText = readField(
-      state.data?.["Co-op Cost"]?.[0] || {},
-      ["Coop Earnings", "Co-op Earnings"]
-    );
-
-    const range = parseRangeFromText(coopText);
-
-    if (range.low > 0 || range.high > 0) {
-      rows.push({
-        label: "Potential co-op earnings",
-        value: `${formatRangeValue(range.low, range.high)} / week`
-      });
-    }
+  if (state.coopInterest !== "Yes") {
+    return "";
   }
 
-  if (!rows.length) return "";
+  const weeklyEarnings =
+    toNumber(state.coopWeeklyEarnings);
+
+  const COOP_WEEKS_PER_WORK_TERM = 16;
+
+  const workTermEarnings =
+    weeklyEarnings * COOP_WEEKS_PER_WORK_TERM;
+
+  if (workTermEarnings <= 0) {
+    return "";
+  }
 
   return `
-    <div class="cost-summary" style="margin-top:20px;">
+    <div class="cost-summary potential-coop-summary">
+      <div class="summary-section-heading">
+        <h3>Potential co-op earnings</h3>
+
+        <p>
+          Estimated earnings for one 16-week work term
+        </p>
+      </div>
+
       <div class="summary-item">
-        <label><strong>Potential earnings</strong></label>
-        <div></div>
-      </div>
+        <div class="summary-item-label">
+          <span>
+            Potential co-op earnings
+          </span>
 
-      <div style="font-size:13px; opacity:0.8; margin-bottom:10px;">
-        These amounts are shown for planning awareness only and are not deducted from your estimated total.
-      </div>
-
-      ${rows.map(row => `
-        <div class="summary-item">
-          <label>${escapeHtml(row.label)}</label>
-          <div class="summary-value">${row.value}</div>
+          <small>
+            Based on ${formatMoney(weeklyEarnings)} per week
+          </small>
         </div>
-      `).join("")}
+
+        <div class="potential-coop-value">
+          ${formatMoney(workTermEarnings)}
+        </div>
+      </div>
+
+      <p class="coop-not-included-note">
+        This potential income is shown for planning only and is not
+        included in your final estimate.
+        <a
+          href="${coopSalaryGuideLink}"
+          target="_blank"
+          rel="noopener"
+        >
+          View the University of Guelph Co-op Salary Guide.
+        </a>
+      </p>
     </div>
   `;
 }
@@ -1820,39 +3195,6 @@ function bindRenderedEvents() {
   bindStep3Events();
   bindStep4Events();
   bindStep5Events();
-  const livingInCanada = document.getElementById("livingInCanada");
-  const canadianCitizen = document.getElementById("canadianCitizen");
-  const permanentResident = document.getElementById("permanentResident");
-  if (livingInCanada) {
-    livingInCanada.onchange = e => {
-      state.livingInCanada = e.target.value;
-      resetProgramPathState();
-      renderCurrentStep();
-    };
-  }
-
-  if (canadianCitizen) {
-    canadianCitizen.onchange = e => {
-      state.canadianCitizen = e.target.value;
-
-      if (state.canadianCitizen === "Yes") {
-        state.permanentResident = "";
-      }
-
-      deriveFutureResidency();
-      resetProgramPathState();
-      renderCurrentStep();
-    };
-  }
-
-  if (permanentResident) {
-    permanentResident.onchange = e => {
-      state.permanentResident = e.target.value;
-      deriveFutureResidency();
-      resetProgramPathState();
-      renderCurrentStep();
-    };
-  }
 }
 function bindCampusCarouselEvents() {
   const carousel = document.querySelector("[data-carousel]");
@@ -1920,143 +3262,239 @@ function bindStep1Events() {
   if (state.currentStep !== 1) return;
 
   const studentPhase = document.getElementById("studentPhase");
+  const livingInCanada = document.getElementById("livingInCanada");
+  const canadaRegion = document.getElementById("canadaRegion");
+  const country = document.getElementById("country");
+  const canadianCitizen = document.getElementById("canadianCitizen");
   const residencyType = document.getElementById("residencyType");
-  const level = document.getElementById("level");
   const province = document.getElementById("province");
-  const provinceGroup = document.getElementById("provinceGroup");
+  const level = document.getElementById("level");
   const nextBtn = document.getElementById("nextStep1");
 
   if (studentPhase) {
     studentPhase.onchange = e => {
-      const newValue = e.target.value;
-      if (newValue !== state.studentPhase) {
-        state.studentPhase = newValue;
-        resetProgramPathState();
-        if (state.studentPhase !== "future") {
-          state.futureMealPlanInterest = "No";
-          state.country = "";
-        }
-        renderCurrentStep();
+      state.studentPhase = e.target.value;
+
+      state.livingInCanada = "";
+      state.canadaRegion = "";
+      state.country = "";
+      state.canadianCitizen = "";
+      state.residencyType = "";
+      state.province = "";
+      state.level = "";
+
+      state.currencyCode = "";
+      state.currencyRate = null;
+      state.currencyError = "";
+
+      resetProgramPathState();
+      resetFundingSelections();
+      renderCurrentStep();
+    };
+  }
+
+  if (livingInCanada) {
+    livingInCanada.onchange = e => {
+      state.livingInCanada = e.target.value;
+
+      state.canadaRegion = "";
+      state.country = "";
+      state.currencyCode = "";
+      state.currencyRate = null;
+      state.currencyError = "";
+
+      deriveFutureResidency();
+      resetProgramPathState();
+      clearErrors();
+      renderCurrentStep();
+    };
+  }
+
+  if (canadaRegion) {
+    canadaRegion.onchange = e => {
+      state.canadaRegion = e.target.value;
+
+      deriveFutureResidency();
+      resetProgramPathState();
+      clearErrors();
+    };
+  }
+
+  if (country) {
+    country.onchange = async e => {
+      state.country = e.target.value;
+
+      clearErrors();
+
+      if (state.country) {
+        await updateCurrencyConversion();
       }
+    };
+  }
+
+  if (canadianCitizen) {
+    canadianCitizen.onchange = e => {
+      state.canadianCitizen = e.target.value;
+
+      deriveFutureResidency();
+      resetProgramPathState();
+      resetFundingSelections();
+      clearErrors();
     };
   }
 
   if (residencyType) {
     residencyType.onchange = e => {
-      const newValue = e.target.value;
-      if (newValue !== state.residencyType) {
-        state.residencyType = newValue;
-        resetProgramPathState();
-        resetFundingSelections();
+      state.residencyType = e.target.value;
 
-        if (state.residencyType === "Domestic") {
-          state.province = "";
-          if (provinceGroup) provinceGroup.style.display = "flex";
-        } else {
-          state.province = "INT";
-          if (provinceGroup) provinceGroup.style.display = "none";
-        }
-
-        renderCurrentStep();
+      if (state.residencyType === "International") {
+        state.province = "INT";
+      } else {
+        state.province = "";
       }
-    };
-  }
 
-  if (level) {
-    level.onchange = e => {
-      const newValue = e.target.value;
-
-      if (newValue !== state.level) {
-        state.level = newValue;
-        resetProgramPathState();
-
-        if (state.level === "GR") {
-          state.campus = "University of Guelph";
-        }
-
-        renderCurrentStep();
-      }
+      resetProgramPathState();
+      resetFundingSelections();
+      clearErrors();
+      renderCurrentStep();
     };
   }
 
   if (province) {
     province.onchange = e => {
       state.province = e.target.value;
+
+      resetProgramPathState();
+      clearErrors();
+    };
+  }
+
+  if (level) {
+    level.onchange = e => {
+      state.level = e.target.value;
+
+      resetProgramPathState();
+      clearErrors();
+
+      if (state.level === "GR") {
+        state.campus = "University of Guelph";
+      }
     };
   }
 
   if (nextBtn) {
-    nextBtn.onclick = () => {
+    nextBtn.onclick = async () => {
       clearErrors();
+
+      /*
+        Read every visible field directly before validation.
+        This prevents the dropdown from displaying a value while
+        the matching state value is still empty.
+      */
+      if (studentPhase) {
+        state.studentPhase = studentPhase.value;
+      }
+
+      if (livingInCanada) {
+        state.livingInCanada = livingInCanada.value;
+      }
+
+      if (canadaRegion) {
+        state.canadaRegion = canadaRegion.value;
+      }
+
+      if (country) {
+        state.country = country.value;
+      }
+
+      if (canadianCitizen) {
+        state.canadianCitizen = canadianCitizen.value;
+      }
+
+      if (residencyType) {
+        state.residencyType = residencyType.value;
+      }
+
+      if (province) {
+        state.province = province.value;
+      }
+
+      if (level) {
+        state.level = level.value;
+      }
 
       let hasError = false;
 
       if (!state.studentPhase) {
-        markError(document.getElementById("studentPhase"), "Required");
+        markError(studentPhase, "Required");
         hasError = true;
       }
 
       if (state.studentPhase === "future") {
         if (!state.livingInCanada) {
-          markError(document.getElementById("livingInCanada"), "Required");
+          markError(livingInCanada, "Required");
+          hasError = true;
+        }
+
+        if (
+          state.livingInCanada === "Yes" &&
+          !state.canadaRegion
+        ) {
+          markError(canadaRegion, "Required");
+          hasError = true;
+        }
+
+        if (
+          state.livingInCanada === "No" &&
+          !state.country
+        ) {
+          markError(country, "Required");
           hasError = true;
         }
 
         if (!state.canadianCitizen) {
-          markError(document.getElementById("canadianCitizen"), "Required");
+          markError(canadianCitizen, "Required");
           hasError = true;
         }
 
-        // if (state.canadianCitizen === "No" && !state.permanentResident) {
-        //   markError(document.getElementById("permanentResident"), "Required");
-        //   hasError = true;
-        // }
+        deriveFutureResidency();
       }
 
-      if (!state.residencyType) {
-        markError(document.getElementById("residencyType"), "Required");
-        hasError = true;
+      if (state.studentPhase === "current") {
+        if (!state.residencyType) {
+          markError(residencyType, "Required");
+          hasError = true;
+        }
+
+        if (
+          state.residencyType === "Domestic" &&
+          !state.province
+        ) {
+          markError(province, "Required");
+          hasError = true;
+        }
+
+        if (state.residencyType === "International") {
+          state.province = "INT";
+        }
       }
 
       if (!state.level) {
-        markError(document.getElementById("level"), "Required");
-        hasError = true;
-      }
-
-      if (state.residencyType === "Domestic" && !state.province) {
-        markError(document.getElementById("province"), "Required");
+        markError(level, "Required");
         hasError = true;
       }
 
       if (hasError) return;
-      if (state.studentPhase === "future") {
-        if (!state.livingInCanada) return alert("Please select whether you are currently living in Canada.");
-        if (!state.canadianCitizen) {
-          return alert("Please select whether you are a Canadian citizen or permanent resident of Canada.");
-        }
 
-        // if (state.canadianCitizen === "No" && !state.permanentResident) {
-        //   return alert("Please select whether you are a permanent resident of Canada.");
-        // }
-
-        deriveFutureResidency();
-      }
-      if (!state.residencyType) return alert("Please complete your residency information.");
-      if (!state.level) {
-        return alert(
-          state.studentPhase === "future"
-            ? "Please select what you are looking for."
-            : "Please select level."
-        );
+      if (
+        state.studentPhase === "future" &&
+        state.livingInCanada === "No" &&
+        state.country
+      ) {
+        await updateCurrencyConversion();
       }
 
-      if (state.residencyType === "Domestic" && !state.province) {
-        return alert("Please select province status.");
-      }
-
-      if (state.residencyType === "International") {
-        state.province = "INT";
-      }
+      resetProgramPathState();
 
       state.currentStep = 2;
       renderCurrentStep();
@@ -2158,44 +3596,64 @@ function renderCurrencyBadge() {
   return "";
 }
 
-function renderCampusGallery() {
-  if (!state.campus) return "";
-
-  const campusImages = {
-    "University of Guelph": {
+function renderCampusChoices() {
+  const campusChoices = [
+    {
+      value: "University of Guelph",
       title: "University of Guelph",
-      folder: "./UGD_img/",
-      images: ["UOFG1.jpg"]
+      image: "./UGD_img/UOFG1.jpg"
     },
-    "University of Guelph-Humber": {
-      title: "University of Guelph-Humber",
-      folder: "./Gh_img/",
-      images: ["GH1.jpg"]
-    },
-    "Ridgetown Campus": {
+    {
+      value: "Ridgetown Campus",
       title: "Ridgetown Campus",
-      folder: "./Ridegtown_img/",
-      images: ["Rgd3.jpg"]
+      image: "./Ridegtown_img/Rgd3.jpg"
+    },
+    {
+      value: "University of Guelph-Humber",
+      title: "University of Guelph-Humber",
+      image: "./Gh_img/GH1.jpg"
     }
-  };
-
-  const campus = campusImages[state.campus];
-  if (!campus) return "";
+  ];
 
   return `
-    <div class="campus-preview-card">
-      <div class="campus-preview-copy">
-        <p class="campus-preview-kicker">Campus preview</p>
-        <h1 class="campus-preview-title">${escapeHtml(campus.title)}</h1>
-        
+    <div class="form-group">
+      <div class="campus-choice-heading">
+        Campus <span class="required-star">*</span>
       </div>
 
-      <div class="campus-preview-image-wrap">
-        <img
-          class="campus-preview-image"
-          src="${escapeHtml(campus.folder + campus.images[0])}"
-          alt="${escapeHtml(campus.title)} campus preview"
-        />
+      <p class="form-help-text">
+        Select the campus you are interested in attending.
+      </p>
+
+      <div
+        id="campusChoices"
+        class="campus-choice-grid"
+        role="radiogroup"
+        aria-label="Select a campus"
+      >
+        ${campusChoices.map(campus => `
+          <button
+            type="button"
+            class="campus-choice-card ${
+              state.campus === campus.value ? "selected" : ""
+            }"
+            data-campus-value="${escapeHtml(campus.value)}"
+            role="radio"
+            aria-checked="${state.campus === campus.value}"
+          >
+            <span class="campus-choice-title">
+              ${escapeHtml(campus.title)}
+            </span>
+
+            <span class="campus-choice-image-wrap">
+              <img
+                class="campus-choice-image"
+                src="${escapeHtml(campus.image)}"
+                alt="${escapeHtml(campus.title)} campus"
+              />
+            </span>
+          </button>
+        `).join("")}
       </div>
     </div>
   `;
@@ -2258,85 +3716,162 @@ function bindStep2Events() {
   if (state.currentStep !== 2) return;
 
   const cohortYear = document.getElementById("cohortYear");
-  const country = document.getElementById("country");
-  const campus = document.getElementById("campus");
+  const campusChoices = document.getElementById("campusChoices");
+  const campusChoiceButtons =
+    document.querySelectorAll("[data-campus-value]");
   const program = document.getElementById("program");
-  const major = document.getElementById("major");
   const coopInterest = document.getElementById("coopInterest");
+  const estimateScopeButtons = document.querySelectorAll("[data-estimate-scope]");
   const back = document.getElementById("backStep2");
   const next = document.getElementById("nextStep2");
-  if (major) {
-    major.onchange = e => {
-      state.major = e.target.value;
+
+  if (cohortYear) {
+    cohortYear.onchange = event => {
+      state.cohortYear = event.target.value;
       state.matchedTuitionRecord = null;
+
+      clearErrors();
+
+      /*
+        Re-render so the 2027-or-later tuition message
+        appears or disappears immediately.
+      */
+      renderCurrentStep();
+    };
+  }
+
+  campusChoiceButtons.forEach(button => {
+    button.onclick = () => {
+      state.campus = button.dataset.campusValue || "";
+
+      state.program = "";
+      state.major = "";
+      state.matchedTuitionRecord = null;
+
+      state.coopInterest = "No";
+      state.includeCoop = false;
+      state.includeCoopEarnings = false;
+      state.coopEarningsOffset = 0;
+
+      clearErrors();
+      renderCurrentStep();
+    };
+  });
+
+  if (program) {
+    program.onchange = event => {
+      const selectedValue = event.target.value;
+
+      state.program = "";
+      state.major = "";
+      state.matchedTuitionRecord = null;
+
+      state.coopInterest = "No";
+      state.includeCoop = false;
+      state.includeCoopEarnings = false;
+      state.coopEarningsOffset = 0;
+
+      if (selectedValue) {
+        const separatorIndex = selectedValue.indexOf("|||");
+
+        if (separatorIndex >= 0) {
+          state.program = selectedValue
+            .slice(0, separatorIndex)
+            .trim();
+
+          state.major = selectedValue
+            .slice(separatorIndex + 3)
+            .trim();
+        } else {
+          /*
+            Fallback in case a record does not contain
+            the expected separator.
+          */
+          state.program = selectedValue.trim();
+          state.major = "";
+        }
+      }
+
       clearErrors();
 
       const coopStatus = getFutureProgramCoopStatus();
+      const mandatoryCoop = isMandatoryCoopProgram();
 
-      if (coopStatus !== "Yes") {
+      if (mandatoryCoop || coopStatus === "Yes") {
+        state.coopInterest = "Yes";
+        state.includeCoop = true;
+      } else {
         state.coopInterest = "No";
         state.includeCoop = false;
         state.includeCoopEarnings = false;
-
-        
       }
 
-      renderCurrentStep();
-    };
-  }
-  if (cohortYear) {
-    cohortYear.onchange = e => {
-      state.cohortYear = e.target.value;
-      state.matchedTuitionRecord = null;
-      clearErrors();
-    };
-  }
-
-  if (country) {
-    country.onchange = async e => {
-      state.country = e.target.value;
-      state.matchedTuitionRecord = null;
-      clearErrors();
-      await updateCurrencyConversion();
-      renderCurrentStep();
-    };
-  }
-
-  if (campus) {
-    campus.onchange = e => {
-      state.campus = e.target.value;
-      state.program = "";
-      state.matchedTuitionRecord = null;
-      clearErrors();
-      renderCurrentStep();
-    };
-  }
-
-  if (program) {
-    program.onchange = e => {
-      state.program = e.target.value;
-      state.major = "";
-      state.matchedTuitionRecord = null;
-      state.coopInterest = "No";
-      state.includeCoop = false;
-      clearErrors();
       renderCurrentStep();
     };
   }
 
   if (coopInterest) {
-    coopInterest.onchange = e => {
-      state.coopInterest = e.target.value;
+    coopInterest.onchange = event => {
+      state.coopInterest = event.target.value;
       state.includeCoop = state.coopInterest === "Yes";
 
       if (state.coopInterest !== "Yes") {
         state.coopEarningsOffset = 0;
+        state.includeCoopEarnings = false;
       }
 
       updateRunningEstimate();
     };
   }
+  estimateScopeButtons.forEach(button => {
+    button.onclick = () => {
+      const selectedScope = button.dataset.estimateScope;
 
+      if (
+        selectedScope !== "full" &&
+        selectedScope !== "tuition-only"
+      ) {
+        return;
+      }
+
+      state.estimateScope = selectedScope;
+
+      /*
+        Remove previously entered non-tuition values when the
+        user changes to a tuition-only estimate.
+      */
+      if (state.estimateScope === "tuition-only") {
+        state.booksAmount = 0;
+        state.personalAmount = 0;
+        state.osapFunding = 0;
+        state.otherScholarshipOffset = 0;
+        state.scholarshipOffset = 0;
+        state.selectedScholarshipKeys = [];
+        state.partTimeIncome = 0;
+        state.includePartTimeEarnings = false;
+        state.includeCoopEarnings = false;
+        state.coopEarningsOffset = 0;
+        state.familySupport = 0;
+
+        state.housingType = "";
+        state.residence = "";
+        state.roomType = "";
+        state.mealPlan = "";
+        state.futureMealPlanInterest = "";
+
+        /*
+          These older off-campus amount fields are no longer
+          displayed, but resetting them prevents stale values.
+        */
+        state.offCampusType = "";
+        state.currentOffCampusRent = 0;
+        state.currentOffCampusFood = 0;
+      }
+
+      calculateEstimate();
+      renderCurrentStep();
+    };
+  });
   if (back) {
     back.onclick = () => {
       clearErrors();
@@ -2355,31 +3890,21 @@ function bindStep2Events() {
         state.cohortYear = getLatestCurrentCohortYear();
       }
 
-      if (state.studentPhase === "future" && !state.cohortYear) {
-        markError(document.getElementById("cohortYear"), "Required");
-        hasError = true;
-      }
-
       if (
         state.studentPhase === "future" &&
-        state.residencyType === "International" &&
-        !state.country
+        !state.cohortYear
       ) {
-        markError(document.getElementById("country"), "Required");
+        markError(cohortYear, "Required");
         hasError = true;
       }
 
       if (!state.campus) {
-        markError(document.getElementById("campus"), "Required");
+        markError(campusChoices, "Please select a campus.");
         hasError = true;
       }
 
       if (!state.program) {
-        markError(document.getElementById("program"), "Required");
-        hasError = true;
-      }
-      if (state.level === "UG" && getAvailableMajors().length > 0 && !state.major) {
-        markError(document.getElementById("major"), "Required");
+        markError(program, "Required");
         hasError = true;
       }
 
@@ -2389,112 +3914,137 @@ function bindStep2Events() {
 
       if (!state.matchedTuitionRecord) {
         markError(
-          document.getElementById("program"),
-          "No tuition record matched this selection. Please try a different program, campus, or year."
+          program,
+          "No tuition record matched this selection. Please try a different program, campus or year."
         );
+
         return;
       }
 
       calculateEstimate();
-      state.currentStep = 3;
+
+      state.currentStep =
+        state.estimateScope === "tuition-only"
+          ? 5
+          : 3;
+
       renderCurrentStep();
     };
   }
 }
 
+
 function bindStep3Events() {
   if (state.currentStep !== 3) return;
 
-  const booksAmount = document.getElementById("booksAmount");
-  const personalAmount = document.getElementById("personalAmount");
-  const osapFunding = document.getElementById("osapFunding");
+  const booksAmount =
+    document.getElementById("booksAmount");
 
-  const partTimeHoursPerWeek = document.getElementById("partTimeHoursPerWeek");
-  const partTimeHourlyRate = document.getElementById("partTimeHourlyRate");
-  const coopWeeklyEarnings = document.getElementById("coopWeeklyEarnings");
-  const coopWeeks = document.getElementById("coopWeeks");
+  const personalAmount =
+    document.getElementById("personalAmount");
 
-  const otherScholarshipOffset = document.getElementById("otherScholarshipOffset");
-  const partTimeIncome = document.getElementById("partTimeIncome");
-  const coopEarningsOffset = document.getElementById("coopEarningsOffset");
-  const familySupport = document.getElementById("familySupport");
+  const housingType =
+    document.getElementById("housingType");
 
-  const back = document.getElementById("backStep3");
-  const next = document.getElementById("nextStep3");
+  const residence =
+    document.getElementById("residence");
+
+  const roomType =
+    document.getElementById("roomType");
+
+  const futureMealPlanInterest =
+    document.getElementById(
+      "futureMealPlanInterest"
+    );
+
+  const mealPlan =
+    document.getElementById("mealPlan");
+
+  const back =
+    document.getElementById("backStep3");
+
+  const next =
+    document.getElementById("nextStep3");
 
   if (booksAmount) {
-    booksAmount.oninput = e => {
-      state.booksAmount = toNumber(e.target.value);
+    booksAmount.oninput = event => {
+      state.booksAmount =
+        toNumber(event.target.value);
+
       updateRunningEstimate();
     };
   }
 
   if (personalAmount) {
-    personalAmount.oninput = e => {
-      state.personalAmount = toNumber(e.target.value);
+    personalAmount.oninput = event => {
+      state.personalAmount =
+        toNumber(event.target.value);
+
       updateRunningEstimate();
     };
   }
 
-  if (osapFunding) {
-    osapFunding.oninput = e => {
-      state.osapFunding = toNumber(e.target.value);
-      updateRunningEstimate();
+  if (housingType) {
+    housingType.onchange = event => {
+      state.housingType =
+        event.target.value;
+
+      state.residence = "";
+      state.roomType = "";
+      state.mealPlan = "";
+      state.futureMealPlanInterest = "";
+
+      renderCurrentStep();
     };
   }
 
-  if (partTimeHoursPerWeek) {
-    partTimeHoursPerWeek.oninput = e => {
-      state.partTimeHoursPerWeek = toNumber(e.target.value);
-      updateRunningEstimate();
+  if (residence) {
+    residence.onchange = event => {
+      state.residence =
+        event.target.value;
+
+      state.roomType = "";
+      state.mealPlan = "";
+
+      renderCurrentStep();
     };
   }
 
-  if (partTimeHourlyRate) {
-    partTimeHourlyRate.oninput = e => {
-      state.partTimeHourlyRate = toNumber(e.target.value);
-      updateRunningEstimate();
+  if (roomType) {
+    roomType.onchange = event => {
+      state.roomType =
+        event.target.value;
+
+      state.mealPlan = "";
+
+      renderCurrentStep();
     };
   }
 
-  if (coopWeeklyEarnings) {
-    coopWeeklyEarnings.oninput = e => {
-      state.coopWeeklyEarnings = toNumber(e.target.value);
-      updateRunningEstimate();
+  if (futureMealPlanInterest) {
+    futureMealPlanInterest.onchange = event => {
+      state.futureMealPlanInterest =
+        event.target.value;
+
+      /*
+        Remove any previously selected plan when the
+        student changes the answer to No.
+      */
+      if (
+        state.futureMealPlanInterest !== "Yes"
+      ) {
+        state.mealPlan = "";
+      }
+
+      renderCurrentStep();
     };
   }
 
-  if (coopWeeks) {
-    coopWeeks.oninput = e => {
-      state.coopWeeks = toNumber(e.target.value);
-      updateRunningEstimate();
-    };
-  }
+  if (mealPlan) {
+    mealPlan.onchange = event => {
+      state.mealPlan =
+        event.target.value;
 
-  if (otherScholarshipOffset) {
-    otherScholarshipOffset.oninput = e => {
-      state.otherScholarshipOffset = toNumber(e.target.value);
-      updateRunningEstimate();
-    };
-  }
-
-  if (partTimeIncome) {
-    partTimeIncome.oninput = e => {
-      state.partTimeIncome = toNumber(e.target.value);
-      updateRunningEstimate();
-    };
-  }
-
-  if (coopEarningsOffset) {
-    coopEarningsOffset.oninput = e => {
-      state.coopEarningsOffset = toNumber(e.target.value);
-      updateRunningEstimate();
-    };
-  }
-
-  if (familySupport) {
-    familySupport.oninput = e => {
-      state.familySupport = toNumber(e.target.value);
       updateRunningEstimate();
     };
   }
@@ -2508,8 +4058,85 @@ function bindStep3Events() {
 
   if (next) {
     next.onclick = () => {
+      clearErrors();
+
+      if (!state.housingType) {
+        markError(
+          housingType,
+          "Please select where you plan to live."
+        );
+
+        return;
+      }
+
+      if (state.housingType === "OnCampus") {
+        if (!state.residence) {
+          markError(
+            residence,
+            "Please select a residence."
+          );
+
+          return;
+        }
+
+        if (!state.roomType) {
+          markError(
+            roomType,
+            "Please select a room type."
+          );
+
+          return;
+        }
+
+        if (!state.mealPlan) {
+          markError(
+            mealPlan,
+            "Please select a meal-plan preference."
+          );
+
+          return;
+        }
+
+        if (
+          selectedResidenceRequiresMealPlan() &&
+          state.mealPlan === "None"
+        ) {
+          markError(
+            mealPlan,
+            "A meal plan is required for this residence and room type."
+          );
+
+          return;
+        }
+      }
+
+      if (state.housingType === "OffCampus") {
+        if (!state.futureMealPlanInterest) {
+          markError(
+            futureMealPlanInterest,
+            "Please select Yes or No."
+          );
+
+          return;
+        }
+
+        if (
+          state.futureMealPlanInterest === "Yes" &&
+          !state.mealPlan
+        ) {
+          markError(
+            mealPlan,
+            "Please select a meal plan."
+          );
+
+          return;
+        }
+      }
+
       calculateEstimate();
+
       state.currentStep = 4;
+
       renderCurrentStep();
     };
   }
@@ -2518,68 +4145,78 @@ function bindStep3Events() {
 function bindStep4Events() {
   if (state.currentStep !== 4) return;
 
-  const housingType = document.getElementById("housingType");
-  const residence = document.getElementById("residence");
-  const mealPlan = document.getElementById("mealPlan");
-  const currentOffCampusRent = document.getElementById("currentOffCampusRent");
-  const currentOffCampusFood = document.getElementById("currentOffCampusFood");
-  const futureMealPlanInterest = document.getElementById("futureMealPlanInterest");
-  const back = document.getElementById("backStep4");
-  const next = document.getElementById("nextStep4");
+  const osapFunding =
+    document.getElementById("osapFunding");
 
-  if (futureMealPlanInterest) {
-    futureMealPlanInterest.onchange = e => {
-      state.futureMealPlanInterest = e.target.value;
+  const partTimeHoursPerWeek =
+    document.getElementById("partTimeHoursPerWeek");
+
+  const partTimeHourlyRate =
+    document.getElementById("partTimeHourlyRate");
+
+  const partTimeIncome =
+    document.getElementById("partTimeIncome");
+    
+  const coopWeeklyEarnings =
+    document.getElementById("coopWeeklyEarnings");
+
+  const otherScholarshipOffset =
+    document.getElementById("otherScholarshipOffset");
+
+  const familySupport =
+    document.getElementById("familySupport");
+
+  const back =
+    document.getElementById("backStep4");
+
+  const next =
+    document.getElementById("nextStep4");
+
+  if (osapFunding) {
+    osapFunding.oninput = event => {
+      state.osapFunding = toNumber(event.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (housingType) {
-    housingType.onchange = e => {
-      state.housingType = e.target.value;
-
-      if (state.studentPhase === "future" && state.housingType === "OnCampus") {
-        state.futureMealPlanInterest = "Yes";
-      }
-
-      if (state.housingType !== "OnCampus") {
-        state.residence = "";
-        state.mealPlan = "";
-      }
-
-      if (state.housingType !== "OffCampus") {
-        state.currentOffCampusRent = 0;
-        state.currentOffCampusFood = 0;
-      }
-
-      renderCurrentStep();
-    };
-  }
-
-  if (residence) {
-    residence.onchange = e => {
-      state.residence = e.target.value;
+  if (partTimeHoursPerWeek) {
+    partTimeHoursPerWeek.oninput = event => {
+      state.partTimeHoursPerWeek = toNumber(event.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (mealPlan) {
-    mealPlan.onchange = e => {
-      state.mealPlan = e.target.value;
+  if (partTimeHourlyRate) {
+    partTimeHourlyRate.oninput = event => {
+      state.partTimeHourlyRate = toNumber(event.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (currentOffCampusRent) {
-    currentOffCampusRent.oninput = e => {
-      state.currentOffCampusRent = toNumber(e.target.value);
+  if (partTimeIncome) {
+    partTimeIncome.oninput = event => {
+      state.partTimeIncome = toNumber(event.target.value);
       updateRunningEstimate();
     };
   }
 
-  if (currentOffCampusFood) {
-    currentOffCampusFood.oninput = e => {
-      state.currentOffCampusFood = toNumber(e.target.value);
+  if (coopWeeklyEarnings) {
+    coopWeeklyEarnings.oninput = event => {
+      state.coopWeeklyEarnings = toNumber(event.target.value);
+      updateRunningEstimate();
+    };
+  }
+
+  if (otherScholarshipOffset) {
+    otherScholarshipOffset.oninput = event => {
+      state.otherScholarshipOffset = toNumber(event.target.value);
+      updateRunningEstimate();
+    };
+  }
+
+  if (familySupport) {
+    familySupport.oninput = event => {
+      state.familySupport = toNumber(event.target.value);
       updateRunningEstimate();
     };
   }
@@ -2593,18 +4230,6 @@ function bindStep4Events() {
 
   if (next) {
     next.onclick = () => {
-      if (state.studentPhase !== "future") {
-        if (state.housingType === "OnCampus") {
-          if (!state.residence) return alert("Please select residence.");
-          if (!state.mealPlan) return alert("Please select meal plan.");
-        }
-
-        if (state.housingType === "OffCampus") {
-          if (toNumber(state.currentOffCampusRent) <= 0) return alert("Please enter your yearly rent.");
-          if (toNumber(state.currentOffCampusFood) < 0) return alert("Please enter a valid yearly food expense.");
-        }
-      }
-
       calculateEstimate();
       state.currentStep = 5;
       renderCurrentStep();
@@ -2624,7 +4249,7 @@ function renderFutureContactSection() {
       <ul class="future-contact-list">
         <li>Programs and admissions</li>
         <li>Scholarships and financial aid</li>
-        <li>Events, campus life, and student opportunities</li>
+        <li>Events, campus life and student opportunities</li>
       </ul>
 
       <div class="form-group">
@@ -2651,7 +4276,7 @@ function renderFutureContactSection() {
 
       <p class="consent-text">
         By requesting your estimate, you agree that the University of Guelph may contact you
-        regarding programs, admissions, scholarships, events, and related opportunities.
+        regarding programs, admissions, scholarships, events and related opportunities.
         You may unsubscribe at any time.
       </p>
     </div>
@@ -2707,7 +4332,12 @@ function bindStep5Events() {
   if (back) {
     back.onclick = () => {
       clearErrors();
-      state.currentStep = 4;
+
+      state.currentStep =
+        state.estimateScope === "tuition-only"
+          ? 2
+          : 4;
+
       renderCurrentStep();
     };
   }
@@ -2893,17 +4523,40 @@ function buildEmailSummaryRows(result) {
   return rows.join("");
 }
 function resetProgramPathState() {
+  /*
+    Only reset Screen 3 and later selections.
+
+    Do not reset:
+    - livingInCanada
+    - canadaRegion
+    - country
+    - canadianCitizen
+    - residencyType
+    - province
+    - level
+  */
+
   state.campus = "";
   state.cohortYear = "";
   state.program = "";
   state.major = "";
-  state.country = "";
+
   state.coopInterest = "No";
   state.includeCoop = false;
+  state.includeCoopEarnings = false;
   state.matchedTuitionRecord = null;
-  state.housingType = "None";
+
+  state.housingType = "";
   state.residence = "";
+  state.roomType = "";
   state.mealPlan = "";
+  state.futureMealPlanInterest = "";
+
+  /*
+    Clear older off-campus amount values in case
+    they were entered before the interface changed.
+  */
+  state.offCampusType = "";
   state.currentOffCampusRent = 0;
   state.currentOffCampusFood = 0;
 }
@@ -2923,12 +4576,35 @@ function updateRunningEstimate() {
 
 function calculateEstimate() {
   const tuition = getTuitionCosts();
-  const living = getLivingCosts();
-  const extras = getExtraCosts();
-  const offsets = getOffsets();
+  const tuitionOnly = state.estimateScope === "tuition-only";
 
-  const low = Math.max(0, tuition.low + living.low + extras.low - offsets.total);
-  const high = Math.max(0, tuition.high + living.high + extras.high - offsets.total);
+  const living = tuitionOnly
+    ? { items: [], low: 0, high: 0 }
+    : getLivingCosts();
+
+  const extras = tuitionOnly
+    ? { items: [], low: 0, high: 0 }
+    : getExtraCosts();
+
+  const offsets = tuitionOnly
+    ? { items: [], total: 0 }
+    : getOffsets();
+
+  const low = Math.max(
+    0,
+    tuition.low +
+    living.low +
+    extras.low -
+    offsets.total
+  );
+
+  const high = Math.max(
+    0,
+    tuition.high +
+    living.high +
+    extras.high -
+    offsets.total
+  );
 
   state.result = {
     tuition,
@@ -3017,24 +4693,58 @@ function getAvailableMajors() {
       .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b));
 }
+
 function getAvailableCohortYears() {
   const rows = getFilteredTuitionRows();
 
   if (state.studentPhase === "future") {
-    const years = rows
+    const cohortRanges = rows
       .map(row => parseCohortRange(normalize(row.CohortYear)))
-      .filter(Boolean)
-      .map(range => range.end);
+      .filter(Boolean);
 
-    const latestEnd = years.length ? Math.max(...years) : new Date().getFullYear();
+    if (!cohortRanges.length) {
+      return [];
+    }
 
-    return Array.from({ length: 5 }, (_, i) => String(latestEnd + i));
+    /*
+      Find the latest cohort range in data.json.
+
+      Example:
+      "2026-2027" gives an ending year of 2027.
+    */
+    const latestCohort = cohortRanges.reduce((latest, current) => {
+      return current.end > latest.end ? current : latest;
+    });
+
+    const firstExpectedStartYear = latestCohort.end;
+    const NUMBER_OF_YEARS = 5;
+
+    /*
+      Example:
+      2026-2027 becomes:
+      2027, 2028, 2029, 2030 and 2031.
+    */
+    return Array.from(
+      { length: NUMBER_OF_YEARS },
+      (_, index) => {
+        const year = firstExpectedStartYear + index;
+
+        return {
+          value: String(year),
+          label: String(year),
+          isFutureEstimate: year > latestCohort.end
+        };
+      }
+    );
   }
 
   return [...new Set(
-    rows.map(row => normalize(row.CohortYear)).filter(Boolean)
+    rows
+      .map(row => normalize(row.CohortYear))
+      .filter(Boolean)
   )].sort((a, b) => compareCohortDesc(a, b));
 }
+
 
 function getLatestCurrentCohortYear() {
   const cohortYears = getAvailableCohortYears();
@@ -3075,6 +4785,21 @@ function compareCohortDesc(a, b) {
   const be = rb ? rb.end : 0;
   return be - ae;
 }
+
+function getLatestApprovedTuitionCohort() {
+  const cohortRanges = getFilteredTuitionRows()
+    .map(row => parseCohortRange(row.CohortYear))
+    .filter(Boolean);
+
+  if (!cohortRanges.length) return null;
+
+  return cohortRanges.reduce((latest, current) => {
+    return current.end > latest.end
+      ? current
+      : latest;
+  });
+}
+
 function getFutureProgramCoopStatus() {
   if (!state.program) return "";
 
@@ -3113,6 +4838,28 @@ function matchTuitionRecord() {
 
   if (!rows.length) {
     state.matchedTuitionRecord = null;
+    return;
+  }
+
+  /*
+    Current students already have their cohort year included
+    in the filtered records.
+
+    Future students use the most recent approved cohort
+    available in data.json.
+  */
+  if (state.studentPhase === "future") {
+    const sortedRows = [...rows].sort((rowA, rowB) => {
+      const cohortA = parseCohortRange(rowA.CohortYear);
+      const cohortB = parseCohortRange(rowB.CohortYear);
+
+      const endYearA = cohortA ? cohortA.end : 0;
+      const endYearB = cohortB ? cohortB.end : 0;
+
+      return endYearB - endYearA;
+    });
+
+    state.matchedTuitionRecord = sortedRows[0] || null;
     return;
   }
 
@@ -3178,44 +4925,58 @@ function getTuitionCosts() {
   const row = state.matchedTuitionRecord;
 
   if (!row) {
-    return { items: [], low: 0, high: 0 };
+    return {
+      items: [],
+      low: 0,
+      high: 0
+    };
   }
 
-  const TUITION_BUFFER = 1000;
+  const fallTuition =
+    toNumber(row.FallTuition);
 
-  const fallTuition = toNumber(row.FallTuition);
-  const winterTuition = toNumber(row.WinterTuition);
+  const winterTuition =
+    toNumber(row.WinterTuition);
 
-  const fallCompulsoryFees = toNumber(row.FallCompulsoryFees);
-  const winterCompulsoryFees = toNumber(row.WinterCompulsoryFees);
+  const fallCompulsoryFees =
+    toNumber(row.FallCompulsoryFees);
+
+  const winterCompulsoryFees =
+    toNumber(row.WinterCompulsoryFees);
+
+  const totalTuition =
+    fallTuition + winterTuition;
+
+  // Minimum compulsory fees from data.json
+  const totalCompulsoryFees =
+    fallCompulsoryFees + winterCompulsoryFees;
+
+  // Maximum compulsory fees include an additional $500
+  const maximumCompulsoryFees =
+    totalCompulsoryFees +
+    COMPULSORY_FEE_RANGE_ALLOWANCE;
 
   const items = [
     {
-      label: "Fall tuition estimate",
-      low: fallTuition,
-      high: fallTuition + TUITION_BUFFER
+      label: "Total tuition for Fall and Winter",
+      low: totalTuition,
+      high: totalTuition
     },
     {
-      label: "Fall compulsory fees",
-      low: fallCompulsoryFees,
-      high: fallCompulsoryFees
-    },
-    {
-      label: "Winter tuition estimate",
-      low: winterTuition,
-      high: winterTuition + TUITION_BUFFER
-    },
-    {
-      label: "Winter compulsory fees",
-      low: winterCompulsoryFees,
-      high: winterCompulsoryFees
+      label: "Total compulsory fees for Fall and Winter",
+      low: totalCompulsoryFees,
+      high: maximumCompulsoryFees,
+      helpLink:
+        "https://www.uoguelph.ca/registrar/finances-fees/tuition-fees#compulsory-fee-descriptions-guelph-campus",
+      helpLinkText:
+        "Learn what compulsory fees include"
     }
   ];
 
   return {
     items,
-    low: items.reduce((sum, item) => sum + item.low, 0),
-    high: items.reduce((sum, item) => sum + item.high, 0)
+    low: totalTuition + totalCompulsoryFees,
+    high: totalTuition + maximumCompulsoryFees
   };
 }
 
@@ -3257,256 +5018,157 @@ function getMealPlanOptions() {
 
 function getLivingCosts() {
   const items = [];
-  let low = 0;
-  let high = 0;
 
-  if (state.housingType === "None") {
-    if (state.studentPhase === "future" && state.futureMealPlanInterest === "Yes") {
-      const mealPlans = state.data?.["Meal_Plan"] || [];
-      const totals = mealPlans
-        .map(item => toNumber(readField(item, ["Total cost per year", "TotalCostPerYear"])))
-        .filter(v => v > 0);
-
-      if (totals.length) {
-        const mealLow = Math.min(...totals);
-        const mealHigh = Math.max(...totals);
-        items.push({
-          label: "Yearly meal plan estimate",
-          low: mealLow,
-          high: mealHigh
-        });
-        low += mealLow;
-        high += mealHigh;
-      }
-    }
-
-    return { items, low, high };
-  }
-
-  const isFutureStudent = state.studentPhase === "future";
-
-  if (isFutureStudent) {
-    if (state.housingType === "OnCampus") {
-      const rows = state.data?.["On_campus_Living_Costs"] || [];
-      const totals = rows
-        .map(item => toNumber(readField(item, ["Cost"])) + toNumber(readField(item, ["Deposit"])))
-        .filter(v => v > 0);
-
-      if (totals.length) {
-        const housingLow = Math.min(...totals);
-        const housingHigh = Math.max(...totals);
-
-        items.push({
-          label: "On-campus yearly housing estimate",
-          low: housingLow,
-          high: housingHigh
-        });
-
-        low += housingLow;
-        high += housingHigh;
-      }
-    }
-
-    if (state.housingType === "OffCampus") {
-      const rows = state.data?.["Off_campus_Living_Costs"] || [];
-
-      const groupedByType = {};
-      rows.forEach(item => {
-        const type = normalize(
+  /*
+    Add the selected on-campus residence.
+  */
+  if (
+    state.housingType === "OnCampus" &&
+    state.residence &&
+    state.roomType
+  ) {
+    const residenceRecord =
+      (
+        state.data?.[
+          "On_campus_Living_Costs"
+        ] || []
+      ).find(item => {
+        const residenceArea = normalize(
           readField(item, [
-            "RoomType                ",
+            "ResidenceArea",
+            "Residence Area"
+          ])
+        );
+
+        const roomType = normalize(
+          readField(item, [
             "RoomType",
-            "Room Type",
-            "Accommodation Type",
-            "Type"
+            "Room Type"
           ])
         );
 
-        const total = toNumber(
-          readField(item, [
-            " TotalTermCost",
-            "TotalTermCost",
-            "Total Term Cost",
-            "Yearly Cost",
-            "Cost"
-          ])
+        return (
+          normalizeKey(residenceArea) ===
+            normalizeKey(state.residence) &&
+          normalizeKey(roomType) ===
+            normalizeKey(state.roomType)
         );
-
-        if (!type || total <= 0) return;
-        groupedByType[type] = (groupedByType[type] || 0) + total;
       });
 
-      const yearlyTotals = Object.values(groupedByType).filter(v => v > 0);
+    if (residenceRecord) {
+      /*
+        The Cost field already includes the deposit
+        in the supplied JSON.
+      */
+      const residenceCost = toNumber(
+        readField(
+          residenceRecord,
+          ["Cost"]
+        )
+      );
 
-      if (yearlyTotals.length) {
-        const housingLow = Math.min(...yearlyTotals);
-        const housingHigh = Math.max(...yearlyTotals);
-
-        items.push({
-          label: "Off-campus yearly housing estimate",
-          low: housingLow,
-          high: housingHigh
-        });
-
-        low += housingLow;
-        high += housingHigh;
-      }
-    }
-
-    if (state.futureMealPlanInterest === "Yes") {
-      const mealPlans = state.data?.["Meal_Plan"] || [];
-      const totals = mealPlans
-        .map(item => toNumber(readField(item, ["Total cost per year", "TotalCostPerYear"])))
-        .filter(v => v > 0);
-
-      if (totals.length) {
-        const mealLow = Math.min(...totals);
-        const mealHigh = Math.max(...totals);
-
-        items.push({
-          label: "Yearly meal plan estimate",
-          low: mealLow,
-          high: mealHigh
-        });
-
-        low += mealLow;
-        high += mealHigh;
-      }
-    }
-
-    return { items, low, high };
-  }
-
-  if (state.housingType === "OnCampus") {
-    const residence = (state.data?.["On_campus_Living_Costs"] || []).find(item => {
-      const area = normalize(readField(item, ["ResidenceArea", "Residence Area"]));
-      const room = normalize(readField(item, ["RoomType", "Room Type"]));
-      return `${area} | ${room}` === state.residence;
-    });
-
-    const meal = (state.data?.["Meal_Plan"] || []).find(item => {
-      const size = normalize(readField(item, ["Meal Plan Size", "MealPlanSize"]));
-      return size === normalize(state.mealPlan);
-    });
-
-    const residenceCost = residence
-      ? toNumber(readField(residence, ["Cost"])) + toNumber(readField(residence, ["Deposit"]))
-      : 0;
-
-    const mealCost = meal
-      ? toNumber(readField(meal, ["Total cost per year", "TotalCostPerYear"]))
-      : 0;
-
-    if (residence) {
-      const area = normalize(readField(residence, ["ResidenceArea", "Residence Area"]));
-      const room = normalize(readField(residence, ["RoomType", "Room Type"]));
       items.push({
-        label: `Residence: ${area} - ${room}`,
+        label:
+          `Residence: ${state.residence} - ${state.roomType}`,
         low: residenceCost,
         high: residenceCost
       });
     }
-
-    if (meal) {
-      const size = normalize(readField(meal, ["Meal Plan Size", "MealPlanSize"]));
-      items.push({
-        label: `Meal plan: ${size}`,
-        low: mealCost,
-        high: mealCost
-      });
-    }
-
-    low = items.reduce((sum, item) => sum + item.low, 0);
-    high = items.reduce((sum, item) => sum + item.high, 0);
   }
 
-  if (state.housingType === "OffCampus") {
-    const rent = toNumber(state.currentOffCampusRent);
-    const food = toNumber(state.currentOffCampusFood);
+  /*
+    Add a selected meal plan for either an on-campus
+    or off-campus student.
+  */
+  const shouldIncludeMealPlan =
+    state.mealPlan &&
+    state.mealPlan !== "None" &&
+    (
+      state.housingType === "OnCampus" ||
+      (
+        state.housingType === "OffCampus" &&
+        state.futureMealPlanInterest === "Yes"
+      )
+    );
 
-    if (rent > 0) {
+  if (shouldIncludeMealPlan) {
+    const mealPlanRecord =
+      (
+        state.data?.["Meal_Plan"] || []
+      ).find(item => {
+        const planName = normalize(
+          readField(item, [
+            "Meal Plan Size",
+            "MealPlanSize"
+          ])
+        );
+
+        return (
+          normalizeKey(planName) ===
+          normalizeKey(state.mealPlan)
+        );
+      });
+
+    if (mealPlanRecord) {
+      const mealPlanCost = toNumber(
+        readField(mealPlanRecord, [
+          "Total cost per year",
+          "TotalCostPerYear"
+        ])
+      );
+
       items.push({
-        label: "Yearly rent",
-        low: rent,
-        high: rent
+        label:
+          `Meal plan: ${state.mealPlan}`,
+        low: mealPlanCost,
+        high: mealPlanCost
       });
     }
-
-    if (food > 0) {
-      items.push({
-        label: "Yearly food expense",
-        low: food,
-        high: food
-      });
-    }
-
-    low = items.reduce((sum, item) => sum + item.low, 0);
-    high = items.reduce((sum, item) => sum + item.high, 0);
   }
 
-  return { items, low, high };
-}
-function renderSuccessStories() {
-  if (state.studentPhase !== "future" || state.residencyType !== "International") {
-    return "";
-  }
+  return {
+    items,
 
-  const stories = state.data?.SuccessStory || [];
-  if (!stories.length) return "";
+    low: items.reduce(
+      (sum, item) => sum + item.low,
+      0
+    ),
 
-  const imageMap = {
-    JUNTIAN: "Juntian.png",
-    JIYA: "Jiya.png"
+    high: items.reduce(
+      (sum, item) => sum + item.high,
+      0
+    )
   };
+}
+function getInformationLink(sheetName, fallbackLink = "") {
+  const dataSections = Object.values(state.data || {});
 
-  return `
-    <div class="form-group">
-      <h3 class="subsection-title">Student funding examples</h3>
+  for (const section of dataSections) {
+    if (!Array.isArray(section)) continue;
 
-      <div class="success-story-grid">
-        ${stories.map(item => {
-          const name = normalize(item["Name "] || item.Name || "Student");
-          const image = imageMap[name.toUpperCase()] || "";
+    const match = section.find(item => {
+      return normalizeKey(
+        readField(item, ["Sheet Name"])
+      ) === normalizeKey(sheetName);
+    });
 
-          return `
-            <div class="success-story-card">
-              ${image ? `<img src="./${escapeHtml(image)}" alt="${escapeHtml(name)} success story" />` : ""}
+    if (match) {
+      const link = normalize(
+        readField(match, ["Information Link"])
+      );
 
-              <div>
-                <h3>Meet ${escapeHtml(name)}</h3>
+      if (link) return link;
+    }
+  }
 
-                <p class="success-story-meta">
-                  Program: ${escapeHtml(item.Program || "N/A")}<br>
-                  Home Country: ${escapeHtml(item["Home Country"] || "N/A")}
-                </p>
-
-                <div class="success-story-text">
-                  ${escapeHtml(item.Story || "")}
-                </div>
-
-                <div class="success-story-total">
-                  Total Funding + Earnings: ${escapeHtml(item["Total Funding + Earnings:"] || "")}
-                </div>
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-
-      ${renderAlert(
-        "Funding example notice",
-        "These examples are illustrative only. Actual funding may vary based on eligibility, renewal terms, and employment wages.",
-        "grey"
-      )}
-    </div>
-  `;
+  return fallbackLink;
 }
 function getExtraCosts() {
   const items = [];
 
   if (toNumber(state.booksAmount) > 0) {
     items.push({
-      label: "Textbooks / supplies",
+      label: "Textbooks / supplies, yearly estimate",
       low: toNumber(state.booksAmount),
       high: toNumber(state.booksAmount)
     });
@@ -3514,7 +5176,7 @@ function getExtraCosts() {
 
   if (toNumber(state.personalAmount) > 0) {
     items.push({
-      label: "Personal expenses",
+      label: "Personal expenses, yearly estimate",
       low: toNumber(state.personalAmount),
       high: toNumber(state.personalAmount)
     });
@@ -3556,133 +5218,229 @@ function getExtraCosts() {
 function getOffsets() {
   const items = [];
 
-  if (state.residencyType === "Domestic" && toNumber(state.osapFunding) > 0) {
+  if (
+    state.residencyType === "Domestic" &&
+    toNumber(state.osapFunding) > 0
+  ) {
     items.push({
-      label: "Estimated OSAP funding",
+      label: "Anticipated OSAP funding",
       value: toNumber(state.osapFunding)
     });
   }
 
+  if (toNumber(state.otherScholarshipOffset) > 0) {
+    items.push({
+      label: "Anticipated scholarships and bursaries",
+      value: toNumber(
+        state.otherScholarshipOffset
+      )
+    });
+  }
+
+  /*
+    Future-student part-time earnings are included
+    as an offset, but future-student co-op earnings
+    are shown for planning only.
+  */
   if (state.studentPhase === "future") {
+    const PART_TIME_WEEKS_PER_SEMESTER = 12;
+    const ACADEMIC_SEMESTERS = 2;
+
     const partTimeEarnings =
       toNumber(state.partTimeHoursPerWeek) *
       toNumber(state.partTimeHourlyRate) *
-      32;
+      PART_TIME_WEEKS_PER_SEMESTER *
+      ACADEMIC_SEMESTERS;
 
     if (partTimeEarnings > 0) {
       items.push({
-        label: "Estimated part-time earnings, two academic semesters (Fall & Winter)",
+        label:
+          "Estimated part-time earnings, 12 weeks per semester for Fall and Winter",
         value: partTimeEarnings
       });
     }
+  }
+
+  if (
+    state.studentPhase === "current" &&
+    toNumber(state.partTimeIncome) > 0
+  ) {
+    items.push({
+      label: "Expected yearly part-time income",
+      value: toNumber(state.partTimeIncome)
+    });
+  }
+
+  /*
+    Only current-student co-op earnings are deducted.
+
+    Future-student co-op earnings are displayed
+    separately in yellow and are not added here.
+  */
+  if (
+    state.studentPhase === "current" &&
+    state.coopInterest === "Yes"
+  ) {
+    const COOP_WEEKS_PER_WORK_TERM = 16;
 
     const coopEarnings =
-      state.coopInterest === "Yes"
-        ? toNumber(state.coopWeeklyEarnings) * toNumber(state.coopWeeks)
-        : 0;
+      toNumber(state.coopWeeklyEarnings) *
+      COOP_WEEKS_PER_WORK_TERM;
 
     if (coopEarnings > 0) {
       items.push({
         label:
-          state.residencyType === "Domestic"
-            ? "Estimated co-op earnings (not deducted from final estimate)"
-            : "Estimated co-op earnings",
-        value: coopEarnings,
-        notDeducted: state.residencyType === "Domestic"
+          "Estimated co-op earnings for one 16-week work term",
+        value: coopEarnings
       });
     }
   }
 
-  if (state.studentPhase === "current") {
-    if (toNumber(state.partTimeIncome) > 0) {
-      items.push({
-        label: "Part-time income",
-        value: toNumber(state.partTimeIncome)
-      });
-    }
-
-    if (toNumber(state.otherScholarshipOffset) > 0) {
-      items.push({
-        label: "Scholarships and bursaries, Fall and Winter total",
-        value: toNumber(state.otherScholarshipOffset)
-      });
-    }
-
-    // Do not deduct co-op earnings for domestic students
-    if (
-      state.coopInterest === "Yes" &&
-      toNumber(state.coopEarningsOffset) > 0
-    ) {
-      items.push({
-        label:
-          state.residencyType === "Domestic"
-            ? `Co-op earnings: ${formatMoney(state.coopEarningsOffset)} (not deducted from final estimate)`
-            : "Co-op earnings",
-        value: state.residencyType === "Domestic" ? 0 : toNumber(state.coopEarningsOffset)
-      });
-    }
-
-    if (toNumber(state.familySupport) > 0) {
-      items.push({
-        label: "Family support / savings",
-        value: toNumber(state.familySupport)
-      });
-    }
+  if (
+    state.studentPhase === "current" &&
+    toNumber(state.familySupport) > 0
+  ) {
+    items.push({
+      label: "Family support / savings",
+      value: toNumber(state.familySupport)
+    });
   }
 
   return {
     items,
-    total: items.reduce((sum, item) => {
-      if (item.notDeducted) return sum;
-      return sum + item.value;
-    }, 0)
+    total: items.reduce(
+      (sum, item) => sum + item.value,
+      0
+    )
   };
 }
 
-function renderBreakdownRows(title, items, isOffset = false) {
+function renderBreakdownRows(
+  title,
+  items,
+  isOffset = false,
+  subtitle = ""
+) {
   const rows = [];
 
   rows.push(`
-    <div class="summary-item">
-      <label><strong>${escapeHtml(title)}</strong></label>
-      <div></div>
+    <div class="summary-section-heading">
+      <h3>
+        ${escapeHtml(title)}
+      </h3>
+
+      ${
+        subtitle
+          ? `
+            <p>
+              ${escapeHtml(subtitle)}
+            </p>
+          `
+          : ""
+      }
     </div>
   `);
 
   if (!items.length) {
     rows.push(`
       <div class="summary-item">
-        <label>None added</label>
-        <div class="summary-value">${formatMoney(0)}</div>
+        <span>None added</span>
+
+        <div class="summary-value">
+          ${formatMoney(0)}
+        </div>
       </div>
     `);
+
     return rows;
   }
 
   items.forEach(item => {
     let displayValue;
+    let valueClass = "summary-value";
 
     if (item.notDeducted) {
-      displayValue = formatMoney(item.value);
+      displayValue =
+        item.low !== undefined &&
+        item.high !== undefined
+          ? formatRangeValue(
+              item.low,
+              item.high
+            )
+          : formatMoney(item.value || 0);
+
+      valueClass = "summary-value-awareness";
     } else if (isOffset) {
-      displayValue = `-${formatMoney(item.value)}`;
-    } else if (item.low !== undefined && item.high !== undefined) {
-      displayValue = formatRangeValue(item.low, item.high);
+      displayValue =
+        `-${formatMoney(item.value)}`;
+
+      valueClass = "summary-value-offset";
+    } else if (
+      item.low !== undefined &&
+      item.high !== undefined
+    ) {
+      displayValue = formatRangeValue(
+        item.low,
+        item.high
+      );
     } else {
-      displayValue = formatMoney(item.value || 0);
+      displayValue =
+        formatMoney(item.value || 0);
     }
 
     rows.push(`
       <div class="summary-item">
-        <label>${escapeHtml(item.label)}</label>
-        <div class="summary-value">${displayValue}</div>
+        <div class="summary-item-label">
+          <span>
+            ${escapeHtml(item.label)}
+          </span>
+
+          ${
+            item.helpLink
+              ? `
+                <small>
+                  <a
+                    href="${escapeHtml(item.helpLink)}"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    ${escapeHtml(
+                      item.helpLinkText ||
+                      "Learn more"
+                    )}
+                  </a>
+                </small>
+              `
+              : ""
+          }
+        </div>
+
+        <div class="${valueClass}">
+          ${displayValue}
+        </div>
       </div>
     `);
   });
 
   return rows;
 }
+function bindResidenceAccordion() {
+  const residenceGroups = document.querySelectorAll(
+    ".residence-group"
+  );
 
+  residenceGroups.forEach(group => {
+    group.addEventListener("toggle", () => {
+      if (!group.open) return;
+
+      residenceGroups.forEach(otherGroup => {
+        if (otherGroup !== group) {
+          otherGroup.open = false;
+        }
+      });
+    });
+  });
+}
 
 function renderOSAPInfo() {
   if (state.residencyType !== "Domestic" || state.province !== "ON") {
@@ -3699,11 +5457,11 @@ function renderOSAPInfo() {
       <div style="font-size:13px; line-height:1.55; color:#444;">
         <p>
           OSAP may be available to eligible Ontario students in the form of grants and loans.
-          Grants do not need to be repaid, and loans are interest-free while students are in full-time studies.
+          Grants do not need to be repaid and loans are interest-free while students are in full-time studies.
         </p>
 
         <p>
-          OSAP can help with education-related costs such as tuition, books, supplies, and basic living expenses.
+          OSAP can help with education-related costs such as tuition, books, supplies and basic living expenses.
           It is meant to supplement student and family resources, not replace them.
         </p>
 
@@ -3877,231 +5635,1022 @@ function drawBrandDivider(doc, x, y, width) {
   doc.setDrawColor(0, 0, 0);
   doc.line(x + redWidth + goldWidth, y, x + width, y);
 }
+function ensurePDFSpace(
+  doc,
+  currentY,
+  requiredHeight,
+  topMargin = 20,
+  bottomMargin = 18
+) {
+  const pageHeight =
+    doc.internal.pageSize.getHeight();
 
-function finishEstimatePDF(doc, startY = 24) {
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  if (
+    currentY + requiredHeight >
+    pageHeight - bottomMargin
+  ) {
+    doc.addPage();
+
+    doc.setFillColor(255, 255, 255);
+    doc.rect(
+      0,
+      0,
+      doc.internal.pageSize.getWidth(),
+      pageHeight,
+      "F"
+    );
+
+    return topMargin;
+  }
+
+  return currentY;
+}
+
+function getPDFItemValue(
+  item,
+  isOffset = false
+) {
+  if (item.displayValue) {
+    return item.displayValue;
+  }
+
+  if (isOffset) {
+    return `-${formatMoney(item.value || 0)}`;
+  }
+
+  if (
+    item.low !== undefined &&
+    item.high !== undefined
+  ) {
+    return formatRangeValue(
+      item.low,
+      item.high
+    );
+  }
+
+  return formatMoney(item.value || 0);
+}
+
+function drawPDFBreakdownSection(
+  doc,
+  title,
+  items,
+  startY,
+  options = {}
+) {
+  const {
+    isOffset = false,
+    emptyText = "None added",
+    valueColor = [44, 52, 64]
+  } = options;
+
+  const pageWidth =
+    doc.internal.pageSize.getWidth();
+
+  const left = 16;
+  const right = pageWidth - 16;
+  const fullWidth = right - left;
+
+  let y = ensurePDFSpace(
+    doc,
+    startY,
+    20
+  );
+
+  const drawHeading = () => {
+    doc.setFillColor(248, 248, 248);
+    doc.rect(
+      left,
+      y,
+      fullWidth,
+      11,
+      "F"
+    );
+
+    doc.setDrawColor(229, 25, 55);
+    doc.setLineWidth(0.5);
+    doc.line(
+      left,
+      y + 11,
+      right,
+      y + 11
+    );
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(44, 52, 64);
+
+    doc.text(
+      title,
+      left + 4,
+      y + 7
+    );
+
+    y += 15;
+  };
+
+  drawHeading();
+
+  const safeItems =
+    items && items.length
+      ? items
+      : [
+          {
+            label: emptyText,
+            low: 0,
+            high: 0
+          }
+        ];
+
+  safeItems.forEach(item => {
+    const labelLines =
+      doc.splitTextToSize(
+        String(item.label || ""),
+        120
+      );
+
+    const hasHelpLink =
+      Boolean(item.helpLink);
+
+    const rowHeight = Math.max(
+      9,
+      labelLines.length * 4 +
+      (hasHelpLink ? 6 : 3)
+    );
+
+    const nextY = ensurePDFSpace(
+      doc,
+      y,
+      rowHeight + 4
+    );
+
+    if (nextY !== y) {
+      y = nextY;
+      drawHeading();
+    }
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(9);
+    doc.setTextColor(70, 70, 70);
+
+    doc.text(
+      labelLines,
+      left + 4,
+      y + 4
+    );
+
+    doc.setFont(
+      "helvetica",
+      "bold"
+    );
+
+    doc.setTextColor(
+      valueColor[0],
+      valueColor[1],
+      valueColor[2]
+    );
+
+    doc.text(
+      getPDFItemValue(
+        item,
+        isOffset
+      ),
+      right - 4,
+      y + 4,
+      {
+        align: "right"
+      }
+    );
+
+    if (hasHelpLink) {
+      doc.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      doc.setFontSize(7.5);
+      doc.setTextColor(24, 123, 180);
+
+      doc.textWithLink(
+        item.helpLinkText ||
+          "Learn more",
+        left + 4,
+        y + labelLines.length * 4 + 4,
+        {
+          url: item.helpLink
+        }
+      );
+    }
+
+    doc.setDrawColor(225, 225, 225);
+    doc.setLineWidth(0.2);
+
+    doc.line(
+      left + 4,
+      y + rowHeight,
+      right - 4,
+      y + rowHeight
+    );
+
+    y += rowHeight + 2;
+  });
+
+  return y + 5;
+}
+
+function getCostBreakdownChartImage() {
+  const canvas =
+    document.getElementById(
+      "costBreakdownChart"
+    );
+
+  if (!canvas) {
+    return "";
+  }
+
+  try {
+    if (costBreakdownChart) {
+      costBreakdownChart.stop();
+      costBreakdownChart.update("none");
+    }
+
+    return canvas.toDataURL(
+      "image/png",
+      1
+    );
+  } catch (error) {
+    console.warn(
+      "The cost breakdown chart could not be captured:",
+      error
+    );
+
+    return "";
+  }
+}
+
+function drawPDFCostChart(
+  doc,
+  startY,
+  chartImageData
+) {
+  const rows =
+    getCostBreakdownChartData();
+
+  if (
+    !rows.length ||
+    !chartImageData
+  ) {
+    return startY;
+  }
+
+  const pageWidth =
+    doc.internal.pageSize.getWidth();
+
+  const left = 16;
+  const right = pageWidth - 16;
+
+  const colors = [
+    [229, 25, 55],
+    [255, 196, 41],
+    [24, 123, 180],
+    [49, 135, 56],
+    [0, 0, 0],
+    [85, 85, 85],
+    [179, 20, 44],
+    [19, 95, 139],
+    [39, 104, 44]
+  ];
+
+  const total = rows.reduce(
+    (sum, row) => sum + row.value,
+    0
+  );
+
+  const preparedRows = rows.map(row => {
+    const labelLines =
+      doc.splitTextToSize(
+        row.label,
+        82
+      );
+
+    return {
+      ...row,
+      labelLines,
+      percentage:
+        total > 0
+          ? (
+              (row.value / total) *
+              100
+            ).toFixed(1)
+          : "0.0",
+      height:
+        labelLines.length * 3.7 + 6
+    };
+  });
+
+  const legendHeight =
+    preparedRows.reduce(
+      (sum, row) => sum + row.height,
+      0
+    );
+
+  const chartSize = 68;
+
+  const contentHeight =
+    Math.max(
+      legendHeight,
+      chartSize
+    );
+
+  let y = ensurePDFSpace(
+    doc,
+    startY,
+    contentHeight + 25
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(12);
+  doc.setTextColor(44, 52, 64);
+
+  doc.text(
+    "Estimated Cost Breakdown",
+    left,
+    y
+  );
+
+  y += 6;
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+
+  doc.text(
+    "Estimated costs by category",
+    left,
+    y
+  );
+
+  y += 9;
+
+  /*
+    Legend with category, value and percentage.
+  */
+  let legendY = y + 1;
+
+  preparedRows.forEach(
+    (row, index) => {
+      const color =
+        colors[index % colors.length];
+
+      doc.setFillColor(
+        color[0],
+        color[1],
+        color[2]
+      );
+
+      doc.rect(
+        left,
+        legendY - 3,
+        4,
+        4,
+        "F"
+      );
+
+      doc.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      doc.setFontSize(7.5);
+      doc.setTextColor(44, 52, 64);
+
+      doc.text(
+        row.labelLines,
+        left + 7,
+        legendY
+      );
+
+      const valueY =
+        legendY +
+        row.labelLines.length * 3.7;
+
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      doc.setFontSize(7.2);
+      doc.setTextColor(90, 90, 90);
+
+      doc.text(
+        `${formatMoney(row.value)} (${row.percentage}%)`,
+        left + 7,
+        valueY
+      );
+
+      legendY += row.height;
+    }
+  );
+
+  /*
+    Doughnut chart.
+  */
+  try {
+    doc.addImage(
+      chartImageData,
+      "PNG",
+      right - chartSize,
+      y,
+      chartSize,
+      chartSize
+    );
+  } catch (error) {
+    console.warn(
+      "The doughnut chart could not be added to the PDF:",
+      error
+    );
+  }
+
+  /*
+    Total represented by the doughnut chart.
+  */
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(8);
+  doc.setTextColor(44, 52, 64);
+
+  doc.text(
+    `Total costs shown: ${formatMoney(total)}`,
+    right - chartSize / 2,
+    y + chartSize + 6,
+    {
+      align: "center"
+    }
+  );
+
+  return (
+    y +
+    Math.max(
+      contentHeight,
+      chartSize + 7
+    ) +
+    9
+  );
+}
+function addEstimatePDFFooters(doc) {
+  const pageCount =
+    doc.getNumberOfPages();
+
+  const pageWidth =
+    doc.internal.pageSize.getWidth();
+
+  const pageHeight =
+    doc.internal.pageSize.getHeight();
+
+  const left = 16;
+  const right = pageWidth - 16;
+  const fullWidth = right - left;
+
+  const disclaimer =
+    "This document is an estimate only and does not replace official tuition, fee, housing, meal plan, scholarship or funding information published by the University of Guelph.";
+
+  for (
+    let pageNumber = 1;
+    pageNumber <= pageCount;
+    pageNumber += 1
+  ) {
+    doc.setPage(pageNumber);
+
+    /*
+      Cover the reserved footer area so the
+      footer remains clean and readable.
+    */
+    doc.setFillColor(255, 255, 255);
+
+    doc.rect(
+      left,
+      pageHeight - 17,
+      fullWidth,
+      13,
+      "F"
+    );
+
+    doc.setDrawColor(225, 225, 225);
+    doc.setLineWidth(0.2);
+
+    doc.line(
+      left,
+      pageHeight - 17,
+      right,
+      pageHeight - 17
+    );
+
+    doc.setFont(
+      "helvetica",
+      "italic"
+    );
+
+    doc.setFontSize(6.8);
+    doc.setTextColor(100, 100, 100);
+
+    const disclaimerLines =
+      doc.splitTextToSize(
+        disclaimer,
+        fullWidth - 22
+      );
+
+    doc.text(
+      disclaimerLines,
+      left,
+      pageHeight - 12
+    );
+
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
+
+    doc.text(
+      `Page ${pageNumber} of ${pageCount}`,
+      right,
+      pageHeight - 9,
+      {
+        align: "right"
+      }
+    );
+  }
+
+  /*
+    Return to the final page before saving.
+  */
+  doc.setPage(pageCount);
+}
+function finishEstimatePDF(
+  doc,
+  startY = 24,
+  chartImageData = ""
+) {
+  const pageWidth =
+    doc.internal.pageSize.getWidth();
+
+  const pageHeight =
+    doc.internal.pageSize.getHeight();
+
   const left = 16;
   const right = pageWidth - 16;
   const fullWidth = right - left;
 
   let y = startY;
 
+  const result =
+    state.result || emptyResult();
+
+  const residenceSelection =
+    state.housingType === "OnCampus"
+      ? state.residence || "Not selected"
+      : state.housingType === "OffCampus"
+        ? "Off campus"
+        : "Not selected";
+
+  const roomTypeSelection =
+    state.housingType === "OnCampus"
+      ? state.roomType || "Not selected"
+      : "None";
+
+  const mealPlanSelection =
+    state.mealPlan &&
+    state.mealPlan !== "None"
+      ? state.mealPlan
+      : "None";
+
+  /*
+    Main heading
+  */
   doc.setTextColor(44, 52, 64);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.text("Cost Estimate Summary", left, y);
+
+  doc.text(
+    "Cost Estimate Summary",
+    left,
+    y
+  );
 
   y += 6;
-  doc.setFont("helvetica", "normal");
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
   doc.setFontSize(9);
   doc.setTextColor(120, 120, 120);
-  doc.text(`Generated: ${todayDisplay()}`, left, y);
+
+  doc.text(
+    `Generated: ${todayDisplay()}`,
+    left,
+    y
+  );
 
   y += 8;
-  drawBrandDivider(doc, left, y, fullWidth);
+
+  drawBrandDivider(
+    doc,
+    left,
+    y,
+    fullWidth
+  );
+
   y += 10;
 
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.8);
-  doc.rect(left, y, fullWidth, 24, "FD");
+  /*
+    Estimated total
+  */
+  doc.setFillColor(248, 248, 248);
+  doc.setDrawColor(205, 205, 205);
+  doc.setLineWidth(0.6);
 
-  doc.setTextColor(100, 100, 100);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Estimated total range", left + 4, y + 11);
-  doc.text(
-    formatRangeValue(state.result?.low || 0, state.result?.high || 0),
-    right - 4,
-    y + 11,
-    { align: "right" }
+  doc.rect(
+    left,
+    y,
+    fullWidth,
+    25,
+    "FD"
   );
-  if (state.currencyCode && state.currencyCode !== "CAD" && state.currencyRate) {
-    const convertedLow = (state.result?.low || 0) * state.currencyRate;
-    const convertedHigh = (state.result?.high || 0) * state.currencyRate;
+
+  doc.setFont(
+    "helvetica",
+    "normal"
+  );
+
+  doc.setFontSize(9);
+  doc.setTextColor(90, 90, 90);
+
+  doc.text(
+    "Estimated total for Fall and Winter",
+    left + 4,
+    y + 10
+  );
+
+  doc.setFont(
+    "helvetica",
+    "bold"
+  );
+
+  doc.setFontSize(12);
+  doc.setTextColor(44, 52, 64);
+
+  doc.text(
+    formatRangeValue(
+      result.low,
+      result.high
+    ),
+    right - 4,
+    y + 10,
+    {
+      align: "right"
+    }
+  );
+
+  if (
+    state.currencyCode &&
+    state.currencyCode !== "CAD" &&
+    state.currencyRate
+  ) {
+    const convertedLow =
+      result.low * state.currencyRate;
+
+    const convertedHigh =
+      result.high * state.currencyRate;
 
     const convertedText =
       convertedLow === convertedHigh
-        ? formatCurrency(convertedLow, state.currencyCode)
-        : `${formatCurrency(convertedLow, state.currencyCode)} - ${formatCurrency(convertedHigh, state.currencyCode)}`;
+        ? formatCurrency(
+            convertedLow,
+            state.currencyCode
+          )
+        : `${
+            formatCurrency(
+              convertedLow,
+              state.currencyCode
+            )
+          } - ${
+            formatCurrency(
+              convertedHigh,
+              state.currencyCode
+            )
+          }`;
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(
+      "helvetica",
+      "normal"
+    );
+
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
+
     doc.text(
       `Approx. ${convertedText}`,
       right - 4,
-      y + 16,
-      { align: "right" }
+      y + 17,
+      {
+        align: "right"
+      }
     );
   }
 
   y += 34;
 
-  doc.setTextColor(44, 52, 64);
+  /*
+    Student selections
+  */
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("Student Selections", left, y);
+  doc.setTextColor(44, 52, 64);
+
+  doc.text(
+    "Student Selections",
+    left,
+    y
+  );
+
   y += 7;
 
-  doc.setFillColor(248, 248, 248);
-  doc.setDrawColor(220, 220, 220);
-  doc.rect(left, y, fullWidth, 42, "FD");
-
-  doc.setFontSize(9);
-
-  const line1 = y + 7;
-  const line2 = y + 14;
-  const line3 = y + 21;
-  const line4 = y + 28;
-  const line5 = y + 35;
-
-  doc.setTextColor(100, 100, 100);
-  doc.setFont("helvetica", "normal");
-  doc.text("Student type:", left + 4, line1);
-  doc.text("Residency:", left + 4, line2);
-  doc.text("Level:", left + 4, line3);
-  doc.text("Province:", left + 4, line4);
-  doc.text("Program:", left + 4, line5);
-
-  doc.setTextColor(44, 52, 64);
-  doc.setFont("helvetica", "bold");
-  doc.text(state.studentPhase || "N/A", left + 32, line1);
-  doc.text(state.residencyType || "N/A", left + 32, line2);
-  doc.text(state.level || "N/A", left + 32, line3);
-  doc.text(state.province || "N/A", left + 32, line4);
-
-  const programText = (state.program || "N/A").slice(0, 42);
-  doc.text(programText, left + 32, line5);
-
-  doc.setTextColor(100, 100, 100);
-  doc.setFont("helvetica", "normal");
-  doc.text("Campus:", 110, line1);
-  doc.text("Cohort:", 110, line2);
-  doc.text("Housing:", 110, line3);
-  doc.text("Meal plan:", 110, line4);
-
-  doc.setTextColor(44, 52, 64);
-  doc.setFont("helvetica", "bold");
-  doc.text(state.campus || "N/A", 138, line1);
-  doc.text(state.cohortYear || "N/A", 138, line2);
-  doc.text(state.housingType || "None", 138, line3);
-  doc.text(state.mealPlan || (state.futureMealPlanInterest === "Yes" ? "Estimated" : "None"), 138, line4);
-
-  y += 52;
-
-  doc.setTextColor(44, 52, 64);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("Estimate Breakdown", left, y);
-  y += 7;
-
-  const rows = [
-    ["Tuition range", formatRangeValue(state.result?.tuition?.low || 0, state.result?.tuition?.high || 0)],
-    ["Living range", formatRangeValue(state.result?.living?.low || 0, state.result?.living?.high || 0)],
-    ["Extra costs", formatRangeValue(state.result?.extras?.low || 0, state.result?.extras?.high || 0)],
-    ["Funding / offsets", "-" + formatMoney(state.result?.offsets?.total || 0)],
-    ["Estimated total range", formatRangeValue(state.result?.low || 0, state.result?.high || 0)]
+  const leftSelections = [
+    ["Student type", state.studentPhase || "N/A"],
+    ["Residency", state.residencyType || "N/A"],
+    ["Level", state.level || "N/A"],
+    ["Province", state.province || "N/A"],
+    ["Program", state.program || "N/A"],
+    ["Major", state.major || "N/A"]
   ];
 
-  const rowHeight = 7;
-  const tableHeight = rows.length * rowHeight + 4;
+  const rightSelections = [
+    ["Campus", state.campus || "N/A"],
+    ["Cohort", state.cohortYear || "N/A"],
+    ["Residence", residenceSelection],
+    ["Room type", roomTypeSelection],
+    ["Meal plan", mealPlanSelection],
+    [
+      "Co-op",
+      state.coopInterest === "Yes"
+        ? "Yes"
+        : "No"
+    ]
+  ];
+
+  const selectionBoxHeight = 49;
 
   doc.setFillColor(248, 248, 248);
   doc.setDrawColor(220, 220, 220);
-  doc.rect(left, y, fullWidth, tableHeight, "FD");
 
-  let rowY = y + 5;
+  doc.rect(
+    left,
+    y,
+    fullWidth,
+    selectionBoxHeight,
+    "FD"
+  );
 
-  rows.forEach(row => {
-    doc.setFontSize(9);
-    doc.setTextColor(70, 70, 70);
-    doc.setFont("helvetica", "normal");
-    doc.text(row[0], left + 4, rowY);
-    doc.text(row[1], right - 4, rowY, { align: "right" });
-    rowY += rowHeight;
-  });
+  leftSelections.forEach(
+    ([label, value], index) => {
+      const lineY =
+        y + 7 + index * 7;
 
-  y += tableHeight + 12;
-  
-  if (state.studentPhase === "future") {
-    const scholarships =
-      state.residencyType === "International"
-        ? (state.data["Scholarships for Int"] || [])
-        : (state.data["Scholarships for Dom"] || []);
+      doc.setFont(
+        "helvetica",
+        "normal"
+      );
 
-    if (scholarships.length) {
-      if (y > pageHeight - 70) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.setTextColor(44, 52, 64);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text("Available Funding Options", left, y);
-      y += 6;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(8.5);
       doc.setTextColor(100, 100, 100);
 
-      const fundingNote =
-        `Possible scholarships and bursaries for ${state.residencyType.toLowerCase()} students. These are shown for awareness only and are not deducted from the estimate.`;
+      doc.text(
+        `${label}:`,
+        left + 4,
+        lineY
+      );
 
-      doc.text(doc.splitTextToSize(fundingNote, fullWidth), left, y);
-      y += 10;
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
 
-      scholarships.slice(0, 8).forEach(item => {
-        if (y > pageHeight - 20) {
-          doc.addPage();
-          y = 20;
+      doc.setTextColor(44, 52, 64);
+
+      doc.text(
+        String(value).slice(0, 35),
+        left + 32,
+        lineY
+      );
+    }
+  );
+
+  rightSelections.forEach(
+    ([label, value], index) => {
+      const lineY =
+        y + 7 + index * 7;
+
+      doc.setFont(
+        "helvetica",
+        "normal"
+      );
+
+      doc.setFontSize(8.5);
+      doc.setTextColor(100, 100, 100);
+
+      doc.text(
+        `${label}:`,
+        110,
+        lineY
+      );
+
+      doc.setFont(
+        "helvetica",
+        "bold"
+      );
+
+      doc.setTextColor(44, 52, 64);
+
+      doc.text(
+        String(value).slice(0, 30),
+        138,
+        lineY
+      );
+    }
+  );
+
+  y += selectionBoxHeight + 12;
+
+  /*
+    Detailed estimate
+  */
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(44, 52, 64);
+
+  doc.text(
+    "Detailed Estimate",
+    left,
+    y
+  );
+
+  y += 8;
+
+  y = drawPDFBreakdownSection(
+    doc,
+    "Tuition and Compulsory Fees",
+    result.tuition.items,
+    y
+  );
+
+  y = drawPDFBreakdownSection(
+    doc,
+    "Living Costs",
+    result.living.items,
+    y
+  );
+
+  y = drawPDFBreakdownSection(
+    doc,
+    "Extra Costs",
+    result.extras.items,
+    y
+  );
+
+  y = drawPDFBreakdownSection(
+    doc,
+    "Funding and Offsets",
+    result.offsets.items,
+    y,
+    {
+      isOffset: true
+    }
+  );
+
+  /*
+    Potential co-op earnings for future students.
+    This amount is not part of the final total.
+  */
+  if (
+    state.studentPhase === "future" &&
+    state.coopInterest === "Yes"
+  ) {
+    const weeklyEarnings =
+      toNumber(state.coopWeeklyEarnings);
+
+    const potentialCoopEarnings =
+      weeklyEarnings * 16;
+
+    if (potentialCoopEarnings > 0) {
+      y = drawPDFBreakdownSection(
+        doc,
+        "Potential Co-op Earnings",
+        [
+          {
+            label:
+              `Estimated earnings for one 16-week work term, based on ${formatMoney(weeklyEarnings)} per week`,
+            displayValue:
+              formatMoney(
+                potentialCoopEarnings
+              )
+          }
+        ],
+        y,
+        {
+          valueColor: [138, 98, 0]
         }
+      );
 
-        const name = item["Award Name"] || "Funding option";
-        const amount = item.Amount || "Amount varies";
-        const note = item.Notes || item.Category || "";
+      y = ensurePDFSpace(
+        doc,
+        y,
+        18
+      );
 
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(44, 52, 64);
-        doc.text(doc.splitTextToSize(name, 105), left, y);
+      doc.setFont(
+        "helvetica",
+        "normal"
+      );
 
-        doc.setFont("helvetica", "normal");
-        doc.text(amount, right - 4, y, { align: "right" });
+      doc.setFontSize(8);
+      doc.setTextColor(90, 90, 90);
 
-        y += 5;
+      const coopNote =
+        "This potential income is shown for planning only and is not included in the final estimate.";
 
-        if (note) {
-          doc.setTextColor(100, 100, 100);
-          doc.setFontSize(8);
-          doc.text(doc.splitTextToSize(note, fullWidth), left, y);
-          y += 5;
+      const coopNoteLines =
+        doc.splitTextToSize(
+          coopNote,
+          fullWidth
+        );
+
+      doc.text(
+        coopNoteLines,
+        left,
+        y
+      );
+
+      y += coopNoteLines.length * 4 + 2;
+
+      doc.setTextColor(24, 123, 180);
+
+      doc.textWithLink(
+        "View the University of Guelph Co-op Salary Guide",
+        left,
+        y,
+        {
+          url: coopSalaryGuideLink
         }
+      );
 
-        y += 2;
-      });
-
-      y += 5;
+      y += 9;
     }
   }
 
-  if (y > pageHeight - 20) {
-    doc.addPage();
-    y = 20;
-  }
+  /*
+    Pie chart
+  */
+  y = drawPDFCostChart(
+    doc,
+    y,
+    chartImageData
+  );
 
-  doc.setTextColor(100, 100, 100);
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(8);
+ 
+  
+  /*
+  Add the disclaimer and page numbers to the
+  existing pages without creating a new page.
+*/
+  addEstimatePDFFooters(doc);
 
-  const note =
-    "This document is an estimate only and does not replace official tuition, fee, housing, meal plan, scholarship, or funding information published by the University of Guelph.";
+  const fileName =
+    `UofG_Cost_Estimate_${
+      safeFileNamePart(
+        state.program,
+        "Student"
+      )
+    }.pdf`;
 
-  const noteLines = doc.splitTextToSize(note, fullWidth);
-  doc.text(noteLines, left, y);
-
-  const fileName = `UofG_Cost_Estimate_${safeFileNamePart(state.program, "Student")}.pdf`;
   doc.save(fileName);
 }
 
@@ -4124,10 +6673,20 @@ async function loadImageAsDataUrl(url) {
 async function generateEstimatePDF() {
   calculateEstimate();
 
-  const { jsPDF } = window.jspdf || {};
+  const { jsPDF } =
+    window.jspdf || {};
+
   if (!jsPDF) {
-    throw new Error("jsPDF is not loaded.");
+    throw new Error(
+      "jsPDF is not loaded."
+    );
   }
+
+  /*
+    Capture the currently rendered doughnut chart.
+  */
+  const chartImageData =
+    getCostBreakdownChartImage();
 
   const doc = new jsPDF({
     orientation: "portrait",
@@ -4135,49 +6694,101 @@ async function generateEstimatePDF() {
     format: "a4"
   });
 
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
+  const pageWidth =
+    doc.internal.pageSize.getWidth();
+
+  const pageHeight =
+    doc.internal.pageSize.getHeight();
+
   const left = 16;
 
   doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, pageWidth, pageHeight, "F");
+
+  doc.rect(
+    0,
+    0,
+    pageWidth,
+    pageHeight,
+    "F"
+  );
 
   const logo = new Image();
+
   let imageLoaded = false;
   let contentStartY = 24;
 
   try {
-    const imageDataUrl = await loadImageAsDataUrl("./image.png");
+    const imageDataUrl =
+      await loadImageAsDataUrl(
+        "./image.png"
+      );
+
     logo.src = imageDataUrl;
 
-    await new Promise((resolve, reject) => {
-      logo.onload = resolve;
-      logo.onerror = reject;
-    });
+    await new Promise(
+      (resolve, reject) => {
+        logo.onload = resolve;
+        logo.onerror = reject;
+      }
+    );
 
     imageLoaded = true;
   } catch (error) {
-    console.warn("image.png could not be loaded for PDF:", error);
+    console.warn(
+      "image.png could not be loaded for PDF:",
+      error
+    );
   }
 
   if (imageLoaded) {
     try {
-      const imgW = logo.naturalWidth || 1;
-      const imgH = logo.naturalHeight || 1;
-      const maxWidth = pageWidth - 32;
-      const maxHeight = 18;
-      const ratio = Math.min(maxWidth / imgW, maxHeight / imgH);
-      const finalW = imgW * ratio;
-      const finalH = imgH * ratio;
-      const x = left;
-      const y = 8;
+      const imageWidth =
+        logo.naturalWidth || 1;
 
-      doc.addImage(logo, "PNG", x, y, finalW, finalH);
-      contentStartY = y + finalH + 12;
+      const imageHeight =
+        logo.naturalHeight || 1;
+
+      const maxWidth =
+        pageWidth - 32;
+
+      const maxHeight = 18;
+
+      const ratio = Math.min(
+        maxWidth / imageWidth,
+        maxHeight / imageHeight
+      );
+
+      const finalWidth =
+        imageWidth * ratio;
+
+      const finalHeight =
+        imageHeight * ratio;
+
+      const x = left;
+      const imageY = 8;
+
+      doc.addImage(
+        logo,
+        "PNG",
+        x,
+        imageY,
+        finalWidth,
+        finalHeight
+      );
+
+      contentStartY =
+        imageY + finalHeight + 12;
     } catch (error) {
-      console.warn("Logo could not be added to PDF:", error);
+      console.warn(
+        "Logo could not be added to PDF:",
+        error
+      );
     }
   }
 
-  finishEstimatePDF(doc, contentStartY);
+  finishEstimatePDF(
+    doc,
+    contentStartY,
+    chartImageData
+  );
 }
