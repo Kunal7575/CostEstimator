@@ -582,7 +582,7 @@ function updateChrome() {
 
   if (osapResourceLink) {
     osapResourceLink.href = osapLink;
-    osapResourceLink.hidden = state.residencyType === "International";
+    osapResourceLink.hidden = false;
   }
 
   if (topStatusCard) topStatusCard.style.display = showChrome ? "flex" : "none";
