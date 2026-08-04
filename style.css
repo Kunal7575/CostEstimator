@@ -1801,8 +1801,57 @@
 
 /* Off-campus overview cards, used by renderOffCampusExpenseGuide(). */
 
+.campus-choice-card.unavailable,
+.campus-choice-card:disabled {
+  opacity: 0.48;
+  filter: grayscale(100%);
+  cursor: not-allowed;
+  background: var(--page-bg);
+  border-color: var(--border-soft);
+}
 
+.campus-choice-card.unavailable:hover,
+.campus-choice-card:disabled:hover {
+  border-color: var(--border-soft);
+  transform: none;
+  box-shadow: none;
+}
 
+.campus-unavailable-text {
+  display: block;
+  padding: 0.8rem 1.2rem;
+  color: var(--text);
+  background: var(--page-bg);
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: left;
+}
+.graduate-expense-guide {
+  margin: 0.8rem 0 2.4rem;
+}
+
+.graduate-expense-guide-note {
+  margin-top: 0;
+}
+
+.graduate-expense-guide .off-campus-cost-header {
+  padding: 1rem 1.2rem;
+  color: #fff;
+  background: var(--red);
+  border-bottom: 0;
+}
+
+.graduate-expense-guide .off-campus-cost-row {
+  padding: 1rem 1.2rem;
+}
+
+.graduate-expense-guide .off-campus-cost-row:nth-child(odd) {
+  background: #f7f7f7;
+}
+
+.graduate-expense-guide .off-campus-cost-row:nth-child(even) {
+  background: #fff;
+}
 .off-campus-guide-note {
   margin-bottom: 1.2rem;
 }
@@ -1891,6 +1940,20 @@
   font-size: 1.8rem;
   font-weight: 800;
   color: var(--text-strong);
+}
+.graduate-earning-period {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.graduate-assistantship-summary
+.summary-item-label small {
+  display: block;
+  margin-top: 0.35rem;
 }
 
 .form-help-text a,
@@ -2023,7 +2086,306 @@
   }
 }
 .residence-option-row > strong:last-child,
+.graduate-expense-guide .off-campus-cost-header,
+.graduate-expense-guide .off-campus-cost-row {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1.8fr)
+    minmax(12rem, 0.8fr)
+    minmax(12rem, 0.8fr);
+  column-gap: 2rem;
+  align-items: center;
+}
 
+.graduate-expense-guide
+.off-campus-cost-header
+span:nth-child(2),
+.graduate-expense-guide
+.off-campus-cost-header
+span:nth-child(3),
+.graduate-expense-guide
+.off-campus-semester-cost,
+.graduate-expense-guide
+.off-campus-yearly-cost {
+  text-align: right;
+}
+
+.graduate-expense-guide
+.off-campus-semester-cost,
+.graduate-expense-guide
+.off-campus-yearly-cost {
+  font-variant-numeric: tabular-nums;
+}
+
+#backStep5,
+#startAgainBtn {
+  width: 180px;
+  min-height: 48px;
+  justify-content: center;
+}
+/* Date-of-birth calendar */
+.dob-field-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 34rem;
+}
+
+.dob-field-wrap .step-input,
+.dob-field-wrap .flatpickr-input {
+  width: 100%;
+}
+
+.dob-field-wrap .step-input,
+.dob-field-wrap .flatpickr-input {
+  padding-right: 5rem;
+  cursor: pointer;
+  background: var(--surface);
+}
+
+/* Calendar icon */
+.dob-field-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 1.6rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23e51937' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 2v3M18 2v3M3 9h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z'/%3E%3C/svg%3E");
+}
+
+/* Calendar container */
+.flatpickr-calendar {
+  border: 0;
+  border-radius: var(--radius-md);
+  font-family: "DM Sans", sans-serif;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+/* Red month and year header */
+.flatpickr-months,
+.flatpickr-months .flatpickr-month,
+.flatpickr-current-month,
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+  background: var(--red);
+  color: #fff;
+}
+
+.flatpickr-current-month {
+  padding-top: 0.8rem;
+  font-weight: 800;
+}
+
+.flatpickr-current-month input.cur-year {
+  color: #fff;
+  font-weight: 800;
+}
+
+.flatpickr-current-month .numInputWrapper span::after {
+  border-bottom-color: #fff;
+}
+
+.flatpickr-current-month .numInputWrapper span::before {
+  border-top-color: #fff;
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  color: #fff;
+  fill: #fff;
+}
+
+.flatpickr-prev-month:hover svg,
+.flatpickr-next-month:hover svg {
+  fill: var(--yellow);
+}
+
+/* Selected date */
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected:hover,
+.flatpickr-day.selected:focus {
+  border-color: var(--red);
+  background: var(--red);
+  color: #fff;
+}
+
+.flatpickr-day.today {
+  border-color: var(--red);
+}
+
+.flatpickr-day:hover {
+  border-color: #f8d2d8;
+  background: #fcecef;
+}
+/* Prevent the estimator's general input styles from
+   enlarging Flatpickr's month and year controls. */
+.flatpickr-calendar select,
+.flatpickr-calendar input[type="number"] {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  box-shadow: none;
+}
+
+.flatpickr-calendar select:focus,
+.flatpickr-calendar input[type="number"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Compact red month and year bar */
+.flatpickr-months,
+.flatpickr-months .flatpickr-month {
+  height: 4.8rem;
+}
+
+.flatpickr-current-month {
+  height: 4.8rem;
+  padding-top: 1.3rem;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0 0.4rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.flatpickr-current-month .numInputWrapper {
+  width: 6.5rem;
+}
+
+.flatpickr-current-month input.cur-year {
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  height: 4.8rem;
+  padding: 1.5rem;
+}
+
+/* Clean month and year calendar header */
+.flatpickr-current-month {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  height: 4.8rem;
+  padding: 0;
+  color: #fff;
+}
+
+.flatpickr-current-month .cur-month {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  color: #fff;
+  font-size: 1.65rem;
+  font-weight: 800;
+  line-height: 4.8rem;
+}
+
+.flatpickr-current-month .numInputWrapper {
+  display: inline-flex;
+  align-items: center;
+  width: 6rem;
+  height: auto;
+}
+
+.flatpickr-current-month input.cur-year {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 1.65rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: left;
+}
+
+.flatpickr-current-month input.cur-year:hover,
+.flatpickr-current-month input.cur-year:focus {
+  background: rgba(255, 255, 255, 0.14);
+  outline: 0;
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.8rem;
+  height: 4.8rem;
+  padding: 0;
+}
+
+.flatpickr-prev-month:hover,
+.flatpickr-next-month:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+@media (max-width: 500px) {
+  .flatpickr-calendar {
+    max-width: calc(100vw - 3.2rem);
+  }
+}
+@media (max-width: 700px) {
+  #backStep5,
+  #startAgainBtn {
+    width: 100%;
+  }
+}
+.coop-earnings-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #d6d6d6;
+}
+@media (max-width: 650px) {
+  .graduate-expense-guide
+  .off-campus-cost-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .graduate-expense-guide
+  .off-campus-expense-name {
+    grid-column: 1 / -1;
+  }
+
+  .graduate-expense-guide
+  .off-campus-semester-cost {
+    text-align: left;
+  }
+
+  .graduate-expense-guide
+  .off-campus-yearly-cost {
+    text-align: right;
+  }
+}
 
 /* Keep meal-plan yearly values green while residence prices use yellow. */
 .meal-plan-row strong {

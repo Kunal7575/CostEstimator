@@ -8,8 +8,13 @@ const osapLink =
 const undergraduateAwardSearchLink =
   "https://www.uoguelph.ca/regweb/studentfinance/apps/awards";
 
+const graduateAwardSearchLink =
+  "https://www.uoguelph.ca/regweb/studentfinance/apps/grawards";
+
 const internationalFundingTipsLink =
   "https://www.uoguelph.ca/admission/undergraduate/international/funding/student-tips/";
+
+
 
 const COMPULSORY_FEE_RANGE_ALLOWANCE = 500;
 const state = {
@@ -29,6 +34,7 @@ const state = {
   cohortYear: "",
   program: "",
   major: "",
+  classification: "",
   country: "",
   estimateScope: "full",
 
@@ -45,7 +51,7 @@ const state = {
   roomType: "",
   mealPlan: "",
   offCampusType: "",
-  currentOffCampusRent: 0,
+  currentOffCampusRent: null,
   currentOffCampusFood: 0,
 
   otherScholarshipOffset: 0,
@@ -55,7 +61,9 @@ const state = {
   coopEarningsOffset: 0,
   familySupport: 0,
   
-  fullName: "",
+  firstName: "",
+  lastName: "",
+  dateOfBirth: "",
   email: "",
   marketingConsent: false,
 
@@ -66,7 +74,8 @@ const state = {
   personalAmount: 0,
   partTimeHoursPerWeek: 10,
   partTimeHourlyRate: 20,
-  coopWeeklyEarnings: null,
+  coopHourlyRate: null,
+  coopHoursPerWeek: 40,
 
   currencyCode: "",
   currencyRate: null,
@@ -76,7 +85,10 @@ const state = {
   step2ErrorMessage: "",
   dataLoadError: false
 };
-
+const INITIAL_ESTIMATOR_STATE =
+  JSON.parse(
+    JSON.stringify(state)
+  );
 // ======================
 // HELPER FUNCTIONS
 // ======================
@@ -88,7 +100,21 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+function getAwardSearchDetails() {
+  if (state.level === "GR") {
+    return {
+      link: graduateAwardSearchLink,
+      label:
+        "University of Guelph Graduate Award Search"
+    };
+  }
 
+  return {
+    link: undergraduateAwardSearchLink,
+    label:
+      "University of Guelph Undergraduate Award Search"
+  };
+}
 function renderAlert(title, message = "", color = "yellow") {
   return `
     <div class="uog-alert uog-alert-${color}">
@@ -304,10 +330,43 @@ const COUNTRY_CURRENCY = {
 document.addEventListener("DOMContentLoaded", init);
 
 async function init() {
+  injectEstimatorStyles();
   bindScrollTop();
   await loadData();
   calculateEstimate();
   renderCurrentStep();
+}
+
+function injectEstimatorStyles() {
+  if (document.getElementById("estimatorDynamicStyles")) {
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.id = "estimatorDynamicStyles";
+  style.textContent = `
+    #backStep5,
+    #startAgainBtn {
+      width: 180px;
+      min-height: 48px;
+      justify-content: center;
+    }
+
+    .coop-earnings-section {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #d6d6d6;
+    }
+
+    @media (max-width: 700px) {
+      #backStep5,
+      #startAgainBtn {
+        width: 100%;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
 }
 
 let SUPPORTED_CURRENCIES = [];
@@ -316,7 +375,12 @@ let SUPPORTED_CURRENCIES = [];
 
 async function loadData() {
   try {
-    const res = await fetch("./data.json");
+    const res = await fetch(
+      "./data.json",
+      {
+        cache: "no-store"
+      }
+    );
     if (!res.ok) throw new Error("Could not load data.json");
     state.data = await res.json();
     state.dataLoadError = false;
@@ -338,7 +402,41 @@ async function loadData() {
   }
 }
 
+function getAvailableGraduateClassifications() {
+  if (state.level !== "GR") {
+    return [];
+  }
+
+  const rows = getFilteredTuitionRows({
+    includeClassification: false
+  });
+
+  const classificationOrder = [
+    "Graduate Diploma",
+    "Masters",
+    "Doctoral/PHD"
+  ];
+
+  return classificationOrder.filter(classification =>
+    rows.some(row =>
+      normalizeKey(row.Classification) ===
+      normalizeKey(classification)
+    )
+  );
+}
+
 function getAvailableProgramGroups() {
+  /*
+    Graduate students must choose a classification before
+    program options become available.
+  */
+  if (
+    state.level === "GR" &&
+    !state.classification
+  ) {
+    return [];
+  }
+
   const rows = getFilteredTuitionRows();
   const groupedPrograms = new Map();
 
@@ -352,16 +450,14 @@ function getAvailableProgramGroups() {
       groupedPrograms.set(program, new Map());
     }
 
-    const programChoices = groupedPrograms.get(program);
+    const programChoices =
+      groupedPrograms.get(program);
 
-    /*
-      Undergraduate records normally use the major as the selectable label.
+    const optionLabel =
+      major || program;
 
-      Graduate records, or records without a major, use the program name
-      itself as the selectable option.
-    */
-    const optionLabel = major || program;
-    const optionKey = `${program}|||${major}`;
+    const optionKey =
+      `${program}|||${major}`;
 
     if (!programChoices.has(optionKey)) {
       programChoices.set(optionKey, {
@@ -373,11 +469,17 @@ function getAvailableProgramGroups() {
   });
 
   return [...groupedPrograms.entries()]
-    .sort(([programA], [programB]) => programA.localeCompare(programB))
+    .sort(([programA], [programB]) =>
+      programA.localeCompare(programB)
+    )
     .map(([program, choices]) => ({
       program,
-      choices: [...choices.values()].sort((a, b) =>
-        a.label.localeCompare(b.label)
+
+      choices: [...choices.values()].sort(
+        (choiceA, choiceB) =>
+          choiceA.label.localeCompare(
+            choiceB.label
+          )
       )
     }));
 }
@@ -457,7 +559,20 @@ function updateChrome() {
     4: "Add potential funding and earnings that may help offset your costs.",
     5: "Review the estimate and choose how to save it."
   };
+  const scholarshipResourceLink =
+    [...document.querySelectorAll(
+      ".global-resources-links a"
+    )].find(link =>
+      link.textContent.trim() ===
+      "Scholarships & Funding"
+    );
 
+  if (scholarshipResourceLink) {
+    scholarshipResourceLink.href =
+      state.level === "GR"
+        ? graduateAwardSearchLink
+        : undergraduateAwardSearchLink;
+  }
   const topStatusCard = document.getElementById("topStatusCard");
   const progressInline = document.getElementById("progressInline");
   const showChrome = state.currentStep > 0;
@@ -666,42 +781,50 @@ function renderStep0() {
   return `
     <div class="step-container contenthub-intro">
       <div class="step-header">
-        <p class="section-kicker">Planning tool</p>
-        <h2 class="step-title">Cost Estimator</h2>
+        <p class="section-kicker">
+          Planning tool
+        </p>
+
+        <h2 class="step-title">
+          Cost Estimator
+        </h2>
 
         <p class="step-description">
-          Use this tool to build an estimated cost range based on student type, program, living costs and optional expenses.
+          Select the option that best describes you
+          to begin your estimate.
         </p>
       </div>
 
       <div class="step-content">
         <div class="choice-row welcome-choice-row">
           <button
-            class="choice-card ${state.studentPhase === "future" ? "selected" : ""}"
+            class="choice-card"
             data-value="future"
             type="button"
           >
-            <span class="choice-card-title">Future student</span>
+            <span class="choice-card-title">
+              Future student
+            </span>
+
             <span class="choice-card-text">
-              For prospective students and applicants planning ahead.
+              For prospective students and applicants
+              planning ahead.
             </span>
           </button>
 
           <button
-            class="choice-card ${state.studentPhase === "current" ? "selected" : ""}"
+            class="choice-card"
             data-value="current"
             type="button"
           >
-            <span class="choice-card-title">Current or returning student</span>
-            <span class="choice-card-text">
-              For students who already know their program and want a more specific estimate.
+            <span class="choice-card-title">
+              Current or returning student
             </span>
-          </button>
-        </div>
 
-        <div class="step-actions welcome-actions">
-          <button class="btn-primary btn-lg" id="startBtn" type="button">
-            Start estimate
+            <span class="choice-card-text">
+              For students who already know their program
+              and want a more specific estimate.
+            </span>
           </button>
         </div>
       </div>
@@ -1059,43 +1182,101 @@ function isMandatoryCoopProgram() {
 }
 
 function renderStep2() {
-  if (state.studentPhase === "current" && !state.cohortYear) {
-    state.cohortYear = getLatestCurrentCohortYear();
+  if (
+    state.studentPhase === "current" &&
+    !state.cohortYear
+  ) {
+    state.cohortYear =
+      getLatestCurrentCohortYear();
   }
 
-  const campuses = getAvailableCampuses();
-  const cohortYears = getAvailableCohortYears();
-  const programGroups = getAvailableProgramGroups();
+  const campuses =
+    getAvailableCampuses();
 
-  const externalCampusSelected = isExternalCampusSelected();
-  const isUG = state.level === "UG";
+  const cohortYears =
+    getAvailableCohortYears();
 
-  const selectedProgramValue = state.program
-    ? `${state.program}|||${state.major || ""}`
-    : "";
+  const isUG =
+    state.level === "UG";
 
-  const selectedProgramExists = programGroups.some(group =>
-    group.choices.some(choice =>
-      choice.program === state.program &&
-      choice.major === (state.major || "")
-    )
-  );
+  const isGraduate =
+    state.level === "GR";
 
-  if (state.campus && !campuses.includes(state.campus)) {
+  const graduateClassifications =
+    getAvailableGraduateClassifications();
+
+  /*
+    Graduate programs currently use only the
+    University of Guelph campus.
+  */
+  if (isGraduate) {
+    state.campus = state.program
+      ? "University of Guelph"
+      : "";
+  }
+
+  const programGroups =
+    getAvailableProgramGroups();
+
+  /*
+    External-campus stopping screens apply only
+    to undergraduate students.
+  */
+  const externalCampusSelected =
+    isUG &&
+    isExternalCampusSelected();
+
+  const isFutureGraduate =
+    state.studentPhase === "future" &&
+    isGraduate;
+  const showUndergraduateWinterWarning =
+    state.studentPhase === "future" &&
+    state.level === "UG" &&
+    normalizeKey(
+      state.cohortYear
+    ).startsWith("winter");
+  const selectedProgramValue =
+    state.program
+      ? `${state.program}|||${state.major || ""}`
+      : "";
+
+  const selectedProgramExists =
+    programGroups.some(group =>
+      group.choices.some(choice =>
+        choice.program === state.program &&
+        choice.major === (state.major || "")
+      )
+    );
+
+  if (
+    state.campus &&
+    !campuses.includes(state.campus)
+  ) {
     state.campus = "";
     state.program = "";
     state.major = "";
     state.matchedTuitionRecord = null;
   }
 
-  if (state.program && !selectedProgramExists) {
+  if (
+    state.program &&
+    !selectedProgramExists
+  ) {
     state.program = "";
     state.major = "";
     state.matchedTuitionRecord = null;
+
+    if (isGraduate) {
+      state.campus = "";
+    }
   }
 
-  const coopStatus = getFutureProgramCoopStatus();
-  const mandatoryCoop = isUG && isMandatoryCoopProgram();
+  const coopStatus =
+    getFutureProgramCoopStatus();
+
+  const mandatoryCoop =
+    isUG &&
+    isMandatoryCoopProgram();
 
   if (mandatoryCoop) {
     state.coopInterest = "Yes";
@@ -1117,8 +1298,15 @@ function renderStep2() {
   const latestApprovedCohort =
     getLatestApprovedTuitionCohort();
 
+  const selectedStartYearMatch =
+    String(
+      state.cohortYear || ""
+    ).match(/\b(\d{4})\b/);
+
   const selectedStartYear =
-    Number.parseInt(state.cohortYear, 10);
+    selectedStartYearMatch
+      ? Number(selectedStartYearMatch[1])
+      : null;
 
   const firstUnapprovedYear =
     latestApprovedCohort
@@ -1129,19 +1317,26 @@ function renderStep2() {
     state.studentPhase === "future" &&
     latestApprovedCohort &&
     Number.isFinite(selectedStartYear) &&
-    selectedStartYear > latestApprovedCohort.end;
+    selectedStartYear >
+      latestApprovedCohort.end;
 
   return `
     <div class="step-container">
       <div class="step-header">
-        <p class="section-kicker">Program and tuition</p>
+        <p class="section-kicker">
+          Program and tuition
+        </p>
 
         <h2 class="step-title">
           Select your program details
         </h2>
 
         <p class="step-description">
-          Choose the campus and program used to match tuition data.
+          ${
+            isGraduate
+              ? "Choose your expected start term, graduate program type and program."
+              : "Choose the campus and program used to match tuition data."
+          }
         </p>
       </div>
 
@@ -1153,17 +1348,29 @@ function renderStep2() {
               ? `
                 <div class="form-group">
                   <label for="cohortYear">
-                    Expected start year
-                    <span class="required-star">*</span>
+                    Expected start term
+
+                    <span class="required-star">
+                      *
+                    </span>
                   </label>
 
-                  <select id="cohortYear" class="step-dropdown">
-                    <option value="">Select target year</option>
+                  <select
+                    id="cohortYear"
+                    class="step-dropdown"
+                  >
+                    <option value="">
+                      Select target term
+                    </option>
 
                     ${cohortYears.map(option => `
                       <option
                         value="${escapeHtml(option.value)}"
-                        ${state.cohortYear === option.value ? "selected" : ""}
+                        ${
+                          state.cohortYear === option.value
+                            ? "selected"
+                            : ""
+                        }
                       >
                         ${escapeHtml(option.label)}
                       </option>
@@ -1174,10 +1381,48 @@ function renderStep2() {
                     showFutureTuitionWarning
                       ? `
                         <p class="form-help-text">
-                          Tuition information is currently available for the
-                          ${escapeHtml(latestApprovedCohort.raw)} cohort.
-                          Estimates for Fall ${escapeHtml(firstUnapprovedYear)}
-                          or later use the most recent approved tuition information.
+                          Tuition information is currently
+                          available for the
+                          ${escapeHtml(latestApprovedCohort.raw)}
+                          cohort.
+
+                          ${
+                            isFutureGraduate
+                              ? `
+                                Graduate estimates for
+                                ${escapeHtml(firstUnapprovedYear)}
+                                or later use the most recent
+                                approved tuition information.
+                              `
+                              : `
+                                Estimates for Fall
+                                ${escapeHtml(firstUnapprovedYear)}
+                                or later use the most recent
+                                approved tuition information.
+                              `
+                          }
+                        </p>
+                      `
+                      : ""
+                  }
+                  ${
+                    showUndergraduateWinterWarning
+                      ? `
+                        <p class="form-help-text">
+                          <strong>Winter start availability:</strong>
+                          Not all undergraduate programs accept students
+                          starting in the Winter term. Some programs are
+                          available for Fall entry only. Please confirm that
+                          your selected program offers Winter admission.
+                          You can
+                          <a
+                            href="https://www.uoguelph.ca/programs/undergraduate"
+                            target="_blank"
+                            rel="noopener"
+                          >
+                            explore undergraduate programs
+                          </a>
+                          on the University of Guelph website.
                         </p>
                       `
                       : ""
@@ -1186,173 +1431,345 @@ function renderStep2() {
               `
               : `
                 <div class="form-group">
-                  <label>Year</label>
+                  <label>
+                    Year
+                  </label>
 
                   <div class="readonly-field">
-                    ${escapeHtml(currentStudentYear || "Not available")}
+                    ${escapeHtml(
+                      currentStudentYear ||
+                      "Not available"
+                    )}
                   </div>
                 </div>
               `
           }
 
-          ${renderCampusChoices()}
+          ${
+            isGraduate
+              ? `
+                <div class="form-group">
+                  <label for="classification">
+                    What type of graduate program
+                    are you interested in?
+
+                    <span class="required-star">
+                      *
+                    </span>
+                  </label>
+
+                  <select
+                    id="classification"
+                    class="step-dropdown"
+                  >
+                    <option value="">
+                      Select graduate program type
+                    </option>
+
+                    ${graduateClassifications.map(
+                      classification => {
+                        const displayLabel =
+                          classification === "Masters"
+                            ? "Master’s"
+                            : classification ===
+                              "Doctoral/PHD"
+                              ? "Doctoral / PhD"
+                              : classification;
+
+                        return `
+                          <option
+                            value="${escapeHtml(classification)}"
+                            ${
+                              state.classification ===
+                              classification
+                                ? "selected"
+                                : ""
+                            }
+                          >
+                            ${escapeHtml(displayLabel)}
+                          </option>
+                        `;
+                      }
+                    ).join("")}
+                  </select>
+                </div>
+              `
+              : ""
+          }
+
+          ${
+            isUG
+              ? renderCampusChoices()
+              : ""
+          }
 
           ${
             externalCampusSelected
               ? renderExternalCampusStopScreen()
-              : state.campus
+              : (
+                  isUG
+                    ? state.campus
+                    : state.classification
+                )
                 ? `
                   <div class="form-group">
                     <label for="program">
-                      Program <span class="required-star">*</span>
+                      Program
+
+                      <span class="required-star">
+                        *
+                      </span>
                     </label>
 
-                    <select id="program" class="step-dropdown">
+                    <select
+                      id="program"
+                      class="step-dropdown"
+                    >
                       <option value="">
-                        Select program or major
+                        ${
+                          isGraduate
+                            ? "Select graduate program"
+                            : "Select program or major"
+                        }
                       </option>
 
-                      ${programGroups.map(group => `
-                        <optgroup label="${escapeHtml(group.program)}">
-                          ${group.choices.map(choice => {
-                            const choiceValue =
-                              `${choice.program}|||${choice.major}`;
+                      ${programGroups.map(group => {
+                        /*
+                          When a graduate program has only
+                          one choice, display one normal option.
+                        */
+                        if (
+                          isGraduate &&
+                          group.choices.length === 1
+                        ) {
+                          const choice =
+                            group.choices[0];
 
-                            return `
-                              <option
-                                value="${escapeHtml(choiceValue)}"
-                                ${
-                                  selectedProgramValue === choiceValue
-                                    ? "selected"
-                                    : ""
-                                }
-                              >
-                                ${escapeHtml(choice.label)}
-                              </option>
-                            `;
-                          }).join("")}
-                        </optgroup>
-                      `).join("")}
+                          const choiceValue =
+                            `${choice.program}|||${choice.major}`;
+
+                          return `
+                            <option
+                              value="${escapeHtml(choiceValue)}"
+                              ${
+                                selectedProgramValue ===
+                                choiceValue
+                                  ? "selected"
+                                  : ""
+                              }
+                            >
+                              ${escapeHtml(group.program)}
+                            </option>
+                          `;
+                        }
+
+                        /*
+                          Keep grouped formatting when a
+                          program contains multiple choices.
+                        */
+                        return `
+                          <optgroup
+                            label="${escapeHtml(group.program)}"
+                          >
+                            ${group.choices.map(choice => {
+                              const choiceValue =
+                                `${choice.program}|||${choice.major}`;
+
+                              return `
+                                <option
+                                  value="${escapeHtml(choiceValue)}"
+                                  ${
+                                    selectedProgramValue ===
+                                    choiceValue
+                                      ? "selected"
+                                      : ""
+                                  }
+                                >
+                                  ${escapeHtml(choice.label)}
+                                </option>
+                              `;
+                            }).join("")}
+                          </optgroup>
+                        `;
+                      }).join("")}
                     </select>
 
                     <p class="form-help-text">
-                      Programs are organized by degree. Select your major
-                      from the applicable section.
+                      ${
+                        isGraduate
+                          ? `
+                            Select the graduate program
+                            that best matches your intended
+                            area of study.
+                          `
+                          : `
+                            Programs are organized by degree.
+                            Select your major from the
+                            applicable section.
+                          `
+                      }
                     </p>
                   </div>
 
                   ${
-                    state.program && mandatoryCoop
+                    state.program
                       ? `
-                        <div class="form-group">
-                          <label>Co-op requirement</label>
+                        ${
+                          isGraduate
+                            ? renderCampusChoices()
+                            : ""
+                        }
 
-                          <div class="readonly-field">
-                            Yes, co-op is required
+                        ${
+                          mandatoryCoop
+                            ? `
+                              <div class="form-group">
+                                <label>
+                                  Co-op requirement
+                                </label>
+
+                                <div class="readonly-field">
+                                  Yes, co-op is required
+                                </div>
+
+                                <p class="form-help-text">
+                                  Co-op is mandatory for this
+                                  engineering program and is
+                                  automatically included in
+                                  your estimate.
+                                </p>
+                              </div>
+                            `
+                            : coopStatus === "Yes"
+                              ? `
+                                <div class="form-group">
+                                  <label for="coopInterest">
+                                    ${
+                                      state.studentPhase ===
+                                      "future"
+                                        ? "Interested in co-op?"
+                                        : "Enrolled in co-op?"
+                                    }
+                                  </label>
+
+                                  <select
+                                    id="coopInterest"
+                                    class="step-dropdown"
+                                  >
+                                    <option
+                                      value="Yes"
+                                      ${
+                                        state.coopInterest ===
+                                        "Yes"
+                                          ? "selected"
+                                          : ""
+                                      }
+                                    >
+                                      Yes
+                                    </option>
+
+                                    <option
+                                      value="No"
+                                      ${
+                                        state.coopInterest ===
+                                        "No"
+                                          ? "selected"
+                                          : ""
+                                      }
+                                    >
+                                      No
+                                    </option>
+                                  </select>
+                                </div>
+                              `
+                              : ""
+                        }
+
+                        <div class="estimate-scope-section">
+                          <div class="estimate-scope-heading">
+                            <h3 class="subsection-title">
+                              What would you like to estimate?
+                            </h3>
+
+                            <p class="form-help-text">
+                              You can calculate tuition and
+                              compulsory fees only or include
+                              living expenses and potential
+                              funding.
+                            </p>
                           </div>
 
-                          <p class="form-help-text">
-                            Co-op is mandatory for this engineering program and is
-                            automatically included in your estimate.
-                          </p>
+                          <div class="estimate-scope-options">
+                            <button
+                              type="button"
+                              class="estimate-scope-card ${
+                                state.estimateScope === "full"
+                                  ? "selected"
+                                  : ""
+                              }"
+                              data-estimate-scope="full"
+                              aria-pressed="${
+                                state.estimateScope === "full"
+                              }"
+                            >
+                              <span
+                                class="estimate-scope-radio"
+                              ></span>
+
+                              <span
+                                class="estimate-scope-content"
+                              >
+                                <strong>
+                                  Full cost estimate
+                                </strong>
+
+                                <span>
+                                  Continue through the
+                                  calculator to include living
+                                  expenses and ways to fund
+                                  your education.
+                                </span>
+                              </span>
+                            </button>
+
+                            <button
+                              type="button"
+                              class="estimate-scope-card ${
+                                state.estimateScope ===
+                                "tuition-only"
+                                  ? "selected"
+                                  : ""
+                              }"
+                              data-estimate-scope="tuition-only"
+                              aria-pressed="${
+                                state.estimateScope ===
+                                "tuition-only"
+                              }"
+                            >
+                              <span
+                                class="estimate-scope-radio"
+                              ></span>
+
+                              <span
+                                class="estimate-scope-content"
+                              >
+                                <strong>
+                                  Tuition only
+                                </strong>
+
+                                <span>
+                                  Skip the remaining calculator
+                                  steps and go directly to your
+                                  tuition and compulsory-fee
+                                  estimate.
+                                </span>
+                              </span>
+                            </button>
+                          </div>
                         </div>
                       `
-                      : state.program && coopStatus === "Yes"
-                        ? `
-                          <div class="form-group">
-                            <label for="coopInterest">
-                              ${
-                                state.studentPhase === "future"
-                                  ? "Interested in co-op?"
-                                  : "Enrolled in co-op?"
-                              }
-                            </label>
-
-                            <select
-                              id="coopInterest"
-                              class="step-dropdown"
-                            >
-                              <option
-                                value="Yes"
-                                ${state.coopInterest === "Yes" ? "selected" : ""}
-                              >
-                                Yes
-                              </option>
-
-                              <option
-                                value="No"
-                                ${state.coopInterest === "No" ? "selected" : ""}
-                              >
-                                No
-                              </option>
-                            </select>
-                          </div>
-                        `
-                        : ""
+                      : ""
                   }
-
-                  <div class="estimate-scope-section">
-                    <div class="estimate-scope-heading">
-                      <h3 class="subsection-title">
-                        What would you like to estimate?
-                      </h3>
-
-                      <p class="form-help-text">
-                         You can calculate tuition and compulsory fees only or include living expenses and potential funding.
-                        fees only.
-                      </p>
-                    </div>
-
-                    <div class="estimate-scope-options">
-                      <button
-                        type="button"
-                        class="estimate-scope-card ${
-                          state.estimateScope === "full"
-                            ? "selected"
-                            : ""
-                        }"
-                        data-estimate-scope="full"
-                        aria-pressed="${
-                          state.estimateScope === "full"
-                        }"
-                      >
-                        <span class="estimate-scope-radio"></span>
-
-                        <span class="estimate-scope-content">
-                          <strong>Full cost estimate</strong>
-
-                          <span>
-                            Continue through the calculator to include living expenses and ways to fund your education.
-                          </span>
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        class="estimate-scope-card ${
-                          state.estimateScope === "tuition-only"
-                            ? "selected"
-                            : ""
-                        }"
-                        data-estimate-scope="tuition-only"
-                        aria-pressed="${
-                          state.estimateScope === "tuition-only"
-                        }"
-                      >
-                        <span class="estimate-scope-radio"></span>
-
-                        <span class="estimate-scope-content">
-                          <strong>Tuition only</strong>
-
-                          <span>
-                            Skip the remaining calculator steps and go directly to your tuition and compulsory-fee estimate.
-                          </span>
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  
                 `
                 : ""
           }
@@ -1519,6 +1936,87 @@ function getRoomOptionsForResidence(residenceArea) {
     .sort((a, b) => a.yearlyCost - b.yearlyCost);
 }
 
+function getGraduateRoomTypes() {
+  const rows =
+    state.data?.["On_campus_Living_Costs"] || [];
+
+  return [...new Set(
+    rows
+      .map(item =>
+        normalize(
+          readField(item, [
+            "RoomType",
+            "Room Type"
+          ])
+        )
+      )
+      .filter(Boolean)
+  )].sort((roomA, roomB) =>
+    roomA.localeCompare(roomB)
+  );
+}
+
+function getGraduateResidencesForRoomType(
+  selectedRoomType
+) {
+  if (!selectedRoomType) {
+    return [];
+  }
+
+  const rows =
+    state.data?.["On_campus_Living_Costs"] || [];
+
+  const residences = new Map();
+
+  rows
+    .filter(item => {
+      const roomType = normalize(
+        readField(item, [
+          "RoomType",
+          "Room Type"
+        ])
+      );
+
+      return (
+        normalizeKey(roomType) ===
+        normalizeKey(selectedRoomType)
+      );
+    })
+    .forEach(item => {
+      const residenceArea = normalize(
+        readField(item, [
+          "ResidenceArea",
+          "Residence Area"
+        ])
+      );
+
+      const yearlyCost = toNumber(
+        readField(item, ["Cost"])
+      );
+
+      if (!residenceArea) {
+        return;
+      }
+
+      residences.set(
+        normalizeKey(residenceArea),
+        {
+          value: residenceArea,
+          label:
+            `${residenceArea} (${formatMoney(yearlyCost)}/year)`,
+          yearlyCost
+        }
+      );
+    });
+
+  return [...residences.values()]
+    .sort((optionA, optionB) =>
+      optionA.value.localeCompare(
+        optionB.value
+      )
+    );
+}
+
 function selectedResidenceRequiresMealPlan() {
   const residence = normalizeKey(state.residence);
   const roomType = normalizeKey(state.roomType);
@@ -1558,7 +2056,327 @@ function selectedResidenceRequiresMealPlan() {
 
   return true;
 }
+function renderGraduateExpenseGuide() {
+  /*
+    Display this informational table only
+    for graduate students.
+  */
+  if (state.level !== "GR") {
+    return "";
+  }
 
+  const rows = (
+    state.data?.["Off_campus_Living_Costs"] || []
+  ).filter(item => {
+    const expense = normalize(
+      readField(item, ["Expense"])
+    );
+
+    /*
+      Exclude the off-campus housing amount.
+    */
+    return (
+      normalizeKey(expense) !==
+      normalizeKey(
+        "Off-campus housing (shared)"
+      )
+    );
+  });
+
+  if (!rows.length) {
+    return "";
+  }
+
+  return `
+    <details
+      class="housing-guide-card graduate-expense-guide"
+    >
+      <summary>
+        <span class="housing-guide-summary-title">
+          View typical graduate living expenses
+        </span>
+
+        <span class="housing-guide-summary-note">
+          Planning information
+        </span>
+      </summary>
+
+      <div class="housing-guide-body">
+        <p
+          class="form-help-text graduate-expense-guide-note"
+        >
+          These amounts are provided as a general
+          planning guide. They are not automatically
+          added to your estimate.
+        </p>
+
+        <div class="off-campus-cost-table">
+          <div class="off-campus-cost-header">
+            <span>
+              Expense
+            </span>
+
+            <span>
+              Cost by semester
+            </span>
+
+            <span>
+              Cost by year
+            </span>
+          </div>
+
+          ${rows.map(item => {
+            const expense = readField(
+              item,
+              ["Expense"]
+            );
+
+            const semesterCost = readField(
+              item,
+              ["Costs by Semester"]
+            );
+
+            const yearlyCost = readField(
+              item,
+              ["Costs by Year"]
+            );
+
+            return `
+              <div class="off-campus-cost-row">
+                <span class="off-campus-expense-name">
+                  ${escapeHtml(expense)}
+                </span>
+
+                <span class="off-campus-semester-cost">
+                  ${escapeHtml(
+                    semesterCost ||
+                    "Not available"
+                  )}
+                </span>
+
+                <strong class="off-campus-yearly-cost">
+                  ${escapeHtml(
+                    yearlyCost ||
+                    "Not available"
+                  )}
+                </strong>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
+function renderOnCampusHousingFields() {
+  if (
+    state.housingType !== "OnCampus"
+  ) {
+    return "";
+  }
+
+  const isGraduate =
+    state.level === "GR";
+
+  const residenceInformationLink =
+    getInformationLink(
+      "On_campus_Living_Costs",
+      "https://www.uoguelph.ca/housing/fees-deposits"
+    );
+
+  /*
+    Graduate order:
+    Room type, followed by available residences.
+  */
+  if (isGraduate) {
+    const roomTypes =
+      getGraduateRoomTypes();
+
+    const availableResidences =
+      getGraduateResidencesForRoomType(
+        state.roomType
+      );
+
+    return `
+      <div class="form-group">
+        <label for="roomType">
+          Which room type would you prefer?
+          <span class="required-star">*</span>
+        </label>
+
+        <select
+          id="roomType"
+          class="step-dropdown"
+        >
+          <option value="">
+            Select a room type
+          </option>
+
+          ${roomTypes.map(roomType => `
+            <option
+              value="${escapeHtml(roomType)}"
+              ${
+                state.roomType === roomType
+                  ? "selected"
+                  : ""
+              }
+            >
+              ${escapeHtml(roomType)}
+            </option>
+          `).join("")}
+        </select>
+
+        <p class="form-help-text">
+          Select a room type to view the
+          residences where it is available.
+        </p>
+      </div>
+
+      ${
+        state.roomType
+          ? `
+            <div class="form-group">
+              <label for="residence">
+                Which residence would you prefer?
+                <span class="required-star">*</span>
+              </label>
+
+              <select
+                id="residence"
+                class="step-dropdown"
+              >
+                <option value="">
+                  Select an available residence
+                </option>
+
+                ${availableResidences.map(option => `
+                  <option
+                    value="${escapeHtml(option.value)}"
+                    ${
+                      state.residence === option.value
+                        ? "selected"
+                        : ""
+                    }
+                  >
+                    ${escapeHtml(option.label)}
+                  </option>
+                `).join("")}
+              </select>
+
+              <p class="form-help-text">
+                These residences offer the selected
+                room type. Review current
+                <a
+                  href="${escapeHtml(residenceInformationLink)}"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  residence fees and deposits
+                </a>.
+              </p>
+            </div>
+          `
+          : ""
+      }
+    `;
+  }
+
+  /*
+    Existing undergraduate order:
+    Residence, followed by room type.
+  */
+  const residenceAreas =
+    getResidenceAreas();
+
+  const roomOptions =
+    getRoomOptionsForResidence(
+      state.residence
+    );
+
+  return `
+    <div class="form-group">
+      <label for="residence">
+        Which residence would you prefer?
+        <span class="required-star">*</span>
+      </label>
+
+      <select
+        id="residence"
+        class="step-dropdown"
+      >
+        <option value="">
+          Select a residence
+        </option>
+
+        ${residenceAreas.map(area => `
+          <option
+            value="${escapeHtml(area)}"
+            ${
+              state.residence === area
+                ? "selected"
+                : ""
+            }
+          >
+            ${escapeHtml(area)}
+          </option>
+        `).join("")}
+      </select>
+
+      <p class="form-help-text">
+        Review current
+        <a
+          href="${escapeHtml(residenceInformationLink)}"
+          target="_blank"
+          rel="noopener"
+        >
+          residence fees and deposits
+        </a>.
+      </p>
+    </div>
+
+    ${
+      state.residence
+        ? `
+          <div class="form-group">
+            <label for="roomType">
+              Which room type would you prefer?
+              <span class="required-star">*</span>
+            </label>
+
+            <select
+              id="roomType"
+              class="step-dropdown"
+            >
+              <option value="">
+                Select a room type
+              </option>
+
+              ${roomOptions.map(option => `
+                <option
+                  value="${escapeHtml(option.value)}"
+                  ${
+                    state.roomType === option.value
+                      ? "selected"
+                      : ""
+                  }
+                >
+                  ${escapeHtml(option.label)}
+                </option>
+              `).join("")}
+            </select>
+
+            <p class="form-help-text">
+              The displayed amount is the
+              yearly residence cost from the
+              available planning data.
+            </p>
+          </div>
+        `
+        : ""
+    }
+  `;
+}
 function renderStep3() {
   const textbooks = getJsonCost(
     "Textbooks",
@@ -1578,6 +2396,16 @@ function renderStep3() {
 
   if (!state.personalAmount) {
     state.personalAmount = personalExpenses.amount;
+  }
+  const averageMonthlyRent =
+    getAverageMonthlyOffCampusRent();
+
+  if (
+    state.housingType === "OffCampus" &&
+    state.currentOffCampusRent === null
+  ) {
+    state.currentOffCampusRent =
+      averageMonthlyRent;
   }
 
   const residenceAreas = getResidenceAreas();
@@ -1675,6 +2503,8 @@ function renderStep3() {
             </p>
           </div>
 
+          ${renderGraduateExpenseGuide()}
+
           <div class="form-group">
             <h3 class="subsection-title">
               Residence and meal plan
@@ -1720,16 +2550,13 @@ function renderStep3() {
               state.studentPhase === "future"
                 ? `
                   <p class="form-help-text">
-                    Eligible first-year students are guaranteed
-                    residence when they meet the applicable
-                    application, admission acceptance and deposit
-                    deadlines. Review the
+                    Explore
                     <a
                       href="https://www.uoguelph.ca/housing/apply"
                       target="_blank"
                       rel="noopener"
                     >
-                      residence eligibility and application requirements
+                      residence eligibility on the Student Housing website
                     </a>.
                   </p>
                 `
@@ -1737,95 +2564,34 @@ function renderStep3() {
             }
           </div>
 
-          ${
-            isOnCampus
-              ? `
-                <div class="form-group">
-                  <label for="residence">
-                    Which residence would you prefer?
-                    <span class="required-star">*</span>
-                  </label>
-
-                  <select
-                    id="residence"
-                    class="step-dropdown"
-                  >
-                    <option value="">
-                      Select a residence
-                    </option>
-
-                    ${residenceAreas.map(area => `
-                      <option
-                        value="${escapeHtml(area)}"
-                        ${
-                          state.residence === area
-                            ? "selected"
-                            : ""
-                        }
-                      >
-                        ${escapeHtml(area)}
-                      </option>
-                    `).join("")}
-                  </select>
-
-                  <p class="form-help-text">
-                    Review current
-                    <a
-                      href="${escapeHtml(residenceInformationLink)}"
-                      target="_blank"
-                      rel="noopener"
-                    >
-                      residence fees and deposits
-                    </a>.
-                  </p>
-                </div>
-              `
-              : ""
-          }
-
-          ${
-            isOnCampus && state.residence
-              ? `
-                <div class="form-group">
-                  <label for="roomType">
-                    Which room type would you prefer?
-                    <span class="required-star">*</span>
-                  </label>
-
-                  <select
-                    id="roomType"
-                    class="step-dropdown"
-                  >
-                    <option value="">
-                      Select a room type
-                    </option>
-
-                    ${roomOptions.map(option => `
-                      <option
-                        value="${escapeHtml(option.value)}"
-                        ${
-                          state.roomType === option.value
-                            ? "selected"
-                            : ""
-                        }
-                      >
-                        ${escapeHtml(option.label)}
-                      </option>
-                    `).join("")}
-                  </select>
-
-                  <p class="form-help-text">
-                    The displayed amount is the yearly residence
-                    cost from the available planning data.
-                  </p>
-                </div>
-              `
-              : ""
-          }
+          ${renderOnCampusHousingFields()}
 
           ${
             isOffCampus
               ? `
+                <div class="form-group">
+                  <label for="currentOffCampusRent">
+                    Estimated monthly off-campus rent
+                  </label>
+
+                  ${renderMoneyInput({
+                    id: "currentOffCampusRent",
+                    value: state.currentOffCampusRent,
+                    placeholder: "Enter estimated monthly rent"
+                  })}
+
+                
+
+                  
+
+                  <p class="form-help-text">
+                    Rental prices in the City of Guelph vary
+                    based on the size of the unit, the number
+                    of bedrooms, amenities, and whether utilities
+                    such as heat and hydro are included.
+                  </p>
+                </div>
+
                 <div class="form-group">
                   <label for="futureMealPlanInterest">
                     Would you like to include a meal plan?
@@ -1864,8 +2630,16 @@ function renderStep3() {
                   </select>
 
                   <p class="form-help-text">
-                    Students living off campus can still purchase
-                    a University meal plan.
+                    Students living off campus can also purchase
+                    an Ultra meal plan. Explore additional meal-plan
+                    options on the
+                    <a
+                      href="${escapeHtml(mealPlanInformationLink)}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Hospitality Services website
+                    </a>.
                   </p>
                 </div>
               `
@@ -1978,43 +2752,64 @@ function renderStep3() {
     </div>
   `;
 }
-function getOffCampusLivingRows() {
-  return state.data?.["Off_campus_Living_Costs"] || [];
+function getOffCampusRentalRows() {
+  return (
+    state.data?.[
+      "Off_campus_Living_Costs_Rental"
+    ] || []
+  );
 }
 
+function getAverageMonthlyOffCampusRent() {
+  const monthlyRents =
+    getOffCampusRentalRows()
+      .map(item =>
+        toNumber(
+          readField(item, [
+            "Monthly Rent",
+            "MonthlyRent"
+          ])
+        )
+      )
+      .filter(amount =>
+        Number.isFinite(amount) &&
+        amount > 0
+      );
 
-
-function getOffCampusHousingRange() {
-  const housingRow = getOffCampusLivingRows().find(item => {
-    const expense = normalize(
-      readField(item, ["Expense"])
-    ).toLowerCase();
-
-    return expense.includes("off-campus housing");
-  });
-
-  if (!housingRow) {
-    return {
-      low: 0,
-      high: 0,
-      display: ""
-    };
+  if (!monthlyRents.length) {
+    return 0;
   }
 
-  const display = readField(
-    housingRow,
-    ["Costs by Year"]
-  );
+  const total =
+    monthlyRents.reduce(
+      (sum, amount) =>
+        sum + amount,
+      0
+    );
 
-  const range = parseRangeFromText(display);
-
-  return {
-    low: range.low,
-    high: range.high,
-    display
-  };
+  return Math.round(
+    (total / monthlyRents.length) * 100
+  ) / 100;
 }
+
+function getOffCampusRentalMonths() {
+  /*
+    All graduate students use 12 months,
+    including Summer-only programs.
+
+    All undergraduate students use 8 months.
+  */
+  return state.level === "GR"
+    ? 12
+    : 8;
+}
+
+
+
+
 function renderStep4() {
+  const awardSearchDetails =
+    getAwardSearchDetails();
   const defaultPartTimeRate = parseAmountFromText(
     readField(
       state.data?.["Part-Time_earnings"]?.[0] || {},
@@ -2033,8 +2828,25 @@ function renderStep4() {
       ? Math.round((coopRange.low + coopRange.high) / 2)
       : 0;
 
-  if (state.coopWeeklyEarnings === null) {
-    state.coopWeeklyEarnings = coopWeeklyMidpoint;
+  const DEFAULT_COOP_HOURS_PER_WEEK = 40;
+
+  const coopHourlyMidpoint =
+    coopWeeklyMidpoint > 0
+      ? Math.round(
+          (
+            coopWeeklyMidpoint /
+            DEFAULT_COOP_HOURS_PER_WEEK
+          ) * 100
+        ) / 100
+      : 0;
+
+  if (state.coopHourlyRate === null) {
+    state.coopHourlyRate = coopHourlyMidpoint;
+  }
+
+  if (!state.coopHoursPerWeek) {
+    state.coopHoursPerWeek =
+      DEFAULT_COOP_HOURS_PER_WEEK;
   }
   if (!state.osapFunding) {
     state.osapFunding = 0;
@@ -2133,14 +2945,14 @@ function renderStep4() {
           ${
             state.coopInterest === "Yes"
               ? `
-                <div class="form-group">
+                <div class="form-group coop-earnings-section">
                   <h4 class="funding-group-title">
                     Potential co-op earnings
                   </h4>
 
                   <p class="form-help-text">
-                    This estimate uses one 16-week co-op work term. The weekly
-                    amount is pre-filled using the midpoint of the earnings range
+                    This estimate uses one 16-week co-op work term. The hourly
+                    wage is pre-filled using the midpoint of the earnings range
                     in the planning data, but you can adjust it.
                   </p>
 
@@ -2162,7 +2974,6 @@ function renderStep4() {
                         <p class="form-help-text">
                           Suggested weekly earnings range:
                           ${formatRangeValue(coopRange.low, coopRange.high)}.
-                          The pre-filled amount is the midpoint of this range.
                         </p>
                       `
                       : ""
@@ -2170,18 +2981,40 @@ function renderStep4() {
                 </div>
 
                 <div class="form-group">
-                  <label for="coopWeeklyEarnings">
-                    Estimated weekly co-op earnings (CAD)
+                  <label for="coopHourlyRate">
+                    Estimated hourly co-op wage (CAD)
                   </label>
 
                   ${renderMoneyInput({
-                    id: "coopWeeklyEarnings",
-                    value: state.coopWeeklyEarnings,
-                    placeholder: "Enter estimated weekly earnings"
+                    id: "coopHourlyRate",
+                    value: state.coopHourlyRate,
+                    placeholder: "Enter your estimated hourly wage"
                   })}
+                </div>
+
+                <div class="form-group">
+                  <label for="coopHoursPerWeek">
+                    Expected hours per week
+                  </label>
+
+                  <input
+                    id="coopHoursPerWeek"
+                    class="step-input"
+                    type="number"
+                    min="0"
+                    max="80"
+                    step="1"
+                    value="${escapeHtml(
+                      state.coopHoursPerWeek
+                    )}"
+                  />
 
                   <p class="form-help-text">
-                    For future students, potential co-op earnings are calculated using one 16-week work term. They are shown for planning only and are not deducted from the final estimate.
+                    Potential earnings are calculated using your
+                    hourly wage and expected weekly hours across
+                    one 16-week co-op work term. For future students,
+                    this amount is shown for planning only and is
+                    not deducted from the final estimate.
                   </p>
                 </div>
               `
@@ -2241,14 +3074,15 @@ function renderStep4() {
             })}
 
             <p class="form-help-text">
-              Include anticipated University of Guelph scholarships, bursaries
-              and other awards. Browse the
+              Include anticipated University of Guelph
+              scholarships, bursaries and other awards.
+              Browse the
               <a
-                href="${undergraduateAwardSearchLink}"
+                href="${escapeHtml(awardSearchDetails.link)}"
                 target="_blank"
                 rel="noopener"
               >
-                University of Guelph Undergraduate Award Search
+                ${escapeHtml(awardSearchDetails.label)}
               </a>
               to explore available funding.
             </p>
@@ -2697,7 +3531,8 @@ function renderMealPlanGuide() {
 
 function renderStep5() {
   const result = state.result || emptyResult();
-
+  const periodDetails =
+    getEstimatePeriodDetails();
   const showOnCampusGuide =
     state.housingType === "OnCampus";
 
@@ -2710,7 +3545,9 @@ function renderStep5() {
 
       <div class="step-header">
         <p class="section-kicker">
-          Estimate summary for 2 academic semesters (Fall & Winter)
+          ${escapeHtml(
+            periodDetails.summaryKicker
+          )}
         </p>
 
         <h2 class="step-title">
@@ -2718,16 +3555,31 @@ function renderStep5() {
         </h2>
 
         <p class="step-description">
-          This is your two-semester estimate for Fall and Winter.
-          It is not a full academic-year estimate.
+          ${escapeHtml(
+            periodDetails.description
+          )}
+
+          ${
+            state.level === "GR" &&
+            !isGraduateSummerOnlyProgram()
+              ? `
+                Tuition and compulsory fees include
+                all three graduate semesters.
+              `
+              : ""
+          }
         </p>
       </div>
 
       <div class="step-content">
 
+        
+
         <div class="estimate-total-card">
           <span class="estimate-total-label">
-            Estimated range for 2 academic semesters (Fall & Winter)
+            ${escapeHtml(
+              periodDetails.totalLabel
+            )}
           </span>
 
           <strong>
@@ -2770,6 +3622,8 @@ function renderStep5() {
 
         ${renderFutureEarningsSummary()}
 
+        ${renderGraduateAssistantshipSummary()}
+
         <div class="cost-summary cost-chart-card">
           <div class="summary-section-heading">
             <h3>Estimated cost breakdown</h3>
@@ -2799,84 +3653,8 @@ function renderStep5() {
 
         ${
           state.studentPhase === "future"
-            ? `
-              <div class="future-contact-section">
-
-                <h3 class="subsection-title">
-                  Would you like the estimate emailed to you?
-                </h3>
-
-                <p class="form-help-text">
-                  To download your estimate or have it emailed to you,
-                  please provide your name and email address.
-                </p>
-
-                <p class="form-help-text">
-                  We may also send information about:
-                </p>
-
-                <ul class="future-contact-list">
-                  <li>Programs and admissions</li>
-                  <li>Scholarships and financial aid</li>
-                  <li>
-                    Events, campus life and student opportunities
-                  </li>
-                </ul>
-
-                <div class="form-group">
-                  <label for="fullName">
-                    Full name
-                    <span class="required-star">*</span>
-                  </label>
-
-                  <input
-                    id="fullName"
-                    class="step-input"
-                    type="text"
-                    value="${escapeHtml(state.fullName)}"
-                    placeholder="Enter your full name"
-                  />
-                </div>
-
-                <div class="form-group">
-                  <label for="email">
-                    Email address
-                    <span class="required-star">*</span>
-                  </label>
-
-                  <input
-                    id="email"
-                    class="step-input"
-                    type="email"
-                    value="${escapeHtml(state.email)}"
-                    placeholder="Enter your email address"
-                  />
-                </div>
-
-                <div class="uog-alert uog-alert-grey">
-                  <div class="uog-alert-title">
-                    <span class="uog-alert-icon">
-                      !
-                    </span>
-
-                    <span>
-                      Consent notice
-                    </span>
-                  </div>
-
-                  <div class="uog-alert-message">
-                    By downloading or requesting your estimate,
-                    you consent to the University of Guelph using
-                    the information provided to send your estimate
-                    and communicate with you about programs,
-                    admissions, scholarships, events and related
-                    opportunities. You may unsubscribe at any time.
-                  </div>
-                </div>
-
-              </div>
-            `
-            : ""
+            ? renderFutureContactSection()
+            : renderCurrentStudentDownloadNotice()
         }
 
       </div>
@@ -2892,7 +3670,13 @@ function renderStep5() {
         >
           Back
         </button>
-
+        <button
+          class="btn-secondary"
+          id="startAgainBtn"
+          type="button"
+        >
+          Start again
+        </button>
         <button
           class="btn-gold"
           id="downloadEstimateBtn"
@@ -3128,21 +3912,25 @@ function renderCostBreakdownChart() {
 
 
 function renderFutureEarningsSummary() {
-  if (state.studentPhase !== "future") {
+  if (
+    state.studentPhase !== "future" ||
+    state.coopInterest !== "Yes"
+  ) {
     return "";
   }
 
-  if (state.coopInterest !== "Yes") {
-    return "";
-  }
+  const hourlyRate =
+    toNumber(state.coopHourlyRate);
 
-  const weeklyEarnings =
-    toNumber(state.coopWeeklyEarnings);
+  const hoursPerWeek =
+    toNumber(state.coopHoursPerWeek);
 
   const COOP_WEEKS_PER_WORK_TERM = 16;
 
   const workTermEarnings =
-    weeklyEarnings * COOP_WEEKS_PER_WORK_TERM;
+    hourlyRate *
+    hoursPerWeek *
+    COOP_WEEKS_PER_WORK_TERM;
 
   if (workTermEarnings <= 0) {
     return "";
@@ -3151,7 +3939,9 @@ function renderFutureEarningsSummary() {
   return `
     <div class="cost-summary potential-coop-summary">
       <div class="summary-section-heading">
-        <h3>Potential co-op earnings</h3>
+        <h3>
+          Potential co-op earnings
+        </h3>
 
         <p>
           Estimated earnings for one 16-week work term
@@ -3165,7 +3955,11 @@ function renderFutureEarningsSummary() {
           </span>
 
           <small>
-            Based on ${formatMoney(weeklyEarnings)} per week
+            Based on
+            ${formatMoney(hourlyRate)}
+            per hour and
+            ${escapeHtml(hoursPerWeek)}
+            hours per week
           </small>
         </div>
 
@@ -3175,8 +3969,9 @@ function renderFutureEarningsSummary() {
       </div>
 
       <p class="coop-not-included-note">
-        This potential income is shown for planning only and is not
-        included in your final estimate.
+        This potential income is shown for planning
+        only and is not included in your final estimate.
+
         <a
           href="${coopSalaryGuideLink}"
           target="_blank"
@@ -3188,6 +3983,183 @@ function renderFutureEarningsSummary() {
     </div>
   `;
 }
+function renderGraduateAssistantshipSummary() {
+  /*
+    Display this card only for graduate students.
+  */
+  if (state.level !== "GR") {
+    return "";
+  }
+
+  const rows =
+    state.data?.["GRA_GTA"] || [];
+
+  if (!rows.length) {
+    return "";
+  }
+
+  /*
+    GTA and GRA information applies generally.
+
+    The MSc funding example appears only for
+    Master's students.
+
+    The PhD funding example appears only for
+    Doctoral / PhD students.
+  */
+  const visibleRows = rows.filter(item => {
+    const role = normalizeKey(
+      readField(item, ["Role"])
+    );
+
+    if (
+      role === "gta" ||
+      role === "gra"
+    ) {
+      return true;
+    }
+
+    if (
+      role === "msc funding example"
+    ) {
+      return (
+        normalizeKey(state.classification) ===
+        "masters"
+      );
+    }
+
+    if (
+      role === "phd funding example"
+    ) {
+      return (
+        normalizeKey(state.classification) ===
+        "doctoral/phd"
+      );
+    }
+
+    return false;
+  });
+
+  if (!visibleRows.length) {
+    return "";
+  }
+
+  return `
+    <div
+      class="
+        cost-summary
+        potential-coop-summary
+        graduate-assistantship-summary
+      "
+    >
+      <div class="summary-section-heading">
+        <h3>
+          Potential graduate assistantship and funding
+        </h3>
+
+        <p>
+          Graduate employment and funding examples
+        </p>
+      </div>
+
+      ${visibleRows.map(item => {
+        const role = normalize(
+          readField(item, ["Role"])
+        );
+
+        const amount = normalize(
+          readField(item, ["Amount"])
+        );
+
+        const period = normalize(
+          readField(item, ["Period"])
+        );
+
+        const details = normalize(
+          readField(item, ["Details"])
+        );
+
+        const numericAmount =
+          toNumber(amount);
+
+        const amountVaries =
+          normalizeKey(amount) === "varies";
+
+        const periodVaries =
+          normalizeKey(period) === "varies";
+
+        let displayRole = role;
+
+        if (
+          normalizeKey(role) === "gta"
+        ) {
+          displayRole =
+            "Graduate Teaching Assistant (GTA)";
+        }
+
+        if (
+          normalizeKey(role) === "gra"
+        ) {
+          displayRole =
+            "Graduate Research Assistant (GRA)";
+        }
+
+        const displayAmount =
+          amountVaries
+            ? "Varies"
+            : formatMoney(numericAmount);
+
+        return `
+          <div class="summary-item">
+            <div class="summary-item-label">
+              <span>
+                ${escapeHtml(displayRole)}
+              </span>
+
+              ${
+                details
+                  ? `
+                    <small>
+                      ${escapeHtml(details)}
+                    </small>
+                  `
+                  : ""
+              }
+            </div>
+
+            <div class="potential-coop-value">
+              ${displayAmount}
+
+              ${
+                period &&
+                !periodVaries &&
+                !amountVaries
+                  ? `
+                    <small
+                      class="graduate-earning-period"
+                    >
+                      per ${escapeHtml(period)}
+                    </small>
+                  `
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+      }).join("")}
+
+      <p class="coop-not-included-note">
+        These amounts are shown for planning
+        purposes only and are not included in
+        your final estimate. Assistantship
+        availability and graduate funding packages
+        vary by program, department, supervisor
+        funding and individual circumstances.
+      </p>
+    </div>
+  `;
+}
+
 function bindRenderedEvents() {
   bindStep0Events();
   bindStep1Events();
@@ -3235,27 +4207,34 @@ function bindCampusCarouselEvents() {
   }
 }
 function bindStep0Events() {
-  if (state.currentStep !== 0) return;
+  if (state.currentStep !== 0) {
+    return;
+  }
 
-  const cards = document.querySelectorAll(".choice-card");
-  const startBtn = document.getElementById("startBtn");
+  const cards = document.querySelectorAll(
+    ".welcome-choice-row [data-value]"
+  );
 
   cards.forEach(card => {
     card.onclick = () => {
-      const selectedValue = card.getAttribute("data-value") || "";
-      cards.forEach(c => c.classList.remove("selected"));
-      card.classList.add("selected");
-      state.studentPhase = selectedValue;
-    };
-  });
+      const selectedValue =
+        card.dataset.value || "";
 
-  if (startBtn) {
-    startBtn.onclick = () => {
-      if (!state.studentPhase) state.studentPhase = "future";
+      if (
+        selectedValue !== "future" &&
+        selectedValue !== "current"
+      ) {
+        return;
+      }
+
+      state.studentPhase =
+        selectedValue;
+
       state.currentStep = 1;
+
       renderCurrentStep();
     };
-  }
+  });
 }
 
 function bindStep1Events() {
@@ -3597,6 +4576,9 @@ function renderCurrencyBadge() {
 }
 
 function renderCampusChoices() {
+  const isGraduate =
+    state.level === "GR";
+
   const campusChoices = [
     {
       value: "University of Guelph",
@@ -3622,7 +4604,11 @@ function renderCampusChoices() {
       </div>
 
       <p class="form-help-text">
-        Select the campus you are interested in attending.
+        ${
+          isGraduate
+            ? "Graduate tuition information is currently available for the University of Guelph campus."
+            : "Select the campus you are interested in attending."
+        }
       </p>
 
       <div
@@ -3631,29 +4617,53 @@ function renderCampusChoices() {
         role="radiogroup"
         aria-label="Select a campus"
       >
-        ${campusChoices.map(campus => `
-          <button
-            type="button"
-            class="campus-choice-card ${
-              state.campus === campus.value ? "selected" : ""
-            }"
-            data-campus-value="${escapeHtml(campus.value)}"
-            role="radio"
-            aria-checked="${state.campus === campus.value}"
-          >
-            <span class="campus-choice-title">
-              ${escapeHtml(campus.title)}
-            </span>
+        ${campusChoices.map(campus => {
+          const isAvailable =
+            !isGraduate ||
+            campus.value ===
+              "University of Guelph";
 
-            <span class="campus-choice-image-wrap">
-              <img
-                class="campus-choice-image"
-                src="${escapeHtml(campus.image)}"
-                alt="${escapeHtml(campus.title)} campus"
-              />
-            </span>
-          </button>
-        `).join("")}
+          const isSelected =
+            state.campus === campus.value;
+
+          return `
+            <button
+              type="button"
+              class="
+                campus-choice-card
+                ${isSelected ? "selected" : ""}
+                ${!isAvailable ? "unavailable" : ""}
+              "
+              data-campus-value="${escapeHtml(campus.value)}"
+              role="radio"
+              aria-checked="${isSelected}"
+              aria-disabled="${!isAvailable}"
+              ${!isAvailable ? "disabled" : ""}
+            >
+              <span class="campus-choice-title">
+                ${escapeHtml(campus.title)}
+              </span>
+
+              <span class="campus-choice-image-wrap">
+                <img
+                  class="campus-choice-image"
+                  src="${escapeHtml(campus.image)}"
+                  alt="${escapeHtml(campus.title)} campus"
+                />
+              </span>
+
+              ${
+                !isAvailable
+                  ? `
+                    <span class="campus-unavailable-text">
+                      Not currently available
+                    </span>
+                  `
+                  : ""
+              }
+            </button>
+          `;
+        }).join("")}
       </div>
     </div>
   `;
@@ -3713,36 +4723,170 @@ function getConvertedRangeText(low, high) {
 }
 
 function bindStep2Events() {
-  if (state.currentStep !== 2) return;
+  if (state.currentStep !== 2) {
+    return;
+  }
 
-  const cohortYear = document.getElementById("cohortYear");
-  const campusChoices = document.getElementById("campusChoices");
+  const cohortYear =
+    document.getElementById("cohortYear");
+
+  const classification =
+    document.getElementById("classification");
+
+  const campusChoices =
+    document.getElementById("campusChoices");
+
   const campusChoiceButtons =
-    document.querySelectorAll("[data-campus-value]");
-  const program = document.getElementById("program");
-  const coopInterest = document.getElementById("coopInterest");
-  const estimateScopeButtons = document.querySelectorAll("[data-estimate-scope]");
-  const back = document.getElementById("backStep2");
-  const next = document.getElementById("nextStep2");
+    document.querySelectorAll(
+      "[data-campus-value]"
+    );
 
+  const program =
+    document.getElementById("program");
+
+  const coopInterest =
+    document.getElementById("coopInterest");
+
+  const estimateScopeButtons =
+    document.querySelectorAll(
+      "[data-estimate-scope]"
+    );
+
+  const back =
+    document.getElementById("backStep2");
+
+  const next =
+    document.getElementById("nextStep2");
+
+  /*
+    Save a selected program and its optional major.
+  */
+  function applyProgramSelection(
+    selectedValue
+  ) {
+    state.program = "";
+    state.major = "";
+    state.matchedTuitionRecord = null;
+
+    state.coopInterest = "No";
+    state.includeCoop = false;
+    state.includeCoopEarnings = false;
+    state.coopEarningsOffset = 0;
+
+    if (!selectedValue) {
+      if (state.level === "GR") {
+        state.campus = "";
+      }
+
+      return;
+    }
+
+    const separatorIndex =
+      selectedValue.indexOf("|||");
+
+    if (separatorIndex >= 0) {
+      state.program =
+        selectedValue
+          .slice(0, separatorIndex)
+          .trim();
+
+      state.major =
+        selectedValue
+          .slice(separatorIndex + 3)
+          .trim();
+    } else {
+      state.program =
+        selectedValue.trim();
+
+      state.major = "";
+    }
+
+    /*
+      Graduate programs currently use only
+      the University of Guelph campus.
+    */
+    if (
+      state.level === "GR" &&
+      state.program
+    ) {
+      state.campus =
+        "University of Guelph";
+    }
+  }
+
+  /*
+    Expected start year or graduate start term.
+  */
   if (cohortYear) {
     cohortYear.onchange = event => {
-      state.cohortYear = event.target.value;
+      state.cohortYear =
+        event.target.value;
+
       state.matchedTuitionRecord = null;
+
+      clearErrors();
+      renderCurrentStep();
+    };
+  }
+
+  /*
+    Graduate classification.
+  */
+  if (classification) {
+    classification.onchange = event => {
+      state.classification =
+        event.target.value;
+
+      /*
+        Clear the old program when moving from
+        Master’s to Doctoral / PhD or Diploma.
+      */
+      state.program = "";
+      state.major = "";
+      state.campus = "";
+      state.matchedTuitionRecord = null;
+
+      state.coopInterest = "No";
+      state.includeCoop = false;
+      state.includeCoopEarnings = false;
+      state.coopEarningsOffset = 0;
 
       clearErrors();
 
       /*
-        Re-render so the 2027-or-later tuition message
-        appears or disappears immediately.
+        Re-render the program dropdown using the
+        newly selected classification.
       */
       renderCurrentStep();
     };
   }
 
+  /*
+    Campus selection.
+  */
   campusChoiceButtons.forEach(button => {
     button.onclick = () => {
-      state.campus = button.dataset.campusValue || "";
+      if (button.disabled) {
+        return;
+      }
+
+      /*
+        Clicking the graduate Guelph campus
+        must not clear the graduate program.
+      */
+      if (state.level === "GR") {
+        state.campus =
+          "University of Guelph";
+
+        clearErrors();
+        return;
+      }
+
+      /*
+        Existing undergraduate behaviour.
+      */
+      state.campus =
+        button.dataset.campusValue || "";
 
       state.program = "";
       state.major = "";
@@ -3758,46 +4902,28 @@ function bindStep2Events() {
     };
   });
 
+  /*
+    Program selection.
+  */
   if (program) {
     program.onchange = event => {
-      const selectedValue = event.target.value;
-
-      state.program = "";
-      state.major = "";
-      state.matchedTuitionRecord = null;
-
-      state.coopInterest = "No";
-      state.includeCoop = false;
-      state.includeCoopEarnings = false;
-      state.coopEarningsOffset = 0;
-
-      if (selectedValue) {
-        const separatorIndex = selectedValue.indexOf("|||");
-
-        if (separatorIndex >= 0) {
-          state.program = selectedValue
-            .slice(0, separatorIndex)
-            .trim();
-
-          state.major = selectedValue
-            .slice(separatorIndex + 3)
-            .trim();
-        } else {
-          /*
-            Fallback in case a record does not contain
-            the expected separator.
-          */
-          state.program = selectedValue.trim();
-          state.major = "";
-        }
-      }
+      applyProgramSelection(
+        event.target.value
+      );
 
       clearErrors();
 
-      const coopStatus = getFutureProgramCoopStatus();
-      const mandatoryCoop = isMandatoryCoopProgram();
+      const coopStatus =
+        getFutureProgramCoopStatus();
 
-      if (mandatoryCoop || coopStatus === "Yes") {
+      const mandatoryCoop =
+        state.level === "UG" &&
+        isMandatoryCoopProgram();
+
+      if (
+        mandatoryCoop ||
+        coopStatus === "Yes"
+      ) {
         state.coopInterest = "Yes";
         state.includeCoop = true;
       } else {
@@ -3810,12 +4936,20 @@ function bindStep2Events() {
     };
   }
 
+  /*
+    Co-op selection.
+  */
   if (coopInterest) {
     coopInterest.onchange = event => {
-      state.coopInterest = event.target.value;
-      state.includeCoop = state.coopInterest === "Yes";
+      state.coopInterest =
+        event.target.value;
 
-      if (state.coopInterest !== "Yes") {
+      state.includeCoop =
+        state.coopInterest === "Yes";
+
+      if (
+        state.coopInterest !== "Yes"
+      ) {
         state.coopEarningsOffset = 0;
         state.includeCoopEarnings = false;
       }
@@ -3823,9 +4957,14 @@ function bindStep2Events() {
       updateRunningEstimate();
     };
   }
+
+  /*
+    Full estimate or tuition-only estimate.
+  */
   estimateScopeButtons.forEach(button => {
     button.onclick = () => {
-      const selectedScope = button.dataset.estimateScope;
+      const selectedScope =
+        button.dataset.estimateScope;
 
       if (
         selectedScope !== "full" &&
@@ -3834,13 +4973,13 @@ function bindStep2Events() {
         return;
       }
 
-      state.estimateScope = selectedScope;
+      state.estimateScope =
+        selectedScope;
 
-      /*
-        Remove previously entered non-tuition values when the
-        user changes to a tuition-only estimate.
-      */
-      if (state.estimateScope === "tuition-only") {
+      if (
+        state.estimateScope ===
+        "tuition-only"
+      ) {
         state.booksAmount = 0;
         state.personalAmount = 0;
         state.osapFunding = 0;
@@ -3859,12 +4998,8 @@ function bindStep2Events() {
         state.mealPlan = "";
         state.futureMealPlanInterest = "";
 
-        /*
-          These older off-campus amount fields are no longer
-          displayed, but resetting them prevents stale values.
-        */
         state.offCampusType = "";
-        state.currentOffCampusRent = 0;
+        state.currentOffCampusRent = null;
         state.currentOffCampusFood = 0;
       }
 
@@ -3872,50 +5007,124 @@ function bindStep2Events() {
       renderCurrentStep();
     };
   });
+
+  /*
+    Back button.
+  */
   if (back) {
     back.onclick = () => {
       clearErrors();
+
       state.currentStep = 1;
       renderCurrentStep();
     };
   }
 
+  /*
+    Continue button and validation.
+  */
   if (next) {
     next.onclick = () => {
       clearErrors();
 
+      /*
+        Synchronize visible fields with state before
+        validating. This provides additional protection
+        if the browser did not fire a change event.
+      */
+      if (cohortYear) {
+        state.cohortYear =
+          cohortYear.value;
+      }
+
+      if (classification) {
+        state.classification =
+          classification.value;
+      }
+
+      if (
+        program &&
+        program.value &&
+        !state.program
+      ) {
+        applyProgramSelection(
+          program.value
+        );
+      }
+
       let hasError = false;
 
-      if (state.studentPhase === "current") {
-        state.cohortYear = getLatestCurrentCohortYear();
+      if (
+        state.studentPhase === "current"
+      ) {
+        state.cohortYear =
+          getLatestCurrentCohortYear();
       }
 
       if (
         state.studentPhase === "future" &&
         !state.cohortYear
       ) {
-        markError(cohortYear, "Required");
+        markError(
+          cohortYear,
+          "Please select an expected start year or term."
+        );
+
         hasError = true;
       }
 
-      if (!state.campus) {
-        markError(campusChoices, "Please select a campus.");
+      if (
+        state.level === "GR" &&
+        !state.classification
+      ) {
+        markError(
+          classification,
+          "Please select a graduate program type."
+        );
+
         hasError = true;
       }
 
       if (!state.program) {
-        markError(program, "Required");
+        markError(
+          program,
+          "Please select a program."
+        );
+
         hasError = true;
       }
 
-      if (hasError) return;
+      /*
+        Automatically confirm Guelph campus for
+        graduate students.
+      */
+      if (
+        state.level === "GR" &&
+        state.program
+      ) {
+        state.campus =
+          "University of Guelph";
+      }
+
+      if (!state.campus) {
+        markError(
+          campusChoices,
+          "Please select a campus."
+        );
+
+        hasError = true;
+      }
+
+      if (hasError) {
+        return;
+      }
 
       matchTuitionRecord();
 
       if (!state.matchedTuitionRecord) {
         markError(
           program,
-          "No tuition record matched this selection. Please try a different program, campus or year."
+          "No tuition record matched this selection. Please try a different program or classification."
         );
 
         return;
@@ -3924,7 +5133,8 @@ function bindStep2Events() {
       calculateEstimate();
 
       state.currentStep =
-        state.estimateScope === "tuition-only"
+        state.estimateScope ===
+        "tuition-only"
           ? 5
           : 3;
 
@@ -3935,13 +5145,20 @@ function bindStep2Events() {
 
 
 function bindStep3Events() {
-  if (state.currentStep !== 3) return;
+  if (state.currentStep !== 3) {
+    return;
+  }
 
   const booksAmount =
     document.getElementById("booksAmount");
 
   const personalAmount =
     document.getElementById("personalAmount");
+
+  const currentOffCampusRent =
+    document.getElementById(
+      "currentOffCampusRent"
+    );
 
   const housingType =
     document.getElementById("housingType");
@@ -3975,13 +5192,14 @@ function bindStep3Events() {
     };
   }
 
-  if (personalAmount) {
-    personalAmount.oninput = event => {
-      state.personalAmount =
-        toNumber(event.target.value);
+  if (currentOffCampusRent) {
+    currentOffCampusRent.oninput =
+      event => {
+        state.currentOffCampusRent =
+          toNumber(event.target.value);
 
-      updateRunningEstimate();
-    };
+        updateRunningEstimate();
+      };
   }
 
   if (housingType) {
@@ -3994,17 +5212,15 @@ function bindStep3Events() {
       state.mealPlan = "";
       state.futureMealPlanInterest = "";
 
-      renderCurrentStep();
-    };
-  }
-
-  if (residence) {
-    residence.onchange = event => {
-      state.residence =
-        event.target.value;
-
-      state.roomType = "";
-      state.mealPlan = "";
+      if (
+        state.housingType === "OffCampus"
+      ) {
+        state.currentOffCampusRent =
+          getAverageMonthlyOffCampusRent();
+      } else {
+        state.currentOffCampusRent =
+          null;
+      }
 
       renderCurrentStep();
     };
@@ -4015,6 +5231,35 @@ function bindStep3Events() {
       state.roomType =
         event.target.value;
 
+      /*
+        Graduate students select room type first,
+        so changing it clears the residence.
+      */
+      if (state.level === "GR") {
+        state.residence = "";
+      }
+
+      state.mealPlan = "";
+
+      renderCurrentStep();
+    };
+  }
+
+  if (residence) {
+    residence.onchange = event => {
+      state.residence =
+        event.target.value;
+
+      /*
+        Undergraduate students select residence
+        first, so changing it clears the room type.
+
+        Graduate students keep their room type.
+      */
+      if (state.level === "UG") {
+        state.roomType = "";
+      }
+
       state.mealPlan = "";
 
       renderCurrentStep();
@@ -4022,22 +5267,20 @@ function bindStep3Events() {
   }
 
   if (futureMealPlanInterest) {
-    futureMealPlanInterest.onchange = event => {
-      state.futureMealPlanInterest =
-        event.target.value;
+    futureMealPlanInterest.onchange =
+      event => {
+        state.futureMealPlanInterest =
+          event.target.value;
 
-      /*
-        Remove any previously selected plan when the
-        student changes the answer to No.
-      */
-      if (
-        state.futureMealPlanInterest !== "Yes"
-      ) {
-        state.mealPlan = "";
-      }
+        if (
+          state.futureMealPlanInterest !==
+          "Yes"
+        ) {
+          state.mealPlan = "";
+        }
 
-      renderCurrentStep();
-    };
+        renderCurrentStep();
+      };
   }
 
   if (mealPlan) {
@@ -4069,7 +5312,25 @@ function bindStep3Events() {
         return;
       }
 
-      if (state.housingType === "OnCampus") {
+      if (
+        state.housingType === "OnCampus"
+      ) {
+        /*
+          Graduate validation follows the
+          room-type-first order.
+        */
+        if (
+          state.level === "GR" &&
+          !state.roomType
+        ) {
+          markError(
+            roomType,
+            "Please select a room type."
+          );
+
+          return;
+        }
+
         if (!state.residence) {
           markError(
             residence,
@@ -4079,7 +5340,14 @@ function bindStep3Events() {
           return;
         }
 
-        if (!state.roomType) {
+        /*
+          Undergraduate students select the
+          room type after residence.
+        */
+        if (
+          state.level === "UG" &&
+          !state.roomType
+        ) {
           markError(
             roomType,
             "Please select a room type."
@@ -4110,8 +5378,25 @@ function bindStep3Events() {
         }
       }
 
-      if (state.housingType === "OffCampus") {
-        if (!state.futureMealPlanInterest) {
+      if (
+        state.housingType === "OffCampus"
+      ) {
+        if (
+          toNumber(
+            state.currentOffCampusRent
+          ) <= 0
+        ) {
+          markError(
+            currentOffCampusRent,
+            "Please enter your estimated monthly rent."
+          );
+
+          return;
+        }
+
+        if (
+          !state.futureMealPlanInterest
+        ) {
           markError(
             futureMealPlanInterest,
             "Please select Yes or No."
@@ -4121,7 +5406,8 @@ function bindStep3Events() {
         }
 
         if (
-          state.futureMealPlanInterest === "Yes" &&
+          state.futureMealPlanInterest ===
+            "Yes" &&
           !state.mealPlan
         ) {
           markError(
@@ -4136,7 +5422,6 @@ function bindStep3Events() {
       calculateEstimate();
 
       state.currentStep = 4;
-
       renderCurrentStep();
     };
   }
@@ -4157,8 +5442,11 @@ function bindStep4Events() {
   const partTimeIncome =
     document.getElementById("partTimeIncome");
     
-  const coopWeeklyEarnings =
-    document.getElementById("coopWeeklyEarnings");
+  const coopHourlyRate =
+    document.getElementById("coopHourlyRate");
+
+  const coopHoursPerWeek =
+    document.getElementById("coopHoursPerWeek");
 
   const otherScholarshipOffset =
     document.getElementById("otherScholarshipOffset");
@@ -4200,9 +5488,16 @@ function bindStep4Events() {
     };
   }
 
-  if (coopWeeklyEarnings) {
-    coopWeeklyEarnings.oninput = event => {
-      state.coopWeeklyEarnings = toNumber(event.target.value);
+  if (coopHourlyRate) {
+    coopHourlyRate.oninput = event => {
+      state.coopHourlyRate = toNumber(event.target.value);
+      updateRunningEstimate();
+    };
+  }
+
+  if (coopHoursPerWeek) {
+    coopHoursPerWeek.oninput = event => {
+      state.coopHoursPerWeek = toNumber(event.target.value);
       updateRunningEstimate();
     };
   }
@@ -4237,48 +5532,123 @@ function bindStep4Events() {
   }
 }
 function renderFutureContactSection() {
+
   return `
     <div class="future-contact-section">
-      <h3 class="subsection-title">Would you like the estimate emailed to you?</h3>
+      <h3 class="subsection-title">
+        Would you like the estimate emailed to you?
+      </h3>
 
       <p class="form-help-text">
-        Please provide your name and email address to download your estimate or have it emailed to you.
+        Please provide the following information
+        to download your estimate or have it emailed
+        to you.
+      </p>
+
+      <p class="form-help-text">
         We may also send information about:
       </p>
 
       <ul class="future-contact-list">
         <li>Programs and admissions</li>
         <li>Scholarships and financial aid</li>
-        <li>Events, campus life and student opportunities</li>
+        <li>
+          Events, campus life and student opportunities
+        </li>
       </ul>
 
       <div class="form-group">
-        <label for="fullName">Full name <span class="required-star">*</span></label>
+        <label for="firstName">
+          First name
+          <span class="required-star">*</span>
+        </label>
+
         <input
-          id="fullName"
+          id="firstName"
           class="step-input"
           type="text"
-          value="${escapeHtml(state.fullName)}"
-          placeholder="Enter your full name"
+          autocomplete="given-name"
+          value="${escapeHtml(state.firstName)}"
+          placeholder="Enter your first name"
+        />
+     "
+ </div>
+
+      <div class="form-group">
+        <label for="lastName">
+          Last name
+          <span class="required-star">*</span>
+        </label>
+
+        <input
+          id="lastName"
+          class="step-input"
+          type="text"
+          autocomplete="family-name"
+          value="${escapeHtml(state.lastName)}"
+          placeholder="Enter your last name"
         />
       </div>
 
       <div class="form-group">
-        <label for="email">Email address <span class="required-star">*</span></label>
+        <label for="dateOfBirth">
+          Date of birth
+          <span class="required-star">*</span>
+        </label>
+
+        <div class="dob-field-wrap">
+          <input
+            id="dateOfBirth"
+            class="step-input"
+            type="text"
+            autocomplete="bday"
+            inputmode="numeric"
+            value="${escapeHtml(state.dateOfBirth)}"
+            placeholder="MM/DD/YYYY"
+          />
+        </div>
+
+        <p class="form-help-text">
+          Select your date of birth from the calendar.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="email">
+          Email address
+          <span class="required-star">*</span>
+        </label>
+
         <input
           id="email"
           class="step-input"
           type="email"
+          autocomplete="email"
           value="${escapeHtml(state.email)}"
           placeholder="Enter your email address"
         />
       </div>
 
-      <p class="consent-text">
-        By requesting your estimate, you agree that the University of Guelph may contact you
-        regarding programs, admissions, scholarships, events and related opportunities.
-        You may unsubscribe at any time.
-      </p>
+      <div class="uog-alert uog-alert-grey">
+        <div class="uog-alert-title">
+          <span class="uog-alert-icon">
+            !
+          </span>
+
+          <span>
+            Consent notice
+          </span>
+        </div>
+
+        <div class="uog-alert-message">
+          By downloading or requesting your estimate,
+          you consent to the University of Guelph using
+          the information provided to send your estimate
+          and communicate with you about programs,
+          admissions, scholarships, events and related
+          opportunities. You may unsubscribe at any time.
+        </div>
+      </div>
     </div>
   `;
 }
@@ -4297,35 +5667,327 @@ function renderCurrentStudentDownloadNotice() {
     </div>
   `;
 }
+function resetEstimator() {
+  const loadedData =
+    state.data;
+
+  const existingDataLoadError =
+    state.dataLoadError;
+
+  /*
+    Restore every estimator selection to its
+    original value while preserving loaded JSON.
+  */
+  Object.assign(
+    state,
+    JSON.parse(
+      JSON.stringify(
+        INITIAL_ESTIMATOR_STATE
+      )
+    )
+  );
+
+  state.data =
+    loadedData;
+
+  state.dataLoadError =
+    existingDataLoadError;
+
+  /*
+    Remove only estimator-specific saved state.
+    Do not clear unrelated storage belonging to
+    other University components.
+  */
+  try {
+    localStorage.removeItem(
+      "uofg-cost-estimator-state"
+    );
+
+    sessionStorage.removeItem(
+      "uofg-cost-estimator-state"
+    );
+  } catch (error) {
+    console.warn(
+      "Estimator storage could not be cleared:",
+      error
+    );
+  }
+
+  if (costBreakdownChart) {
+    costBreakdownChart.destroy();
+    costBreakdownChart = null;
+  }
+
+  clearErrors();
+
+  state.currentStep = 0;
+
+  calculateEstimate();
+  renderCurrentStep();
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
 function bindStep5Events() {
-  if (state.currentStep !== 5) return;
+  if (state.currentStep !== 5) {
+    return;
+  }
 
   renderCostBreakdownChart();
 
-  const fullName = document.getElementById("fullName");
-  const email = document.getElementById("email");
-  const marketingConsent = document.getElementById("marketingConsent");
-  const back = document.getElementById("backStep5");
-  const downloadBtn = document.getElementById("downloadEstimateBtn");
-  const emailBtn = document.getElementById("emailEstimateBtn");
+  const firstName =
+    document.getElementById(
+      "firstName"
+    );
 
-  if (fullName) {
-    fullName.oninput = e => {
-      state.fullName = e.target.value;
+  const lastName =
+    document.getElementById(
+      "lastName"
+    );
+
+  const dateOfBirth =
+    document.getElementById(
+      "dateOfBirth"
+    );
+
+  const email =
+    document.getElementById(
+      "email"
+    );
+
+  const back =
+    document.getElementById(
+      "backStep5"
+    );
+
+  const startAgainBtn =
+    document.getElementById(
+      "startAgainBtn"
+    );
+
+  const downloadBtn =
+    document.getElementById(
+      "downloadEstimateBtn"
+    );
+
+  const emailBtn =
+    document.getElementById(
+      "emailEstimateBtn"
+    );
+
+  if (firstName) {
+    firstName.oninput = event => {
+      state.firstName =
+        event.target.value;
+
       clearErrors();
     };
+  }
+
+  if (lastName) {
+    lastName.oninput = event => {
+      state.lastName =
+        event.target.value;
+
+      clearErrors();
+    };
+  }
+
+  let dateOfBirthErrorTarget =
+    dateOfBirth;
+
+  if (
+    dateOfBirth &&
+    typeof window.flatpickr === "function"
+  ) {
+    const dateOfBirthPicker =
+      window.flatpickr(
+        dateOfBirth,
+        {
+          dateFormat: "Y-m-d",
+          altInput: true,
+          altFormat: "m/d/Y",
+
+          maxDate: "today",
+          disableMobile: true,
+          allowInput: true,
+          clickOpens: true,
+          monthSelectorType: "static",
+
+          /*
+            Keep the field empty, but open the
+            calendar at January 1, 2000.
+          */
+          onReady(
+            selectedDates,
+            dateString,
+            instance
+          ) {
+            if (!state.dateOfBirth) {
+              instance.jumpToDate(
+                "2000-01-01"
+              );
+            }
+          },
+
+          onOpen(
+            selectedDates,
+            dateString,
+            instance
+          ) {
+            if (!state.dateOfBirth) {
+              instance.jumpToDate(
+                "2000-01-01"
+              );
+            }
+          },
+
+          onChange(
+            selectedDates,
+            dateString
+          ) {
+            state.dateOfBirth =
+              dateString;
+
+            clearErrors();
+          }
+        }
+      );
+
+    dateOfBirthErrorTarget =
+      dateOfBirthPicker.altInput ||
+      dateOfBirth;
+
+    const dateOfBirthDisplayInput =
+      dateOfBirthPicker.altInput;
+
+    if (dateOfBirthDisplayInput) {
+      dateOfBirthDisplayInput.inputMode =
+        "numeric";
+
+      dateOfBirthDisplayInput.placeholder =
+        "MM/DD/YYYY";
+
+      dateOfBirthDisplayInput.maxLength = 10;
+
+      dateOfBirthDisplayInput.setAttribute(
+        "aria-label",
+        "Date of birth in month, day and year format"
+      );
+
+      dateOfBirthDisplayInput.addEventListener(
+        "input",
+        event => {
+          /*
+            Keep only numbers and automatically add
+            the two date separators.
+          */
+          const digits =
+            event.target.value
+              .replace(/\D/g, "")
+              .slice(0, 8);
+
+          let formattedDate = digits;
+
+          if (digits.length > 2) {
+            formattedDate =
+              `${digits.slice(0, 2)}/${digits.slice(2)}`;
+          }
+
+          if (digits.length > 4) {
+            formattedDate =
+              `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+          }
+
+          event.target.value =
+            formattedDate;
+
+          /*
+            Wait until the complete MM/DD/YYYY value
+            has been entered.
+          */
+          if (digits.length !== 8) {
+            state.dateOfBirth = "";
+            return;
+          }
+
+          const month =
+            Number(digits.slice(0, 2));
+
+          const day =
+            Number(digits.slice(2, 4));
+
+          const year =
+            Number(digits.slice(4, 8));
+
+          const selectedDate =
+            new Date(
+              year,
+              month - 1,
+              day
+            );
+
+          const today = new Date();
+
+          today.setHours(
+            23,
+            59,
+            59,
+            999
+          );
+
+          /*
+            Confirm that the date exists. This catches
+            values such as February 31.
+          */
+          const isValidDate =
+            month >= 1 &&
+            month <= 12 &&
+            day >= 1 &&
+            selectedDate.getFullYear() === year &&
+            selectedDate.getMonth() === month - 1 &&
+            selectedDate.getDate() === day &&
+            selectedDate <= today;
+
+          if (!isValidDate) {
+            state.dateOfBirth = "";
+            return;
+          }
+
+          const isoDate =
+            `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+          state.dateOfBirth =
+            isoDate;
+
+          /*
+            Select the typed date and move the
+            calendar to the matching month and year.
+          */
+          dateOfBirthPicker.setDate(
+            isoDate,
+            false,
+            "Y-m-d"
+          );
+
+          dateOfBirthPicker.jumpToDate(
+            isoDate
+          );
+
+          clearErrors();
+        }
+      );
+    }
   }
 
   if (email) {
-    email.oninput = e => {
-      state.email = e.target.value;
-      clearErrors();
-    };
-  }
+    email.oninput = event => {
+      state.email =
+        event.target.value;
 
-  if (marketingConsent) {
-    marketingConsent.onchange = e => {
-      state.marketingConsent = e.target.checked;
+      clearErrors();
     };
   }
 
@@ -4334,7 +5996,8 @@ function bindStep5Events() {
       clearErrors();
 
       state.currentStep =
-        state.estimateScope === "tuition-only"
+        state.estimateScope ===
+          "tuition-only"
           ? 2
           : 4;
 
@@ -4342,22 +6005,95 @@ function bindStep5Events() {
     };
   }
 
+  if (startAgainBtn) {
+    startAgainBtn.onclick = () => {
+      const shouldRestart =
+        window.confirm(
+          "Start a new estimate? Your current selections will be cleared."
+        );
+
+      if (!shouldRestart) {
+        return;
+      }
+
+      resetEstimator();
+    };
+  }
+
   function validateContactFields() {
     clearErrors();
 
     let hasError = false;
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!state.fullName.trim()) {
-      markError(fullName, "Required");
+    const emailPattern =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!state.firstName.trim()) {
+      markError(
+        firstName,
+        "Please enter your first name."
+      );
+
       hasError = true;
     }
 
-    if (!state.email.trim()) {
-      markError(email, "Required");
+    if (!state.lastName.trim()) {
+      markError(
+        lastName,
+        "Please enter your last name."
+      );
+
       hasError = true;
-    } else if (!emailPattern.test(state.email.trim())) {
-      markError(email, "Please enter a valid email address.");
+    }
+
+    if (!state.dateOfBirth) {
+      markError(
+        dateOfBirthErrorTarget,
+        "Please enter your date of birth."
+      );
+
+      hasError = true;
+    } else {
+      const selectedDate =
+        new Date(
+          `${state.dateOfBirth}T00:00:00`
+        );
+
+      const today =
+        new Date();
+
+      if (
+        Number.isNaN(
+          selectedDate.getTime()
+        ) ||
+        selectedDate > today
+      ) {
+        markError(
+          dateOfBirthErrorTarget,
+          "Please enter a valid date of birth."
+        );
+
+        hasError = true;
+      }
+    }
+
+    if (!state.email.trim()) {
+      markError(
+        email,
+        "Please enter your email address."
+      );
+
+      hasError = true;
+    } else if (
+      !emailPattern.test(
+        state.email.trim()
+      )
+    ) {
+      markError(
+        email,
+        "Please enter a valid email address."
+      );
+
       hasError = true;
     }
 
@@ -4376,36 +6112,65 @@ function bindStep5Events() {
       try {
         calculateEstimate();
 
-        if (state.studentPhase === "future") {
-          await saveFutureStudentLead("Downloaded copy");
+        if (
+          state.studentPhase === "future"
+        ) {
+          await saveFutureStudentLead(
+            "Downloaded copy"
+          );
         }
 
         await generateEstimatePDF();
       } catch (error) {
-        console.error("Download/save failed:", error);
-        markError(email, "Download failed. Please refresh and try again.");
+        console.error(
+          "Download/save failed:",
+          error
+        );
+
+        markError(
+          email,
+          "Download failed. Please refresh and try again."
+        );
       }
     };
   }
 
   if (emailBtn) {
     emailBtn.onclick = async () => {
-      if (!validateContactFields()) return;
+      if (!validateContactFields()) {
+        return;
+      }
 
       try {
         calculateEstimate();
+
         await sendEstimateEmail();
-        alert("Your estimate has been emailed successfully.");
+
+        alert(
+          "Your estimate has been emailed successfully."
+        );
       } catch (error) {
-        console.error("Email failed:", error);
-        markError(email, "Email failed. Please refresh and try again.");
+        console.error(
+          "Email failed:",
+          error
+        );
+
+        markError(
+          email,
+          "Email failed. Please refresh and try again."
+        );
       }
     };
   }
 }
 async function saveFutureStudentLead(emailStatus = "Downloaded copy") {
   const payload = {
-    studentName: state.fullName.trim(),
+    studentName:
+      `${state.firstName.trim()} ${state.lastName.trim()}`.trim(),
+
+    firstName: state.firstName.trim(),
+    lastName: state.lastName.trim(),
+    dateOfBirth: state.dateOfBirth,
     studentEmail: state.email.trim(),
     residency: state.residencyType,
     level: state.level,
@@ -4439,7 +6204,12 @@ async function sendEstimateEmail() {
   const result = state.result || emptyResult();
 
   const payload = {
-    studentName: state.fullName.trim(),
+    studentName:
+      `${state.firstName.trim()} ${state.lastName.trim()}`.trim(),
+
+    firstName: state.firstName.trim(),
+    lastName: state.lastName.trim(),
+    dateOfBirth: state.dateOfBirth,
     studentEmail: state.email.trim(),
     residency: state.residencyType,
     level: state.level,
@@ -4512,7 +6282,9 @@ function buildEmailSummaryRows(result) {
   rows.push(`
     <tr>
       <td style="padding:12px;border:1px solid #318738;background:#318738;color:#ffffff;font-weight:700;">
-        Estimated range for 2 academic semesters
+        ${escapeHtml(
+          getEstimatePeriodDetails().totalLabel
+        )}
       </td>
       <td style="padding:12px;border:1px solid #318738;background:#318738;color:#ffffff;font-weight:700;text-align:right;">
         ${formatRangeValue(result.low, result.high)}
@@ -4540,6 +6312,7 @@ function resetProgramPathState() {
   state.cohortYear = "";
   state.program = "";
   state.major = "";
+  state.classification = "";
 
   state.coopInterest = "No";
   state.includeCoop = false;
@@ -4557,7 +6330,7 @@ function resetProgramPathState() {
     they were entered before the interface changed.
   */
   state.offCampusType = "";
-  state.currentOffCampusRent = 0;
+  state.currentOffCampusRent = null;
   state.currentOffCampusFood = 0;
 }
 
@@ -4633,46 +6406,88 @@ function getTuitionArray() {
     ? (state.data.UG_Tuition || [])
     : (state.data.GR_Tuition || []);
 }
+
 function getFilteredTuitionRows({
   includeProgram = false,
   includeMajor = false,
-  includeCohortForCurrent = true
+  includeCohortForCurrent = true,
+  includeClassification = true
 } = {}) {
   return getTuitionArray().filter(row => {
     const residencyMatch =
-      normalizeKey(row.Residency) === normalizeKey(state.residencyType);
+      normalizeKey(row.Residency) ===
+      normalizeKey(state.residencyType);
 
-    const provinceValue = normalizeKey(row.Province);
+    const provinceValue =
+      normalizeKey(row.Province);
+
+    /*
+      Graduate tuition data contains Ontario domestic
+      records but does not contain separate Non-ON records.
+
+      Therefore, all domestic graduate students use
+      the Ontario graduate tuition record.
+    */
+    const effectiveProvince =
+      state.level === "GR" &&
+      state.residencyType === "Domestic"
+        ? "ON"
+        : state.province;
 
     let provinceMatch = true;
 
-    if (state.residencyType === "International") {
+    if (
+      state.residencyType === "International"
+    ) {
       provinceMatch =
         provinceValue === "int" ||
         provinceValue === "international";
     } else {
       provinceMatch =
-        !state.province ||
-        provinceValue === normalizeKey(state.province);
+        !effectiveProvince ||
+        provinceValue ===
+          normalizeKey(effectiveProvince);
     }
 
-    const programMatch = includeProgram
-      ? normalizeKey(row.Program) === normalizeKey(state.program)
-      : true;
-
-    const majorMatch = includeMajor && state.level === "UG"
-      ? normalizeKey(row.Major) === normalizeKey(state.major)
-      : true;
-
-    const cohortMatch =
-      state.studentPhase === "current" && includeCohortForCurrent
-        ? !state.cohortYear || normalizeKey(row.CohortYear) === normalizeKey(state.cohortYear)
+    const classificationMatch =
+      state.level === "GR" &&
+      includeClassification &&
+      state.classification
+        ? normalizeKey(row.Classification) ===
+          normalizeKey(state.classification)
         : true;
 
-    return residencyMatch && provinceMatch && programMatch && majorMatch && cohortMatch;
+    const programMatch =
+      includeProgram
+        ? normalizeKey(row.Program) ===
+          normalizeKey(state.program)
+        : true;
+
+    const majorMatch =
+      includeMajor &&
+      state.major
+        ? normalizeKey(row.Major) ===
+          normalizeKey(state.major)
+        : true;
+
+    const cohortMatch =
+      state.studentPhase === "current" &&
+      includeCohortForCurrent
+        ? !state.cohortYear ||
+          normalizeKey(row.CohortYear) ===
+            normalizeKey(state.cohortYear)
+        : true;
+
+    return (
+      residencyMatch &&
+      provinceMatch &&
+      classificationMatch &&
+      programMatch &&
+      majorMatch &&
+      cohortMatch
+    );
   });
 }
-
 
 
 function getAvailableCampuses() {
@@ -4695,54 +6510,117 @@ function getAvailableMajors() {
 }
 
 function getAvailableCohortYears() {
-  const rows = getFilteredTuitionRows();
+  const rows =
+    getFilteredTuitionRows();
 
   if (state.studentPhase === "future") {
     const cohortRanges = rows
-      .map(row => parseCohortRange(normalize(row.CohortYear)))
+      .map(row =>
+        parseCohortRange(
+          normalize(row.CohortYear)
+        )
+      )
       .filter(Boolean);
 
     if (!cohortRanges.length) {
       return [];
     }
 
-    /*
-      Find the latest cohort range in data.json.
+    const latestCohort =
+      cohortRanges.reduce(
+        (latest, current) => {
+          return current.end > latest.end
+            ? current
+            : latest;
+        }
+      );
 
-      Example:
-      "2026-2027" gives an ending year of 2027.
-    */
-    const latestCohort = cohortRanges.reduce((latest, current) => {
-      return current.end > latest.end ? current : latest;
-    });
+    const firstExpectedStartYear =
+      latestCohort.end;
 
-    const firstExpectedStartYear = latestCohort.end;
     const NUMBER_OF_YEARS = 5;
 
     /*
-      Example:
-      2026-2027 becomes:
-      2027, 2028, 2029, 2030 and 2031.
+      Graduate students:
+      Winter, Summer and Fall.
     */
-    return Array.from(
-      { length: NUMBER_OF_YEARS },
-      (_, index) => {
-        const year = firstExpectedStartYear + index;
-
-        return {
-          value: String(year),
-          label: String(year),
-          isFutureEstimate: year > latestCohort.end
-        };
+    const graduateTerms = [
+      {
+        name: "Winter",
+        months: "January - April"
+      },
+      {
+        name: "Summer",
+        months: "May - August"
+      },
+      {
+        name: "Fall",
+        months: "September - December"
       }
+    ];
+
+    /*
+      Undergraduate students:
+      Winter and Fall only.
+    */
+    const undergraduateTerms = [
+      {
+        name: "Winter",
+        months: "January - April"
+      },
+      {
+        name: "Fall",
+        months: "September - December"
+      }
+    ];
+
+    const applicableTerms =
+      state.level === "GR"
+        ? graduateTerms
+        : undergraduateTerms;
+
+    return Array.from(
+      {
+        length: NUMBER_OF_YEARS
+      },
+      (_, index) =>
+        firstExpectedStartYear + index
+    ).flatMap(year =>
+      applicableTerms.map(term => ({
+        value:
+          `${term.name} ${year}`,
+
+        label:
+          `${term.name} ${year} (${term.months})`,
+
+        year,
+        term: term.name,
+
+        isFutureEstimate:
+          year > latestCohort.end
+      }))
     );
   }
 
-  return [...new Set(
-    rows
-      .map(row => normalize(row.CohortYear))
-      .filter(Boolean)
-  )].sort((a, b) => compareCohortDesc(a, b));
+  /*
+    Current or returning students continue
+    using the available cohort years.
+  */
+  return [
+    ...new Set(
+      rows
+        .map(row =>
+          normalize(row.CohortYear)
+        )
+        .filter(Boolean)
+    )
+  ].sort(
+    (yearA, yearB) =>
+      compareCohortDesc(
+        yearA,
+        yearB
+      )
+  );
 }
 
 
@@ -4801,18 +6679,26 @@ function getLatestApprovedTuitionCohort() {
 }
 
 function getFutureProgramCoopStatus() {
-  if (!state.program) return "";
+  if (!state.program) {
+    return "";
+  }
 
   const rows = getFilteredTuitionRows({
     includeProgram: true,
-    includeMajor: state.level === "UG"
+    includeMajor: true
   });
 
   const match = rows.find(row => {
-    const programMatch = normalizeKey(row.Program) === normalizeKey(state.program);
+    const programMatch =
+      normalizeKey(row.Program) ===
+      normalizeKey(state.program);
 
-    if (state.level === "UG") {
-      return programMatch && normalizeKey(row.Major) === normalizeKey(state.major);
+    if (state.major) {
+      return (
+        programMatch &&
+        normalizeKey(row.Major) ===
+          normalizeKey(state.major)
+      );
     }
 
     return programMatch;
@@ -4824,7 +6710,6 @@ function getFutureProgramCoopStatus() {
       "Coop_included",
       "coop_included",
       "Co-op Included",
-      "Coop Included",
       "Co-op"
     ])
   );
@@ -4832,7 +6717,7 @@ function getFutureProgramCoopStatus() {
 function matchTuitionRecord() {
   const rows = getFilteredTuitionRows({
     includeProgram: true,
-    includeMajor: state.level === "UG",
+    includeMajor: true,
     includeCohortForCurrent: true
   });
 
@@ -4842,28 +6727,44 @@ function matchTuitionRecord() {
   }
 
   /*
-    Current students already have their cohort year included
-    in the filtered records.
-
-    Future students use the most recent approved cohort
-    available in data.json.
+    Future students use the newest approved
+    tuition record available in data.json.
   */
   if (state.studentPhase === "future") {
-    const sortedRows = [...rows].sort((rowA, rowB) => {
-      const cohortA = parseCohortRange(rowA.CohortYear);
-      const cohortB = parseCohortRange(rowB.CohortYear);
+    const sortedRows = [...rows].sort(
+      (rowA, rowB) => {
+        const cohortA =
+          parseCohortRange(
+            rowA.CohortYear
+          );
 
-      const endYearA = cohortA ? cohortA.end : 0;
-      const endYearB = cohortB ? cohortB.end : 0;
+        const cohortB =
+          parseCohortRange(
+            rowB.CohortYear
+          );
 
-      return endYearB - endYearA;
-    });
+        const endYearA =
+          cohortA
+            ? cohortA.end
+            : 0;
 
-    state.matchedTuitionRecord = sortedRows[0] || null;
+        const endYearB =
+          cohortB
+            ? cohortB.end
+            : 0;
+
+        return endYearB - endYearA;
+      }
+    );
+
+    state.matchedTuitionRecord =
+      sortedRows[0] || null;
+
     return;
   }
 
-  state.matchedTuitionRecord = rows[0] || null;
+  state.matchedTuitionRecord =
+    rows[0] || null;
 }
 
 function getScholarshipOptions() {
@@ -4920,9 +6821,92 @@ function getSelectedScholarshipTotal() {
     return sum + getScholarshipYearlyValue(match);
   }, 0);
 }
+function isGraduateSummerOnlyProgram() {
+  if (state.level !== "GR") {
+    return false;
+  }
 
+  const programText = normalizeKey(
+    [
+      state.program,
+      state.major,
+      state.matchedTuitionRecord?.Program,
+      state.matchedTuitionRecord?.Major
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  return programText.includes(
+    "summer only"
+  );
+}
+
+function getEstimatePeriodDetails() {
+  /*
+    Undergraduate:
+    Fall and Winter.
+  */
+  if (state.level !== "GR") {
+    return {
+      terms: ["Fall", "Winter"],
+      label: "Fall and Winter",
+      shortLabel: "Fall & Winter",
+      semesterCount: 2,
+      summaryKicker:
+        "Estimate summary for 2 academic semesters (Fall & Winter)",
+      totalLabel:
+        "Estimated range for 2 academic semesters (Fall & Winter)",
+      description:
+        "This is your two-semester estimate for Fall and Winter."
+    };
+  }
+
+  /*
+    Summer-only graduate programs:
+    Summer only.
+  */
+  if (isGraduateSummerOnlyProgram()) {
+    return {
+      terms: ["Summer"],
+      label: "Summer only",
+      shortLabel: "Summer",
+      semesterCount: 1,
+      summaryKicker:
+        "Estimate summary for the Summer semester",
+      totalLabel:
+        "Estimated range for the Summer semester",
+      description:
+        "This graduate estimate includes the Summer semester only."
+    };
+  }
+
+  /*
+    All other graduate programs:
+    Fall, Winter and Summer.
+  */
+  return {
+    terms: [
+      "Fall",
+      "Winter",
+      "Summer"
+    ],
+    label:
+      "Fall, Winter and Summer",
+    shortLabel:
+      "Fall, Winter & Summer",
+    semesterCount: 3,
+    summaryKicker:
+      "Estimate summary for 3 academic semesters (Fall, Winter & Summer)",
+    totalLabel:
+      "Estimated range for 3 academic semesters (Fall, Winter & Summer)",
+    description:
+      "This graduate estimate includes Fall, Winter and Summer."
+  };
+}
 function getTuitionCosts() {
-  const row = state.matchedTuitionRecord;
+  const row =
+    state.matchedTuitionRecord;
 
   if (!row) {
     return {
@@ -4932,42 +6916,105 @@ function getTuitionCosts() {
     };
   }
 
-  const fallTuition =
-    toNumber(row.FallTuition);
+  const periodDetails =
+    getEstimatePeriodDetails();
 
-  const winterTuition =
-    toNumber(row.WinterTuition);
+  const termAmounts = {
+    Fall: {
+      tuition: toNumber(
+        row.FallTuition
+      ),
 
-  const fallCompulsoryFees =
-    toNumber(row.FallCompulsoryFees);
+      compulsoryFees: toNumber(
+        row.FallCompulsoryFees
+      )
+    },
 
-  const winterCompulsoryFees =
-    toNumber(row.WinterCompulsoryFees);
+    Winter: {
+      tuition: toNumber(
+        row.WinterTuition
+      ),
 
+      compulsoryFees: toNumber(
+        row.WinterCompulsoryFees
+      )
+    },
+
+    Summer: {
+      tuition: toNumber(
+        row.SummerTuition
+      ),
+
+      compulsoryFees: toNumber(
+        row.SummerCompulsoryFees
+      )
+    }
+  };
+
+  /*
+    Add only the applicable terms.
+
+    Undergraduate:
+    Fall + Winter
+
+    Graduate:
+    Fall + Winter + Summer
+
+    Summer-only graduate:
+    Summer
+  */
   const totalTuition =
-    fallTuition + winterTuition;
+    periodDetails.terms.reduce(
+      (total, term) => {
+        return (
+          total +
+          termAmounts[term].tuition
+        );
+      },
+      0
+    );
 
-  // Minimum compulsory fees from data.json
   const totalCompulsoryFees =
-    fallCompulsoryFees + winterCompulsoryFees;
+    periodDetails.terms.reduce(
+      (total, term) => {
+        return (
+          total +
+          termAmounts[term]
+            .compulsoryFees
+        );
+      },
+      0
+    );
 
-  // Maximum compulsory fees include an additional $500
+  /*
+    Maintain the existing $500 possible
+    compulsory-fee variation.
+  */
   const maximumCompulsoryFees =
-    totalCompulsoryFees +
-    COMPULSORY_FEE_RANGE_ALLOWANCE;
+    totalCompulsoryFees > 0
+      ? totalCompulsoryFees +
+        COMPULSORY_FEE_RANGE_ALLOWANCE
+      : 0;
 
   const items = [
     {
-      label: "Total tuition for Fall and Winter",
+      label:
+        `Total tuition for ${periodDetails.label}`,
+
       low: totalTuition,
       high: totalTuition
     },
+
     {
-      label: "Total compulsory fees for Fall and Winter",
+      label:
+        `Total compulsory fees for ${periodDetails.label}`,
+
       low: totalCompulsoryFees,
       high: maximumCompulsoryFees,
+
       helpLink:
         "https://www.uoguelph.ca/registrar/finances-fees/tuition-fees#compulsory-fee-descriptions-guelph-campus",
+
       helpLinkText:
         "Learn what compulsory fees include"
     }
@@ -4975,11 +7022,16 @@ function getTuitionCosts() {
 
   return {
     items,
-    low: totalTuition + totalCompulsoryFees,
-    high: totalTuition + maximumCompulsoryFees
+
+    low:
+      totalTuition +
+      totalCompulsoryFees,
+
+    high:
+      totalTuition +
+      maximumCompulsoryFees
   };
 }
-
 
 function getOnCampusResidenceOptions() {
   return (state.data?.["On_campus_Living_Costs"] || [])
@@ -5020,56 +7072,55 @@ function getLivingCosts() {
   const items = [];
 
   /*
-    Add the selected on-campus residence.
+    On-campus residence cost.
   */
   if (
     state.housingType === "OnCampus" &&
     state.residence &&
     state.roomType
   ) {
-    const residenceRecord =
-      (
-        state.data?.[
-          "On_campus_Living_Costs"
-        ] || []
-      ).find(item => {
-        const residenceArea = normalize(
+    const residenceRecord = (
+      state.data?.[
+        "On_campus_Living_Costs"
+      ] || []
+    ).find(item => {
+      const residenceArea =
+        normalize(
           readField(item, [
             "ResidenceArea",
             "Residence Area"
           ])
         );
 
-        const roomType = normalize(
+      const roomType =
+        normalize(
           readField(item, [
             "RoomType",
             "Room Type"
           ])
         );
 
-        return (
-          normalizeKey(residenceArea) ===
-            normalizeKey(state.residence) &&
-          normalizeKey(roomType) ===
-            normalizeKey(state.roomType)
-        );
-      });
+      return (
+        normalizeKey(residenceArea) ===
+          normalizeKey(state.residence) &&
+        normalizeKey(roomType) ===
+          normalizeKey(state.roomType)
+      );
+    });
 
     if (residenceRecord) {
-      /*
-        The Cost field already includes the deposit
-        in the supplied JSON.
-      */
-      const residenceCost = toNumber(
-        readField(
-          residenceRecord,
-          ["Cost"]
-        )
-      );
+      const residenceCost =
+        toNumber(
+          readField(
+            residenceRecord,
+            ["Cost"]
+          )
+        );
 
       items.push({
         label:
           `Residence: ${state.residence} - ${state.roomType}`,
+
         low: residenceCost,
         high: residenceCost
       });
@@ -5077,8 +7128,41 @@ function getLivingCosts() {
   }
 
   /*
-    Add a selected meal plan for either an on-campus
-    or off-campus student.
+    Off-campus rent.
+
+    Undergraduate:
+    Monthly rent multiplied by 8 months.
+
+    Graduate:
+    Monthly rent multiplied by 12 months.
+  */
+  if (
+    state.housingType === "OffCampus"
+  ) {
+    const monthlyRent =
+      toNumber(
+        state.currentOffCampusRent
+      );
+
+    const rentalMonths =
+      getOffCampusRentalMonths();
+
+    const totalRent =
+      monthlyRent * rentalMonths;
+
+    if (totalRent > 0) {
+      items.push({
+        label:
+          `Off-campus rent: ${rentalMonths} months at ${formatMoney(monthlyRent)} per month`,
+
+        low: totalRent,
+        high: totalRent
+      });
+    }
+  }
+
+  /*
+    Meal-plan cost.
   */
   const shouldIncludeMealPlan =
     state.mealPlan &&
@@ -5092,34 +7176,36 @@ function getLivingCosts() {
     );
 
   if (shouldIncludeMealPlan) {
-    const mealPlanRecord =
-      (
-        state.data?.["Meal_Plan"] || []
-      ).find(item => {
-        const planName = normalize(
+    const mealPlanRecord = (
+      state.data?.["Meal_Plan"] || []
+    ).find(item => {
+      const planName =
+        normalize(
           readField(item, [
             "Meal Plan Size",
             "MealPlanSize"
           ])
         );
 
-        return (
-          normalizeKey(planName) ===
-          normalizeKey(state.mealPlan)
-        );
-      });
+      return (
+        normalizeKey(planName) ===
+        normalizeKey(state.mealPlan)
+      );
+    });
 
     if (mealPlanRecord) {
-      const mealPlanCost = toNumber(
-        readField(mealPlanRecord, [
-          "Total cost per year",
-          "TotalCostPerYear"
-        ])
-      );
+      const mealPlanCost =
+        toNumber(
+          readField(mealPlanRecord, [
+            "Total cost per year",
+            "TotalCostPerYear"
+          ])
+        );
 
       items.push({
         label:
           `Meal plan: ${state.mealPlan}`,
+
         low: mealPlanCost,
         high: mealPlanCost
       });
@@ -5130,12 +7216,14 @@ function getLivingCosts() {
     items,
 
     low: items.reduce(
-      (sum, item) => sum + item.low,
+      (sum, item) =>
+        sum + item.low,
       0
     ),
 
     high: items.reduce(
-      (sum, item) => sum + item.high,
+      (sum, item) =>
+        sum + item.high,
       0
     )
   };
@@ -5244,18 +7332,27 @@ function getOffsets() {
   */
   if (state.studentPhase === "future") {
     const PART_TIME_WEEKS_PER_SEMESTER = 12;
-    const ACADEMIC_SEMESTERS = 2;
+
+    const periodDetails =
+      getEstimatePeriodDetails();
+
+    const academicSemesters =
+      periodDetails.semesterCount;
 
     const partTimeEarnings =
-      toNumber(state.partTimeHoursPerWeek) *
-      toNumber(state.partTimeHourlyRate) *
+      toNumber(
+        state.partTimeHoursPerWeek
+      ) *
+      toNumber(
+        state.partTimeHourlyRate
+      ) *
       PART_TIME_WEEKS_PER_SEMESTER *
-      ACADEMIC_SEMESTERS;
+      academicSemesters;
 
     if (partTimeEarnings > 0) {
       items.push({
         label:
-          "Estimated part-time earnings, 12 weeks per semester for Fall and Winter",
+          `Estimated part-time earnings, 12 weeks per semester for ${periodDetails.label}`,
         value: partTimeEarnings
       });
     }
@@ -5284,7 +7381,8 @@ function getOffsets() {
     const COOP_WEEKS_PER_WORK_TERM = 16;
 
     const coopEarnings =
-      toNumber(state.coopWeeklyEarnings) *
+      toNumber(state.coopHourlyRate) *
+      toNumber(state.coopHoursPerWeek) *
       COOP_WEEKS_PER_WORK_TERM;
 
     if (coopEarnings > 0) {
@@ -5321,6 +7419,32 @@ function renderBreakdownRows(
   isOffset = false,
   subtitle = ""
 ) {
+  /*
+    Remove rows whose value is entirely zero.
+  */
+  const visibleItems =
+    (items || []).filter(item => {
+      if (
+        item.low !== undefined &&
+        item.high !== undefined
+      ) {
+        return (
+          toNumber(item.low) !== 0 ||
+          toNumber(item.high) !== 0
+        );
+      }
+
+      return toNumber(item.value) !== 0;
+    });
+
+  /*
+    Do not display the section heading when
+    there are no non-zero rows.
+  */
+  if (!visibleItems.length) {
+    return [];
+  }
+
   const rows = [];
 
   rows.push(`
@@ -5341,23 +7465,10 @@ function renderBreakdownRows(
     </div>
   `);
 
-  if (!items.length) {
-    rows.push(`
-      <div class="summary-item">
-        <span>None added</span>
-
-        <div class="summary-value">
-          ${formatMoney(0)}
-        </div>
-      </div>
-    `);
-
-    return rows;
-  }
-
-  items.forEach(item => {
+  visibleItems.forEach(item => {
     let displayValue;
-    let valueClass = "summary-value";
+    let valueClass =
+      "summary-value";
 
     if (item.notDeducted) {
       displayValue =
@@ -5367,22 +7478,27 @@ function renderBreakdownRows(
               item.low,
               item.high
             )
-          : formatMoney(item.value || 0);
+          : formatMoney(
+              item.value || 0
+            );
 
-      valueClass = "summary-value-awareness";
+      valueClass =
+        "summary-value-awareness";
     } else if (isOffset) {
       displayValue =
         `-${formatMoney(item.value)}`;
 
-      valueClass = "summary-value-offset";
+      valueClass =
+        "summary-value-offset";
     } else if (
       item.low !== undefined &&
       item.high !== undefined
     ) {
-      displayValue = formatRangeValue(
-        item.low,
-        item.high
-      );
+      displayValue =
+        formatRangeValue(
+          item.low,
+          item.high
+        );
     } else {
       displayValue =
         formatMoney(item.value || 0);
@@ -5582,14 +7698,32 @@ function parseAmountFromText(text) {
 }
 
 function formatMoney(value) {
-  const formatted = new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency: "CAD",
-    currencyDisplay: "code",
-    maximumFractionDigits: 0
-  }).format(Number(value) || 0);
+  const formatted =
+    new Intl.NumberFormat(
+      "en-CA",
+      {
+        style: "currency",
+        currency: "CAD",
+        currencyDisplay: "code",
+        maximumFractionDigits: 0
+      }
+    ).format(Number(value) || 0);
 
-  return formatted.replace("CAD", "CAD ");
+  return formatted.replace(
+    /^CAD\s*/,
+    "CAD "
+  );
+}
+
+function formatDollarAmount(value) {
+  const amount = Number(value) || 0;
+
+  return `$${amount.toLocaleString(
+    "en-CA",
+    {
+      maximumFractionDigits: 0
+    }
+  )}`;
 }
 
 function formatRangeValue(low, high) {
@@ -6222,7 +8356,8 @@ function finishEstimatePDF(
 
   const result =
     state.result || emptyResult();
-
+  const periodDetails =
+    getEstimatePeriodDetails();
   const residenceSelection =
     state.housingType === "OnCampus"
       ? state.residence || "Not selected"
@@ -6305,7 +8440,7 @@ function finishEstimatePDF(
   doc.setTextColor(90, 90, 90);
 
   doc.text(
-    "Estimated total for Fall and Winter",
+    periodDetails.totalLabel,
     left + 4,
     y + 10
   );
@@ -6554,11 +8689,16 @@ function finishEstimatePDF(
     state.studentPhase === "future" &&
     state.coopInterest === "Yes"
   ) {
-    const weeklyEarnings =
-      toNumber(state.coopWeeklyEarnings);
+    const hourlyRate =
+      toNumber(state.coopHourlyRate);
+
+    const hoursPerWeek =
+      toNumber(state.coopHoursPerWeek);
 
     const potentialCoopEarnings =
-      weeklyEarnings * 16;
+      hourlyRate *
+      hoursPerWeek *
+      16;
 
     if (potentialCoopEarnings > 0) {
       y = drawPDFBreakdownSection(
@@ -6567,7 +8707,7 @@ function finishEstimatePDF(
         [
           {
             label:
-              `Estimated earnings for one 16-week work term, based on ${formatMoney(weeklyEarnings)} per week`,
+              `Estimated earnings for one 16-week work term, based on ${formatMoney(hourlyRate)} per hour and ${hoursPerWeek} hours per week`,
             displayValue:
               formatMoney(
                 potentialCoopEarnings
