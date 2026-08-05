@@ -6947,6 +6947,26 @@ function getCurrentStartTermOptions() {
     ).values()
   ].sort((a, b) => a.start - b.start);
 
+  if (!cohortRanges.length) {
+    return [];
+  }
+
+  /*
+    Current students should not be offered a start term from the
+    newest tuition-data year itself. Keep the newest selectable
+    calendar year one year behind the newest cohort start year.
+
+    Example: if the newest cohort is 2026-2027, the dropdown stops
+    at Fall 2025 (September - December). This advances automatically
+    when newer cohort data is added to the JSON.
+  */
+  const latestDataStartYear = Math.max(
+    ...cohortRanges.map(range => range.start)
+  );
+
+  const currentStudentCutoffYear =
+    latestDataStartYear - 1;
+
   return cohortRanges.flatMap(range => {
     const options = [
       {
@@ -6973,15 +6993,19 @@ function getCurrentStartTermOptions() {
       });
     }
 
-    return options.map(option => ({
-      value:
-        `${option.term}|||${range.raw}`,
-      label:
-        `${option.term} ${option.year} (${option.months})`,
-      term: option.term,
-      year: option.year,
-      cohortYear: range.raw
-    }));
+    return options
+      .filter(option =>
+        option.year <= currentStudentCutoffYear
+      )
+      .map(option => ({
+        value:
+          `${option.term}|||${range.raw}`,
+        label:
+          `${option.term} ${option.year} (${option.months})`,
+        term: option.term,
+        year: option.year,
+        cohortYear: range.raw
+      }));
   });
 }
 
