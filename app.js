@@ -3848,7 +3848,7 @@ function renderStep5() {
         ${
           state.studentPhase === "future"
             ? renderFutureContactSection()
-            : renderCurrentStudentDownloadNotice()
+            : ""
         }
 
       </div>
@@ -5920,20 +5920,7 @@ function renderFutureContactSection() {
   `;
 }
 
-function renderCurrentStudentDownloadNotice() {
-  return `
-    <div class="uog-alert uog-alert-grey">
-      <div class="uog-alert-title">
-        <span class="uog-alert-icon">!</span>
-        <span>Download your estimate</span>
-      </div>
 
-      <div class="uog-alert-message">
-        Current or returning students can download this estimate without providing a name or email address.
-      </div>
-    </div>
-  `;
-}
 function resetEstimator() {
   const loadedData =
     state.data;
