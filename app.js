@@ -5,6 +5,12 @@ const coopSalaryGuideLink =
 const osapLink =
   "https://osap.gov.on.ca/AidEstimator2627Web/enterapp/enter.xhtml";
 
+const federalStudentAidEstimatorLink =
+  "https://certification.esdc.gc.ca/lea-mcl/eafe-sfae/eafe-sfae-h.4m.2@-eng.jsp";
+
+const provincialTerritorialStudentAidLink =
+  "https://www.canada.ca/en/services/benefits/education/student-aid.html";
+
 const undergraduateAwardSearchLink =
   "https://www.uoguelph.ca/regweb/studentfinance/apps/awards";
 
@@ -19,6 +25,7 @@ const internationalFundingTipsLink =
 const COMPULSORY_FEE_RANGE_ALLOWANCE = 500;
 const state = {
   osapFunding: 0,
+  nonOntarioAidFunding: 0,
   data: null,
   currentStep: 0,
 
@@ -32,6 +39,7 @@ const state = {
   level: "",                   // UG | GR
   campus: "",
   cohortYear: "",
+  currentStartTerm: "",
   program: "",
   major: "",
   classification: "",
@@ -556,7 +564,10 @@ function updateChrome() {
     1: "Choose the student and residency path that applies to you.",
     2: "Select the year, campus and program for the estimate.",
     3: "Review textbooks, personal expenses, housing and food costs.",
-    4: "Add potential funding and earnings that may help offset your costs.",
+    4:
+      state.studentPhase === "current"
+        ? "Add your funding and earnings that may help offset your costs."
+        : "Add potential funding and earnings that may help offset your costs.",
     5: "Review the estimate and choose how to save it."
   };
   const scholarshipResourceLink =
@@ -1182,19 +1193,14 @@ function isMandatoryCoopProgram() {
 }
 
 function renderStep2() {
-  if (
-    state.studentPhase === "current" &&
-    !state.cohortYear
-  ) {
-    state.cohortYear =
-      getLatestCurrentCohortYear();
-  }
-
   const campuses =
     getAvailableCampuses();
 
   const cohortYears =
     getAvailableCohortYears();
+
+  const currentStartTerms =
+    getCurrentStartTermOptions();
 
   const isUG =
     state.level === "UG";
@@ -1290,11 +1296,6 @@ function renderStep2() {
     state.includeCoopEarnings = false;
   }
 
-  const currentStudentYear =
-    state.studentPhase === "current"
-      ? state.cohortYear
-      : "";
-
   const latestApprovedCohort =
     getLatestApprovedTuitionCohort();
 
@@ -1333,7 +1334,9 @@ function renderStep2() {
 
         <p class="step-description">
           ${
-            isGraduate
+            state.studentPhase === "current"
+              ? "Tell us when you began your current program, then choose the program details that apply to you."
+              : isGraduate
               ? "Choose your expected start term, graduate program type and program."
               : "Choose the campus and program used to match tuition data."
           }
@@ -1431,16 +1434,39 @@ function renderStep2() {
               `
               : `
                 <div class="form-group">
-                  <label>
-                    Year
+                  <label for="currentStartTerm">
+                    When did you begin your current program at the University of Guelph?
+
+                    <span class="required-star">
+                      *
+                    </span>
                   </label>
 
-                  <div class="readonly-field">
-                    ${escapeHtml(
-                      currentStudentYear ||
-                      "Not available"
-                    )}
-                  </div>
+                  <select
+                    id="currentStartTerm"
+                    class="step-dropdown"
+                  >
+                    <option value="">
+                      Select your start term
+                    </option>
+
+                    ${currentStartTerms.map(option => `
+                      <option
+                        value="${escapeHtml(option.value)}"
+                        ${
+                          state.currentStartTerm === option.value
+                            ? "selected"
+                            : ""
+                        }
+                      >
+                        ${escapeHtml(option.label)}
+                      </option>
+                    `).join("")}
+                  </select>
+
+                  <p class="form-help-text">
+                    Select the term when you first began your current program. This is used to match the correct tuition cohort.
+                  </p>
                 </div>
               `
           }
@@ -2179,6 +2205,9 @@ function renderOnCampusHousingFields() {
   const isGraduate =
     state.level === "GR";
 
+  const isCurrentStudent =
+    state.studentPhase === "current";
+
   const residenceInformationLink =
     getInformationLink(
       "On_campus_Living_Costs",
@@ -2201,7 +2230,11 @@ function renderOnCampusHousingFields() {
     return `
       <div class="form-group">
         <label for="roomType">
-          Which room type would you prefer?
+          ${
+            isCurrentStudent
+              ? "Which room type do you live in?"
+              : "Which room type would you prefer?"
+          }
           <span class="required-star">*</span>
         </label>
 
@@ -2238,7 +2271,11 @@ function renderOnCampusHousingFields() {
           ? `
             <div class="form-group">
               <label for="residence">
-                Which residence would you prefer?
+                ${
+                  isCurrentStudent
+                    ? "Which residence do you live in?"
+                    : "Which residence would you prefer?"
+                }
                 <span class="required-star">*</span>
               </label>
 
@@ -2297,7 +2334,11 @@ function renderOnCampusHousingFields() {
   return `
     <div class="form-group">
       <label for="residence">
-        Which residence would you prefer?
+        ${
+          isCurrentStudent
+            ? "Which residence do you live in?"
+            : "Which residence would you prefer?"
+        }
         <span class="required-star">*</span>
       </label>
 
@@ -2340,7 +2381,11 @@ function renderOnCampusHousingFields() {
         ? `
           <div class="form-group">
             <label for="roomType">
-              Which room type would you prefer?
+              ${
+                isCurrentStudent
+                  ? "Which room type do you live in?"
+                  : "Which room type would you prefer?"
+              }
               <span class="required-star">*</span>
             </label>
 
@@ -2378,6 +2423,9 @@ function renderOnCampusHousingFields() {
   `;
 }
 function renderStep3() {
+  const isCurrentStudent =
+    state.studentPhase === "current";
+
   const textbooks = getJsonCost(
     "Textbooks",
     "Textbooks",
@@ -2457,12 +2505,19 @@ function renderStep3() {
         </p>
 
         <h2 class="step-title">
-          Add your estimated expenses
+          ${
+            isCurrentStudent
+              ? "Add your expenses"
+              : "Add your estimated expenses"
+          }
         </h2>
 
         <p class="step-description">
-          Review textbooks, personal expenses, residence and
-          meal-plan costs before adding potential funding.
+          ${
+            isCurrentStudent
+              ? "Review your textbooks, personal expenses, residence and meal-plan costs before adding your funding."
+              : "Review textbooks, personal expenses, residence and meal-plan costs before adding potential funding."
+          }
         </p>
       </div>
 
@@ -2471,7 +2526,7 @@ function renderStep3() {
 
           <div class="form-group">
             <label for="booksAmount">
-              Estimated textbooks and supplies
+              ${isCurrentStudent ? "Textbooks and supplies" : "Estimated textbooks and supplies"}
               (${escapeHtml(textbooks.period)})
             </label>
 
@@ -2488,7 +2543,7 @@ function renderStep3() {
 
           <div class="form-group">
             <label for="personalAmount">
-              Estimated personal expenses
+              ${isCurrentStudent ? "Personal expenses" : "Estimated personal expenses"}
               (${escapeHtml(personalExpenses.period)})
             </label>
 
@@ -2511,7 +2566,11 @@ function renderStep3() {
             </h3>
 
             <label for="housingType">
-              Do you plan to live on campus or off campus?
+              ${
+                isCurrentStudent
+                  ? "Do you live on campus or off campus?"
+                  : "Do you plan to live on campus or off campus?"
+              }
               <span class="required-star">*</span>
             </label>
 
@@ -2520,7 +2579,7 @@ function renderStep3() {
               class="step-dropdown"
             >
               <option value="">
-                Select where you plan to live
+                ${isCurrentStudent ? "Select where you live" : "Select where you plan to live"}
               </option>
 
               <option
@@ -2571,13 +2630,15 @@ function renderStep3() {
               ? `
                 <div class="form-group">
                   <label for="currentOffCampusRent">
-                    Estimated monthly off-campus rent
+                    ${isCurrentStudent ? "Monthly off-campus rent" : "Estimated monthly off-campus rent"}
                   </label>
 
                   ${renderMoneyInput({
                     id: "currentOffCampusRent",
                     value: state.currentOffCampusRent,
-                    placeholder: "Enter estimated monthly rent"
+                    placeholder: isCurrentStudent
+                      ? "Enter your monthly rent"
+                      : "Enter estimated monthly rent"
                   })}
 
                 
@@ -2594,7 +2655,11 @@ function renderStep3() {
 
                 <div class="form-group">
                   <label for="futureMealPlanInterest">
-                    Would you like to include a meal plan?
+                    ${
+                      isCurrentStudent
+                        ? "Do you have a meal plan?"
+                        : "Would you like to include a meal plan?"
+                    }
                     <span class="required-star">*</span>
                   </label>
 
@@ -2651,7 +2716,11 @@ function renderStep3() {
               ? `
                 <div class="form-group">
                   <label for="mealPlan">
-                    What is your meal-plan preference?
+                    ${
+                      isCurrentStudent
+                        ? "What meal plan do you have?"
+                        : "What is your meal-plan preference?"
+                    }
                     <span class="required-star">*</span>
                   </label>
 
@@ -2660,7 +2729,7 @@ function renderStep3() {
                     class="step-dropdown"
                   >
                     <option value="">
-                      Select a meal-plan preference
+                      ${isCurrentStudent ? "Select your meal plan" : "Select a meal-plan preference"}
                     </option>
 
                     ${
@@ -2709,8 +2778,11 @@ function renderStep3() {
                             available.
                           `
                           : `
-                            Select the meal plan you would like to
-                            include in your estimate.
+                            ${
+                              isCurrentStudent
+                                ? "Select the meal plan you currently have."
+                                : "Select the meal plan you would like to include in your estimate."
+                            }
                           `
                     }
 
@@ -2808,6 +2880,50 @@ function getOffCampusRentalMonths() {
 
 
 function renderStep4() {
+  const isCurrentStudent =
+    state.studentPhase === "current";
+
+  const isOntarioDomestic =
+    state.residencyType === "Domestic" &&
+    state.province === "ON";
+
+  const isNonOntarioDomestic =
+    state.residencyType === "Domestic" &&
+    state.province === "Non-ON";
+
+  const isInternational =
+    state.residencyType === "International";
+
+  const fundingSectionTitle =
+    isOntarioDomestic
+      ? "OSAP and scholarships"
+      : isNonOntarioDomestic
+        ? "Student financial assistance and scholarships"
+        : "Scholarships and bursaries";
+
+  const fundingSectionDescription =
+    isOntarioDomestic
+      ? (
+          isCurrentStudent
+            ? "Add your OSAP funding, University of Guelph scholarships, bursaries and other awards."
+            : "Add anticipated OSAP funding, University of Guelph scholarships, bursaries and other awards."
+        )
+      : isNonOntarioDomestic
+        ? "Review federal, provincial or territorial student financial assistance and add your University of Guelph scholarships and bursaries."
+        : "Add University of Guelph scholarships, bursaries and other awards that may help with your costs.";
+
+  /*
+    Keep Ontario OSAP and outside-Ontario student assistance
+    separate so a value cannot carry into the wrong residency path.
+  */
+  if (!isOntarioDomestic) {
+    state.osapFunding = 0;
+  }
+
+  if (!isNonOntarioDomestic) {
+    state.nonOntarioAidFunding = 0;
+  }
+
   const awardSearchDetails =
     getAwardSearchDetails();
   const defaultPartTimeRate = parseAmountFromText(
@@ -2868,12 +2984,15 @@ function renderStep4() {
         <p class="section-kicker">Funding and earnings</p>
 
         <h2 class="step-title">
-          Add potential funding
+          ${isCurrentStudent ? "Add your funding and earnings" : "Add potential funding"}
         </h2>
 
         <p class="step-description">
-          Include anticipated employment earnings, government assistance,
-          scholarships and other funding that may help offset your costs.
+          ${
+            isCurrentStudent
+              ? "Include your employment earnings, government assistance, scholarships and other funding that help offset your costs."
+              : "Include anticipated employment earnings, government assistance, scholarships and other funding that may help offset your costs."
+          }
         </p>
       </div>
 
@@ -2886,7 +3005,11 @@ function renderStep4() {
             </h3>
 
             <p class="form-help-text">
-              Add potential earnings from part-time employment or co-op work terms.
+              ${
+                isCurrentStudent
+                  ? "Add your earnings from part-time employment or co-op work terms."
+                  : "Add potential earnings from part-time employment or co-op work terms."
+              }
             </p>
           </div>
 
@@ -2930,13 +3053,13 @@ function renderStep4() {
               : `
                 <div class="form-group">
                   <label for="partTimeIncome">
-                    Expected yearly part-time income (CAD)
+                    Yearly part-time income (CAD)
                   </label>
 
                   ${renderMoneyInput({
                     id: "partTimeIncome",
                     value: state.partTimeIncome,
-                    placeholder: "Enter expected yearly part-time income"
+                    placeholder: "Enter your yearly part-time income"
                   })}
                 </div>
               `
@@ -2947,7 +3070,7 @@ function renderStep4() {
               ? `
                 <div class="form-group coop-earnings-section">
                   <h4 class="funding-group-title">
-                    Potential co-op earnings
+                    ${isCurrentStudent ? "Co-op earnings" : "Potential co-op earnings"}
                   </h4>
 
                   <p class="form-help-text">
@@ -2982,19 +3105,21 @@ function renderStep4() {
 
                 <div class="form-group">
                   <label for="coopHourlyRate">
-                    Estimated hourly co-op wage (CAD)
+                    ${isCurrentStudent ? "Hourly co-op wage (CAD)" : "Estimated hourly co-op wage (CAD)"}
                   </label>
 
                   ${renderMoneyInput({
                     id: "coopHourlyRate",
                     value: state.coopHourlyRate,
-                    placeholder: "Enter your estimated hourly wage"
+                    placeholder: isCurrentStudent
+                      ? "Enter your hourly wage"
+                      : "Enter your estimated hourly wage"
                   })}
                 </div>
 
                 <div class="form-group">
                   <label for="coopHoursPerWeek">
-                    Expected hours per week
+                    ${isCurrentStudent ? "Hours per week" : "Expected hours per week"}
                   </label>
 
                   <input
@@ -3010,11 +3135,11 @@ function renderStep4() {
                   />
 
                   <p class="form-help-text">
-                    Potential earnings are calculated using your
-                    hourly wage and expected weekly hours across
-                    one 16-week co-op work term. For future students,
-                    this amount is shown for planning only and is
-                    not deducted from the final estimate.
+                    ${
+                      isCurrentStudent
+                        ? "Co-op earnings are calculated using your hourly wage and weekly hours across one 16-week co-op work term."
+                        : "Potential earnings are calculated using your hourly wage and expected weekly hours across one 16-week co-op work term. For future students, this amount is shown for planning only and is not deducted from the final estimate."
+                    }
                   </p>
                 </div>
               `
@@ -3023,27 +3148,28 @@ function renderStep4() {
 
           <div class="form-group funding-section-heading">
             <h3 class="subsection-title">
-              OSAP and scholarships
+              ${escapeHtml(fundingSectionTitle)}
             </h3>
 
             <p class="form-help-text">
-              Add anticipated government assistance, University of Guelph
-              scholarships, bursaries and other awards.
+              ${escapeHtml(fundingSectionDescription)}
             </p>
           </div>
 
           ${
-            state.residencyType === "Domestic"
+            isOntarioDomestic
               ? `
                 <div class="form-group">
                   <label for="osapFunding">
-                    Anticipated OSAP funding (CAD)
+                    ${isCurrentStudent ? "OSAP funding (CAD)" : "Anticipated OSAP funding (CAD)"}
                   </label>
 
                   ${renderMoneyInput({
                     id: "osapFunding",
                     value: state.osapFunding,
-                    placeholder: "Enter anticipated OSAP funding"
+                    placeholder: isCurrentStudent
+                      ? "Enter your OSAP funding"
+                      : "Enter anticipated OSAP funding"
                   })}
 
                   <p class="form-help-text">
@@ -3062,20 +3188,88 @@ function renderStep4() {
               : ""
           }
 
+          ${
+            isNonOntarioDomestic
+              ? `
+                <div class="international-funding-tip">
+                  <h3>Student financial assistance outside Ontario</h3>
+
+                  <p>
+                    Use the federal estimator to explore federal student
+                    financial assistance. Provincial and territorial student-aid
+                    programs vary by where you live, so also review the program
+                    for your home province or territory.
+                  </p>
+
+                  <p>
+                    <a
+                      href="${federalStudentAidEstimatorLink}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Federal Student Financial Assistance Estimator
+                    </a>
+                  </p>
+
+                  <p>
+                    <a
+                      href="${provincialTerritorialStudentAidLink}"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      Provincial and territorial student aid information
+                    </a>
+                  </p>
+                </div>
+
+                <div class="form-group">
+                  <label for="nonOntarioAidFunding">
+                    ${
+                      isCurrentStudent
+                        ? "Student financial assistance amount (CAD)"
+                        : "Anticipated student financial assistance (CAD)"
+                    }
+                  </label>
+
+                  ${renderMoneyInput({
+                    id: "nonOntarioAidFunding",
+                    value: state.nonOntarioAidFunding,
+                    placeholder: isCurrentStudent
+                      ? "Enter your student financial assistance amount"
+                      : "Enter the amount you calculated"
+                  })}
+
+                  <p class="form-help-text">
+                    ${
+                      isCurrentStudent
+                        ? "Enter the federal, provincial or territorial student assistance amount you receive or expect to receive."
+                        : "Enter the federal, provincial or territorial student assistance amount you calculated using the resources above."
+                    }
+                  </p>
+                </div>
+              `
+              : ""
+          }
+
           <div class="form-group">
             <label for="otherScholarshipOffset">
-              Anticipated scholarships and bursaries (CAD)
+              ${isCurrentStudent ? "Scholarships and bursaries (CAD)" : "Anticipated scholarships and bursaries (CAD)"}
             </label>
 
             ${renderMoneyInput({
               id: "otherScholarshipOffset",
               value: state.otherScholarshipOffset,
-              placeholder: "Enter anticipated yearly scholarships and bursaries"
+              placeholder: isCurrentStudent
+                ? "Enter your yearly scholarships and bursaries"
+                : "Enter anticipated yearly scholarships and bursaries"
             })}
 
             <p class="form-help-text">
-              Include anticipated University of Guelph
-              scholarships, bursaries and other awards.
+              ${
+                isCurrentStudent
+                  ? "Include your University of Guelph scholarships, bursaries and other awards."
+                  : "Include anticipated University of Guelph scholarships, bursaries and other awards."
+              }
               Browse the
               <a
                 href="${escapeHtml(awardSearchDetails.link)}"
@@ -3107,7 +3301,7 @@ function renderStep4() {
           }
 
           ${
-            state.residencyType === "International"
+            isInternational
               ? `
                 <div class="international-funding-tip">
                   <h3>Looking for more ways to fund your education?</h3>
@@ -4730,6 +4924,9 @@ function bindStep2Events() {
   const cohortYear =
     document.getElementById("cohortYear");
 
+  const currentStartTerm =
+    document.getElementById("currentStartTerm");
+
   const classification =
     document.getElementById("classification");
 
@@ -4823,6 +5020,44 @@ function bindStep2Events() {
         event.target.value;
 
       state.matchedTuitionRecord = null;
+
+      clearErrors();
+      renderCurrentStep();
+    };
+  }
+
+  /*
+    Current students choose a readable start term such as Fall 2021.
+    The option also carries its underlying cohort (2021-2022), which
+    is what the tuition matching logic already uses.
+  */
+  if (currentStartTerm) {
+    currentStartTerm.onchange = event => {
+      const selectedValue =
+        event.target.value;
+
+      state.currentStartTerm =
+        selectedValue;
+
+      const selectedOption =
+        getCurrentStartTermOptions()
+          .find(option =>
+            option.value === selectedValue
+          );
+
+      state.cohortYear =
+        selectedOption?.cohortYear || "";
+
+      state.program = "";
+      state.major = "";
+      state.classification = "";
+      state.campus = "";
+      state.matchedTuitionRecord = null;
+
+      state.coopInterest = "No";
+      state.includeCoop = false;
+      state.includeCoopEarnings = false;
+      state.coopEarningsOffset = 0;
 
       clearErrors();
       renderCurrentStep();
@@ -4983,6 +5218,7 @@ function bindStep2Events() {
         state.booksAmount = 0;
         state.personalAmount = 0;
         state.osapFunding = 0;
+        state.nonOntarioAidFunding = 0;
         state.otherScholarshipOffset = 0;
         state.scholarshipOffset = 0;
         state.selectedScholarshipKeys = [];
@@ -5037,6 +5273,21 @@ function bindStep2Events() {
           cohortYear.value;
       }
 
+      if (currentStartTerm) {
+        state.currentStartTerm =
+          currentStartTerm.value;
+
+        const selectedOption =
+          getCurrentStartTermOptions()
+            .find(option =>
+              option.value ===
+              state.currentStartTerm
+            );
+
+        state.cohortYear =
+          selectedOption?.cohortYear || "";
+      }
+
       if (classification) {
         state.classification =
           classification.value;
@@ -5055,10 +5306,15 @@ function bindStep2Events() {
       let hasError = false;
 
       if (
-        state.studentPhase === "current"
+        state.studentPhase === "current" &&
+        !state.currentStartTerm
       ) {
-        state.cohortYear =
-          getLatestCurrentCohortYear();
+        markError(
+          currentStartTerm,
+          "Please select when you began your current program."
+        );
+
+        hasError = true;
       }
 
       if (
@@ -5433,6 +5689,9 @@ function bindStep4Events() {
   const osapFunding =
     document.getElementById("osapFunding");
 
+  const nonOntarioAidFunding =
+    document.getElementById("nonOntarioAidFunding");
+
   const partTimeHoursPerWeek =
     document.getElementById("partTimeHoursPerWeek");
 
@@ -5463,6 +5722,14 @@ function bindStep4Events() {
   if (osapFunding) {
     osapFunding.oninput = event => {
       state.osapFunding = toNumber(event.target.value);
+      updateRunningEstimate();
+    };
+  }
+
+  if (nonOntarioAidFunding) {
+    nonOntarioAidFunding.oninput = event => {
+      state.nonOntarioAidFunding =
+        toNumber(event.target.value);
       updateRunningEstimate();
     };
   }
@@ -6179,7 +6446,11 @@ async function saveFutureStudentLead(emailStatus = "Downloaded copy") {
     program: state.program,
     major: state.major || "",
     coopInterest: state.coopInterest,
-    osapFunding: Number(state.osapFunding) || 0,
+    osapFunding:
+      state.residencyType === "Domestic" &&
+      state.province === "ON"
+        ? Number(state.osapFunding) || 0
+        : 0,
     housing: state.housingType,
     includeMealPlan: state.futureMealPlanInterest,
     emailStatus: emailStatus
@@ -6218,7 +6489,11 @@ async function sendEstimateEmail() {
     program: state.program,
     major: state.major || "",
     coopInterest: state.coopInterest,
-    osapFunding: Number(state.osapFunding) || 0,
+    osapFunding:
+      state.residencyType === "Domestic" &&
+      state.province === "ON"
+        ? Number(state.osapFunding) || 0
+        : 0,
     housing: state.housingType,
     includeMealPlan: state.futureMealPlanInterest,
     emailStatus: "Sent",
@@ -6310,6 +6585,7 @@ function resetProgramPathState() {
 
   state.campus = "";
   state.cohortYear = "";
+  state.currentStartTerm = "";
   state.program = "";
   state.major = "";
   state.classification = "";
@@ -6335,6 +6611,8 @@ function resetProgramPathState() {
 }
 
 function resetFundingSelections() {
+  state.osapFunding = 0;
+  state.nonOntarioAidFunding = 0;
   state.selectedScholarshipKeys = [];
   state.scholarshipOffset = 0;
   state.partTimeIncome = 0;
@@ -6401,6 +6679,29 @@ function emptyResult() {
 }
 function getTuitionArray() {
   if (!state.data) return [];
+
+  /*
+    Current / returning students use the combined historical
+    tuition table so every available cohort can be selected.
+
+    Future students continue using the existing UG_Tuition and
+    GR_Tuition sections exactly as before.
+  */
+  if (state.studentPhase === "current") {
+    const expectedStudentLevel =
+      state.level === "UG"
+        ? "undergrad"
+        : state.level === "GR"
+          ? "grad"
+          : "";
+
+    return (
+      state.data.Current_Students_GR_UG || []
+    ).filter(row =>
+      normalizeKey(row.StudentLevel) ===
+      expectedStudentLevel
+    );
+  }
 
   return state.level === "UG"
     ? (state.data.UG_Tuition || [])
@@ -6621,6 +6922,67 @@ function getAvailableCohortYears() {
         yearB
       )
   );
+}
+
+function getCurrentStartTermOptions() {
+  if (state.studentPhase !== "current") {
+    return [];
+  }
+
+  /*
+    Do not filter by the currently selected cohort here. The purpose
+    of this list is to expose every cohort contained in the current-
+    student JSON data for the chosen level and residency pathway.
+  */
+  const rows = getFilteredTuitionRows({
+    includeCohortForCurrent: false
+  });
+
+  const cohortRanges = [
+    ...new Map(
+      rows
+        .map(row => parseCohortRange(row.CohortYear))
+        .filter(Boolean)
+        .map(range => [range.raw, range])
+    ).values()
+  ].sort((a, b) => a.start - b.start);
+
+  return cohortRanges.flatMap(range => {
+    const options = [
+      {
+        term: "Fall",
+        year: range.start,
+        months: "September - December"
+      },
+      {
+        term: "Winter",
+        year: range.end,
+        months: "January - April"
+      }
+    ];
+
+    /*
+      Graduate students may also begin in Summer. Undergraduate
+      students intentionally receive only Fall and Winter choices.
+    */
+    if (state.level === "GR") {
+      options.push({
+        term: "Summer",
+        year: range.end,
+        months: "May - August"
+      });
+    }
+
+    return options.map(option => ({
+      value:
+        `${option.term}|||${range.raw}`,
+      label:
+        `${option.term} ${option.year} (${option.months})`,
+      term: option.term,
+      year: option.year,
+      cohortYear: range.raw
+    }));
+  });
 }
 
 
@@ -7308,17 +7670,40 @@ function getOffsets() {
 
   if (
     state.residencyType === "Domestic" &&
+    state.province === "ON" &&
     toNumber(state.osapFunding) > 0
   ) {
     items.push({
-      label: "Anticipated OSAP funding",
+      label:
+        state.studentPhase === "current"
+          ? "OSAP funding"
+          : "Anticipated OSAP funding",
       value: toNumber(state.osapFunding)
+    });
+  }
+
+  if (
+    state.residencyType === "Domestic" &&
+    state.province === "Non-ON" &&
+    toNumber(state.nonOntarioAidFunding) > 0
+  ) {
+    items.push({
+      label:
+        state.studentPhase === "current"
+          ? "Student financial assistance"
+          : "Anticipated student financial assistance",
+      value: toNumber(
+        state.nonOntarioAidFunding
+      )
     });
   }
 
   if (toNumber(state.otherScholarshipOffset) > 0) {
     items.push({
-      label: "Anticipated scholarships and bursaries",
+      label:
+        state.studentPhase === "current"
+          ? "Scholarships and bursaries"
+          : "Anticipated scholarships and bursaries",
       value: toNumber(
         state.otherScholarshipOffset
       )
@@ -7363,7 +7748,7 @@ function getOffsets() {
     toNumber(state.partTimeIncome) > 0
   ) {
     items.push({
-      label: "Expected yearly part-time income",
+      label: "Yearly part-time income",
       value: toNumber(state.partTimeIncome)
     });
   }
