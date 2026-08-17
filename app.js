@@ -5994,7 +5994,7 @@ function renderFutureContactSection() {
           value="${escapeHtml(state.firstName)}"
           placeholder="Enter your first name"
         />
-     "
+     
  </div>
 
       <div class="form-group">
