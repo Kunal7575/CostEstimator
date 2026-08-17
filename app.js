@@ -97,6 +97,261 @@ const INITIAL_ESTIMATOR_STATE =
   JSON.parse(
     JSON.stringify(state)
   );
+
+const ESTIMATOR_SESSION_STORAGE_KEY =
+  "uofg-cost-estimator-state";
+
+const ESTIMATOR_SESSION_STORAGE_VERSION = 1;
+
+/*
+  Only non-sensitive estimator choices are saved. Personal contact fields,
+  loaded JSON, calculated records and temporary error states are deliberately
+  excluded from browser storage.
+*/
+const ESTIMATOR_PERSISTED_STATE_KEYS =
+  Object.freeze([
+    "osapFunding",
+    "nonOntarioAidFunding",
+    "currentStep",
+    "studentPhase",
+    "residencyType",
+    "province",
+    "canadaRegion",
+    "livingInCanada",
+    "canadianCitizen",
+    "permanentResident",
+    "level",
+    "campus",
+    "cohortYear",
+    "currentStartTerm",
+    "program",
+    "major",
+    "classification",
+    "country",
+    "estimateScope",
+    "includeBooks",
+    "includePersonal",
+    "includeCoop",
+    "includePartTimeEarnings",
+    "includeCoopEarnings",
+    "coopInterest",
+    "futureMealPlanInterest",
+    "housingType",
+    "residence",
+    "roomType",
+    "mealPlan",
+    "offCampusType",
+    "currentOffCampusRent",
+    "currentOffCampusFood",
+    "otherScholarshipOffset",
+    "scholarshipOffset",
+    "selectedScholarshipKeys",
+    "partTimeIncome",
+    "coopEarningsOffset",
+    "familySupport",
+    "booksAmount",
+    "personalAmount",
+    "partTimeHoursPerWeek",
+    "partTimeHourlyRate",
+    "coopHourlyRate",
+    "coopHoursPerWeek",
+    "currencyCode",
+    "currencyRate"
+  ]);
+
+const ESTIMATOR_NULLABLE_NUMBER_KEYS =
+  new Set([
+    "currentOffCampusRent",
+    "coopHourlyRate",
+    "currencyRate"
+  ]);
+
+function isCompatiblePersistedValue(
+  key,
+  value
+) {
+  if (key === "currentStep") {
+    return (
+      Number.isInteger(value) &&
+      value >= 0 &&
+      value <= 5
+    );
+  }
+
+  if (
+    ESTIMATOR_NULLABLE_NUMBER_KEYS.has(key)
+  ) {
+    return (
+      value === null ||
+      (
+        typeof value === "number" &&
+        Number.isFinite(value)
+      )
+    );
+  }
+
+  const initialValue =
+    INITIAL_ESTIMATOR_STATE[key];
+
+  if (Array.isArray(initialValue)) {
+    return (
+      Array.isArray(value) &&
+      value.every(item =>
+        typeof item === "string"
+      )
+    );
+  }
+
+  if (typeof initialValue === "number") {
+    return (
+      typeof value === "number" &&
+      Number.isFinite(value)
+    );
+  }
+
+  return typeof value === typeof initialValue;
+}
+
+function getPersistableEstimatorState() {
+  return ESTIMATOR_PERSISTED_STATE_KEYS.reduce(
+    (savedState, key) => {
+      const value = state[key];
+
+      savedState[key] =
+        Array.isArray(value)
+          ? [...value]
+          : value;
+
+      return savedState;
+    },
+    {}
+  );
+}
+
+function saveEstimatorSession() {
+  try {
+    sessionStorage.setItem(
+      ESTIMATOR_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        version:
+          ESTIMATOR_SESSION_STORAGE_VERSION,
+        savedAt: new Date().toISOString(),
+        state: getPersistableEstimatorState()
+      })
+    );
+  } catch (error) {
+    console.warn(
+      "Estimator progress could not be saved:",
+      error
+    );
+  }
+}
+
+function restoreEstimatorSession() {
+  try {
+    const savedValue =
+      sessionStorage.getItem(
+        ESTIMATOR_SESSION_STORAGE_KEY
+      );
+
+    if (!savedValue) {
+      return false;
+    }
+
+    const savedPayload =
+      JSON.parse(savedValue);
+
+    if (
+      savedPayload?.version !==
+        ESTIMATOR_SESSION_STORAGE_VERSION ||
+      !savedPayload.state ||
+      typeof savedPayload.state !== "object"
+    ) {
+      sessionStorage.removeItem(
+        ESTIMATOR_SESSION_STORAGE_KEY
+      );
+
+      return false;
+    }
+
+    const restoredState = {};
+
+    ESTIMATOR_PERSISTED_STATE_KEYS.forEach(
+      key => {
+        if (
+          Object.prototype.hasOwnProperty.call(
+            savedPayload.state,
+            key
+          ) &&
+          isCompatiblePersistedValue(
+            key,
+            savedPayload.state[key]
+          )
+        ) {
+          restoredState[key] =
+            savedPayload.state[key];
+        }
+      }
+    );
+
+    Object.assign(
+      state,
+      restoredState
+    );
+
+    /*
+      Never restore personally identifying or derived information.
+    */
+    state.firstName = "";
+    state.lastName = "";
+    state.dateOfBirth = "";
+    state.email = "";
+    state.marketingConsent = false;
+    state.matchedTuitionRecord = null;
+    state.result = null;
+    state.currencyLoading = false;
+    state.currencyError = "";
+    state.showStep2Error = false;
+    state.step2ErrorMessage = "";
+
+    return true;
+  } catch (error) {
+    console.warn(
+      "Estimator progress could not be restored:",
+      error
+    );
+
+    try {
+      sessionStorage.removeItem(
+        ESTIMATOR_SESSION_STORAGE_KEY
+      );
+    } catch (storageError) {
+      console.warn(
+        "Invalid estimator progress could not be cleared:",
+        storageError
+      );
+    }
+
+    return false;
+  }
+}
+
+function bindEstimatorSessionPersistence() {
+  document.addEventListener(
+    "input",
+    saveEstimatorSession
+  );
+
+  document.addEventListener(
+    "change",
+    saveEstimatorSession
+  );
+
+  window.addEventListener(
+    "pagehide",
+    saveEstimatorSession
+  );
+}
 // ======================
 // HELPER FUNCTIONS
 // ======================
@@ -340,7 +595,9 @@ document.addEventListener("DOMContentLoaded", init);
 async function init() {
   injectEstimatorStyles();
   bindScrollTop();
+  bindEstimatorSessionPersistence();
   await loadData();
+  restoreEstimatorSession();
   calculateEstimate();
   renderCurrentStep();
 }
@@ -419,17 +676,52 @@ function getAvailableGraduateClassifications() {
     includeClassification: false
   });
 
-  const classificationOrder = [
-    "Graduate Diploma",
-    "Masters",
-    "Doctoral/PHD"
+  const classifications = [
+    ...new Map(
+      rows
+        .map(row => normalize(row.Classification))
+        .filter(Boolean)
+        .map(classification => [
+          normalizeKey(classification),
+          classification
+        ])
+    ).values()
   ];
 
-  return classificationOrder.filter(classification =>
-    rows.some(row =>
-      normalizeKey(row.Classification) ===
-      normalizeKey(classification)
-    )
+  const preferredOrder = [
+    "Graduate Diploma",
+    "Masters",
+    "Doctor of Philosophy (PhD)",
+    "Doctor of Veterinary Science (PhD)"
+  ].map(normalizeKey);
+
+  return classifications.sort(
+    (classificationA, classificationB) => {
+      const indexA = preferredOrder.indexOf(
+        normalizeKey(classificationA)
+      );
+
+      const indexB = preferredOrder.indexOf(
+        normalizeKey(classificationB)
+      );
+
+      const orderA =
+        indexA === -1
+          ? Number.MAX_SAFE_INTEGER
+          : indexA;
+
+      const orderB =
+        indexB === -1
+          ? Number.MAX_SAFE_INTEGER
+          : indexB;
+
+      return (
+        orderA - orderB ||
+        classificationA.localeCompare(
+          classificationB
+        )
+      );
+    }
   );
 }
 
@@ -505,6 +797,28 @@ function bindScrollTop() {
   });
 }
 
+let lastRenderedStep = null;
+
+function scrollToEstimatorTop(
+  behavior = "smooth"
+) {
+  const estimator = document.querySelector(
+    ".estimator-shell"
+  );
+
+  if (!estimator) return;
+
+  const top =
+    estimator.getBoundingClientRect().top +
+    window.scrollY -
+    16;
+
+  window.scrollTo({
+    top: Math.max(0, top),
+    behavior
+  });
+}
+
 function setupWelcomeImage() {
   return;
 }
@@ -529,6 +843,7 @@ function deriveFutureResidency() {
         : "Non-ON";
   } else if (state.canadianCitizen === "No") {
     state.residencyType = "International";
+
     state.province = "INT";
   } else {
     state.residencyType = "";
@@ -700,6 +1015,10 @@ function renderCurrentStep() {
   const container = document.getElementById("flowContainer");
   if (!container) return;
 
+  const shouldScrollToEstimatorTop =
+    lastRenderedStep !== null &&
+    lastRenderedStep !== state.currentStep;
+
   if (!state.data) {
     container.innerHTML = state.dataLoadError ? `
       <div class="step-container">
@@ -754,6 +1073,15 @@ function renderCurrentStep() {
 
   setupWelcomeImage();
   updateChrome();
+  saveEstimatorSession();
+
+  lastRenderedStep = state.currentStep;
+
+  if (shouldScrollToEstimatorTop) {
+    window.requestAnimationFrame(() => {
+      scrollToEstimatorTop();
+    });
+  }
 }
 function renderHelpfulResourcesFooter() {
   return `
@@ -1127,6 +1455,7 @@ function renderExternalCampusNotice() {
   const link = getExternalCampusFeeLink();
 
   return `
+
     <div class="uog-alert uog-alert-yellow">
       <div class="uog-alert-title">
         <span class="uog-alert-icon">!</span>
@@ -1691,6 +2020,7 @@ function renderStep2() {
                                           : ""
                                       }
                                     >
+
                                       Yes
                                     </option>
 
@@ -2389,6 +2719,7 @@ function renderOnCampusHousingFields() {
               <span class="required-star">*</span>
             </label>
 
+
             <select
               id="roomType"
               class="step-dropdown"
@@ -3033,6 +3364,7 @@ function renderStep4() {
                     value="${escapeHtml(state.partTimeHoursPerWeek)}"
                   />
 
+
                   <p class="form-help-text">
                     Part-time earnings are calculated using 12 working weeks
                     per semester across Fall and Winter, for 24 weeks in total.
@@ -3641,6 +3973,7 @@ function renderMealPlanGuide() {
       const winterCost = toNumber(
         readField(item, [
           "Semesterly cost (Winter)",
+
           "Semester cost (Winter)",
           "Winter Term",
           "Winter cost",
@@ -3815,8 +4148,6 @@ function renderStep5() {
         
 
         ${renderFutureEarningsSummary()}
-
-        ${renderGraduateAssistantshipSummary()}
 
         <div class="cost-summary cost-chart-card">
           <div class="summary-section-heading">
@@ -4177,183 +4508,6 @@ function renderFutureEarningsSummary() {
     </div>
   `;
 }
-function renderGraduateAssistantshipSummary() {
-  /*
-    Display this card only for graduate students.
-  */
-  if (state.level !== "GR") {
-    return "";
-  }
-
-  const rows =
-    state.data?.["GRA_GTA"] || [];
-
-  if (!rows.length) {
-    return "";
-  }
-
-  /*
-    GTA and GRA information applies generally.
-
-    The MSc funding example appears only for
-    Master's students.
-
-    The PhD funding example appears only for
-    Doctoral / PhD students.
-  */
-  const visibleRows = rows.filter(item => {
-    const role = normalizeKey(
-      readField(item, ["Role"])
-    );
-
-    if (
-      role === "gta" ||
-      role === "gra"
-    ) {
-      return true;
-    }
-
-    if (
-      role === "msc funding example"
-    ) {
-      return (
-        normalizeKey(state.classification) ===
-        "masters"
-      );
-    }
-
-    if (
-      role === "phd funding example"
-    ) {
-      return (
-        normalizeKey(state.classification) ===
-        "doctoral/phd"
-      );
-    }
-
-    return false;
-  });
-
-  if (!visibleRows.length) {
-    return "";
-  }
-
-  return `
-    <div
-      class="
-        cost-summary
-        potential-coop-summary
-        graduate-assistantship-summary
-      "
-    >
-      <div class="summary-section-heading">
-        <h3>
-          Potential graduate assistantship and funding
-        </h3>
-
-        <p>
-          Graduate employment and funding examples
-        </p>
-      </div>
-
-      ${visibleRows.map(item => {
-        const role = normalize(
-          readField(item, ["Role"])
-        );
-
-        const amount = normalize(
-          readField(item, ["Amount"])
-        );
-
-        const period = normalize(
-          readField(item, ["Period"])
-        );
-
-        const details = normalize(
-          readField(item, ["Details"])
-        );
-
-        const numericAmount =
-          toNumber(amount);
-
-        const amountVaries =
-          normalizeKey(amount) === "varies";
-
-        const periodVaries =
-          normalizeKey(period) === "varies";
-
-        let displayRole = role;
-
-        if (
-          normalizeKey(role) === "gta"
-        ) {
-          displayRole =
-            "Graduate Teaching Assistant (GTA)";
-        }
-
-        if (
-          normalizeKey(role) === "gra"
-        ) {
-          displayRole =
-            "Graduate Research Assistant (GRA)";
-        }
-
-        const displayAmount =
-          amountVaries
-            ? "Varies"
-            : formatMoney(numericAmount);
-
-        return `
-          <div class="summary-item">
-            <div class="summary-item-label">
-              <span>
-                ${escapeHtml(displayRole)}
-              </span>
-
-              ${
-                details
-                  ? `
-                    <small>
-                      ${escapeHtml(details)}
-                    </small>
-                  `
-                  : ""
-              }
-            </div>
-
-            <div class="potential-coop-value">
-              ${displayAmount}
-
-              ${
-                period &&
-                !periodVaries &&
-                !amountVaries
-                  ? `
-                    <small
-                      class="graduate-earning-period"
-                    >
-                      per ${escapeHtml(period)}
-                    </small>
-                  `
-                  : ""
-              }
-            </div>
-          </div>
-        `;
-      }).join("")}
-
-      <p class="coop-not-included-note">
-        These amounts are shown for planning
-        purposes only and are not included in
-        your final estimate. Assistantship
-        availability and graduate funding packages
-        vary by program, department, supervisor
-        funding and individual circumstances.
-      </p>
-    </div>
-  `;
-}
-
 function bindRenderedEvents() {
   bindStep0Events();
   bindStep1Events();
@@ -4650,6 +4804,7 @@ function bindStep1Events() {
         if (state.residencyType === "International") {
           state.province = "INT";
         }
+
       }
 
       if (!state.level) {
@@ -5484,6 +5639,7 @@ function bindStep3Events() {
 
   if (roomType) {
     roomType.onchange = event => {
+
       state.roomType =
         event.target.value;
 
@@ -5958,7 +6114,7 @@ function resetEstimator() {
     );
 
     sessionStorage.removeItem(
-      "uofg-cost-estimator-state"
+      ESTIMATOR_SESSION_STORAGE_KEY
     );
   } catch (error) {
     console.warn(
@@ -5978,11 +6134,6 @@ function resetEstimator() {
 
   calculateEstimate();
   renderCurrentStep();
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
 }
 function bindStep5Events() {
   if (state.currentStep !== 5) {
@@ -6367,6 +6518,7 @@ function bindStep5Events() {
         calculateEstimate();
 
         if (
+
           state.studentPhase === "future"
         ) {
           await saveFutureStudentLead(
@@ -7137,6 +7289,7 @@ function matchTuitionRecord() {
   }
 
   state.matchedTuitionRecord =
+
     rows[0] || null;
 }
 
@@ -7971,6 +8124,7 @@ function renderOSAPInfo() {
           OSAP may be available to eligible Ontario students in the form of grants and loans.
           Grants do not need to be repaid and loans are interest-free while students are in full-time studies.
         </p>
+
 
         <p>
           OSAP can help with education-related costs such as tuition, books, supplies and basic living expenses.
@@ -8976,6 +9130,7 @@ function finishEstimatePDF(
 
       doc.text(
         `${label}:`,
+
         left + 4,
         lineY
       );
@@ -9328,3 +9483,4 @@ async function generateEstimatePDF() {
     chartImageData
   );
 }
+
