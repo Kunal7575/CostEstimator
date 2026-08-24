@@ -692,7 +692,7 @@ function getAvailableGraduateClassifications() {
     "Graduate Diploma",
     "Masters",
     "Doctor of Philosophy (PhD)",
-    "Doctor of Veterinary Science (PhD)"
+    "Doctor of Veterinary Science"
   ].map(normalizeKey);
 
   return classifications.sort(
@@ -4179,7 +4179,9 @@ function renderStep5() {
         ${
           state.studentPhase === "future"
             ? renderFutureContactSection()
-            : ""
+            : state.studentPhase === "current"
+              ? renderCurrentContactSection()
+              : ""
         }
 
       </div>
@@ -4210,19 +4212,13 @@ function renderStep5() {
           Download estimate
         </button>
 
-        ${
-          state.studentPhase === "future"
-            ? `
-              <button
-                class="btn-primary"
-                id="emailEstimateBtn"
-                type="button"
-              >
-                Get estimate by email
-              </button>
-            `
-            : ""
-        }
+        <button
+          class="btn-primary"
+          id="emailEstimateBtn"
+          type="button"
+        >
+          Get estimate by email
+        </button>
       </div>
 
       ${renderFeedbackCard()}
@@ -6077,6 +6073,53 @@ function renderFutureContactSection() {
 }
 
 
+function renderCurrentContactSection() {
+  return `
+    <div class="future-contact-section current-contact-section">
+      <h3 class="subsection-title">
+        Would you like the estimate emailed to you?
+      </h3>
+
+      <p class="form-help-text">
+        Enter your full name and email address and we will
+        send you a copy of your estimate.
+      </p>
+
+      <div class="form-group">
+        <label for="fullName">
+          Full name
+          <span class="required-star">*</span>
+        </label>
+
+        <input
+          id="fullName"
+          class="step-input"
+          type="text"
+          autocomplete="name"
+          value="${escapeHtml(state.firstName)}"
+          placeholder="Enter your full name"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="email">
+          Email address
+          <span class="required-star">*</span>
+        </label>
+
+        <input
+          id="email"
+          class="step-input"
+          type="email"
+          autocomplete="email"
+          value="${escapeHtml(state.email)}"
+          placeholder="Enter your email address"
+        />
+      </div>
+    </div>
+  `;
+}
+
 function resetEstimator() {
   const loadedData =
     state.data;
@@ -6147,6 +6190,11 @@ function bindStep5Events() {
       "firstName"
     );
 
+  const fullName =
+    document.getElementById(
+      "fullName"
+    );
+
   const lastName =
     document.getElementById(
       "lastName"
@@ -6186,6 +6234,23 @@ function bindStep5Events() {
     firstName.oninput = event => {
       state.firstName =
         event.target.value;
+
+      clearErrors();
+    };
+  }
+
+  if (fullName) {
+    fullName.oninput = event => {
+      state.firstName =
+        event.target.value;
+
+      /*
+        Current students provide one full-name field only.
+        Keep lastName blank so the existing email-flow payload
+        can be reused without collecting another name field.
+      */
+      state.lastName = "";
+      state.dateOfBirth = "";
 
       clearErrors();
     };
@@ -6433,52 +6498,63 @@ function bindStep5Events() {
     const emailPattern =
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!state.firstName.trim()) {
-      markError(
-        firstName,
-        "Please enter your first name."
-      );
-
-      hasError = true;
-    }
-
-    if (!state.lastName.trim()) {
-      markError(
-        lastName,
-        "Please enter your last name."
-      );
-
-      hasError = true;
-    }
-
-    if (!state.dateOfBirth) {
-      markError(
-        dateOfBirthErrorTarget,
-        "Please enter your date of birth."
-      );
-
-      hasError = true;
-    } else {
-      const selectedDate =
-        new Date(
-          `${state.dateOfBirth}T00:00:00`
-        );
-
-      const today =
-        new Date();
-
-      if (
-        Number.isNaN(
-          selectedDate.getTime()
-        ) ||
-        selectedDate > today
-      ) {
+    if (state.studentPhase === "current") {
+      if (!state.firstName.trim()) {
         markError(
-          dateOfBirthErrorTarget,
-          "Please enter a valid date of birth."
+          fullName,
+          "Please enter your full name."
         );
 
         hasError = true;
+      }
+    } else {
+      if (!state.firstName.trim()) {
+        markError(
+          firstName,
+          "Please enter your first name."
+        );
+
+        hasError = true;
+      }
+
+      if (!state.lastName.trim()) {
+        markError(
+          lastName,
+          "Please enter your last name."
+        );
+
+        hasError = true;
+      }
+
+      if (!state.dateOfBirth) {
+        markError(
+          dateOfBirthErrorTarget,
+          "Please enter your date of birth."
+        );
+
+        hasError = true;
+      } else {
+        const selectedDate =
+          new Date(
+            `${state.dateOfBirth}T00:00:00`
+          );
+
+        const today =
+          new Date();
+
+        if (
+          Number.isNaN(
+            selectedDate.getTime()
+          ) ||
+          selectedDate > today
+        ) {
+          markError(
+            dateOfBirthErrorTarget,
+            "Please enter a valid date of birth."
+          );
+
+          hasError = true;
+        }
       }
     }
 
@@ -6614,12 +6690,21 @@ async function sendEstimateEmail() {
   const result = state.result || emptyResult();
 
   const payload = {
+    studentPhase: state.studentPhase,
     studentName:
-      `${state.firstName.trim()} ${state.lastName.trim()}`.trim(),
+      state.studentPhase === "current"
+        ? state.firstName.trim()
+        : `${state.firstName.trim()} ${state.lastName.trim()}`.trim(),
 
     firstName: state.firstName.trim(),
-    lastName: state.lastName.trim(),
-    dateOfBirth: state.dateOfBirth,
+    lastName:
+      state.studentPhase === "current"
+        ? ""
+        : state.lastName.trim(),
+    dateOfBirth:
+      state.studentPhase === "current"
+        ? ""
+        : state.dateOfBirth,
     studentEmail: state.email.trim(),
     residency: state.residencyType,
     level: state.level,
@@ -9483,4 +9568,5 @@ async function generateEstimatePDF() {
     chartImageData
   );
 }
+
 
